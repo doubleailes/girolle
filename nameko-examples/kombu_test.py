@@ -2,7 +2,7 @@ from kombu import Connection, Exchange, Queue
 import os
 
 media_exchange = Exchange('media', 'direct', durable=True)
-video_queue = Queue('video', exchange=media_exchange, routing_key='video')
+video_queue = Queue('rpc-video', exchange=media_exchange, routing_key='video')
 
 with Connection("amqp://{}:{}@{}/".format(
         os.getenv("RABBITMQ_USER"),

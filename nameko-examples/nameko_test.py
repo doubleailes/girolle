@@ -29,7 +29,8 @@ def send_simple_message(name):
     :type name: str
     """
     with rpc_proxy(CONFIG) as rpc:
-        rpc.queue_test.hello(name)
+        return rpc.video.hello(name)
 
 if __name__ == "__main__":
-    send_simple_message("John")
+    response = send_simple_message({'name': '/tmp/lolcat1.avi', 'size': 1301013})
+    print(response)

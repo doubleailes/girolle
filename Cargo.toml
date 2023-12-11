@@ -10,9 +10,19 @@ license-file = "LICENSE"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-tokio = { version = "1.35.0", features = ["full"] }
 lapin = "2.3.1"
-serde_json = "1.0.64"
-tokio-executor-trait = "2.1.1"
+async-global-executor = "^2.0"
+futures-lite = "2.1.0"
+serde_json = "^1.0"
+waker-fn = "^1.1"
+tokio = { version = "1.17.0", features = ["full"] }
+tokio-executor-trait = "2.1.0"
 tokio-reactor-trait = "1.1.0"
-serde = { version = "1.0.193", features = ["derive"] }
+
+[dependencies.tracing]
+version = "0.1.40"
+default-features = false
+
+[dependencies.tracing-subscriber]
+version = "0.3.18"
+features = ["fmt"]
