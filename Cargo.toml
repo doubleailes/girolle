@@ -1,0 +1,12 @@
+[package]
+name = "girolle"
+version = "0.1.0"
+edition = "2021"
+authors = ["Philippe Llerena <philippe.llerena@gmail.com>"]
+description = "a simple command line tool to list frame sequence in friendly way"
+readme = "README.md"
+license-file = "LICENSE"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
