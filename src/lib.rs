@@ -57,14 +57,17 @@ pub fn async_service(service_name: &str, f: fn(String) -> String) -> Result<()> 
 
         info!("CONNECTED");
 
-        let channel_a = conn.create_channel().await?;
-        let channel_b = conn.create_channel().await?;
+        let incomming_channel = conn.create_channel().await?;
+        let response_channel = conn.create_channel().await?;
+        incomming_channel
+            .basic_qos(10, BasicQosOptions::default())
+            .await?;
         let mut queue_declare_options = QueueDeclareOptions::default();
         queue_declare_options.durable = true;
-        let queue = channel_a
+        let queue = incomming_channel
             .queue_declare(&rpc_queue, queue_declare_options, FieldTable::default())
             .await?;
-        let _incomming_queue = channel_a
+        let _incomming_queue = incomming_channel
             .queue_bind(
                 &rpc_queue,
                 "nameko-rpc",
@@ -77,7 +80,7 @@ pub fn async_service(service_name: &str, f: fn(String) -> String) -> Result<()> 
 
         info!(?queue, "Declared queue");
 
-        let mut consumer = channel_a
+        let mut consumer = incomming_channel
             .basic_consume(
                 &rpc_queue,
                 "my_consumer",
@@ -92,14 +95,9 @@ pub fn async_service(service_name: &str, f: fn(String) -> String) -> Result<()> 
             let incomming_data: IncommingData =
                 serde_json::from_slice(&delivery.data).expect("json");
             info!("incomming_data: {:?}", incomming_data.get_args());
-            let content_type = delivery.properties.content_type();
-            info!("content_type: {:?}", content_type);
             let opt_correlation_id = delivery.properties.correlation_id();
             let correlation_id = match opt_correlation_id {
-                Some(correlation_id) => {
-                    info!("correlation_id: {}", correlation_id);
-                    correlation_id.to_string()
-                }
+                Some(correlation_id) => correlation_id.to_string(),
                 None => {
                     error!("correlation_id: None");
                     panic!("correlation_id: None")
@@ -107,10 +105,7 @@ pub fn async_service(service_name: &str, f: fn(String) -> String) -> Result<()> 
             };
             let opt_reply_to_id = delivery.properties.reply_to();
             let reply_to_id = match opt_reply_to_id {
-                Some(reply_to_id) => {
-                    info!("reply_to_id: {}", reply_to_id);
-                    reply_to_id.to_string()
-                }
+                Some(reply_to_id) => reply_to_id.to_string(),
                 None => {
                     error!("reply_to_id: None");
                     panic!("reply_to_id: None")
@@ -121,9 +116,7 @@ pub fn async_service(service_name: &str, f: fn(String) -> String) -> Result<()> 
                 "error": None::<String>
             });
             let rpc_queue_reply = format!("rpc.reply-{}-{}", service_name, &id);
-            info!("reply_to: {}", &reply_to_id);
-            info!("rpc_queue_reply: {}", rpc_queue_reply);
-            channel_b
+            response_channel
                 .queue_declare(
                     &rpc_queue_reply,
                     queue_declare_options,
@@ -131,11 +124,11 @@ pub fn async_service(service_name: &str, f: fn(String) -> String) -> Result<()> 
                 )
                 .await
                 .unwrap();
-            channel_b
+            response_channel
                 .queue_bind(
                     &rpc_queue_reply,
                     "nameko-rpc",
-                    &format!("{}", &reply_to_id),
+                    &format!("{}", &id),
                     QueueBindOptions::default(),
                     FieldTable::default(),
                 )
@@ -145,7 +138,7 @@ pub fn async_service(service_name: &str, f: fn(String) -> String) -> Result<()> 
                 .with_correlation_id(correlation_id.into())
                 .with_content_type("application/json".into())
                 .with_reply_to(rpc_queue_reply.into());
-            let confirm = channel_b
+            let confirm = response_channel
                 .basic_publish(
                     "nameko-rpc",
                     &format!("{}", &reply_to_id),

@@ -23,18 +23,21 @@ def rpc_proxy(CONFIG) -> ClusterRpcClient:
     return ClusterRpcClient(CONFIG)
 
 
-def send_simple_message(name):
+def send_simple_message(name) -> list:
     """
     send_simple_message send a message to the queue
 
     :param name: name of the person
     :type name: str
     """
+    data = list()
     with rpc_proxy(CONFIG) as rpc:
-        return rpc.video.hello(name)
+        for i in range(1000):
+            i_str = str(i).zfill(4)
+            data.append(rpc.video.hello(f"{name}{i_str}"))
+    return data
 
 
 if __name__ == "__main__":
-    for i in range(100):
-        response = send_simple_message(f"John{i}")
-        print(response)
+    response = send_simple_message("John")
+    print(response)
