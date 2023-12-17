@@ -5,9 +5,10 @@ CONFIG = {
     "AMQP_URI": "pyamqp://{}:{}@{}/".format(
         os.getenv("RABBITMQ_USER"),
         os.getenv("RABBITMQ_PASSWORD"),
-        os.getenv("RABBITMQ_HOST")
+        os.getenv("RABBITMQ_HOST"),
     )
 }
+
 
 def rpc_proxy(CONFIG) -> ClusterRpcClient:
     """
@@ -21,6 +22,7 @@ def rpc_proxy(CONFIG) -> ClusterRpcClient:
     config.setup(CONFIG)
     return ClusterRpcClient(CONFIG)
 
+
 def send_simple_message(name):
     """
     send_simple_message send a message to the queue
@@ -31,6 +33,7 @@ def send_simple_message(name):
     with rpc_proxy(CONFIG) as rpc:
         return rpc.video.hello(name)
 
+
 if __name__ == "__main__":
-    response = send_simple_message({'name': '/tmp/lolcat1.avi', 'size': 1301013})
+    response = send_simple_message("John")
     print(response)

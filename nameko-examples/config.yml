@@ -1,0 +1,4 @@
+AMQP_URI: !env_var 'pyamqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@${RABBITMQ_HOST}/'
+rpc_exchange: 'nameko-rpc'
+max_workers: 10
+parent_calls_tracked: 10
