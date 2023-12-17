@@ -46,17 +46,20 @@ pub fn async_service(service_name: &str, f: fn(String) -> String) -> Result<()> 
     if std::env::var("RUST_LOG").is_err() {
         std::env::set_var("RUST_LOG", "info");
     }
+    // Define the queue name1
     let rpc_queue = format!("rpc-{}", service_name);
     let routing_key = format!("{}.*", service_name);
+    // Add tracing
     tracing_subscriber::fmt::init();
     let addr = get_address();
+    // Uuid of the service
     let id = Uuid::new_v4();
 
     async_global_executor::block_on(async {
+        // Connect to RabbitMQ
         let conn = Connection::connect(&addr, ConnectionProperties::default()).await?;
-
         info!("CONNECTED");
-
+        // Open a channel and set the QOS
         let incomming_channel = conn.create_channel().await?;
         let response_channel = conn.create_channel().await?;
         incomming_channel
@@ -79,7 +82,7 @@ pub fn async_service(service_name: &str, f: fn(String) -> String) -> Result<()> 
             .unwrap();
 
         info!(?queue, "Declared queue");
-
+        // Start a consumer.
         let mut consumer = incomming_channel
             .basic_consume(
                 &rpc_queue,
@@ -89,12 +92,15 @@ pub fn async_service(service_name: &str, f: fn(String) -> String) -> Result<()> 
             )
             .await?;
         info!("will consume");
+        // Iterate over deliveries.
         while let Some(delivery) = consumer.next().await {
             let delivery = delivery.expect("error in consumer");
             delivery.ack(BasicAckOptions::default()).await.expect("ack");
+            // Parse the incomming data
             let incomming_data: IncommingData =
                 serde_json::from_slice(&delivery.data).expect("json");
             info!("incomming_data: {:?}", incomming_data.get_args());
+            // Get the correlation_id and reply_to_id
             let opt_correlation_id = delivery.properties.correlation_id();
             let correlation_id = match opt_correlation_id {
                 Some(correlation_id) => correlation_id.to_string(),
@@ -115,6 +121,7 @@ pub fn async_service(service_name: &str, f: fn(String) -> String) -> Result<()> 
                 "result": f(incomming_data.get_args()[0].clone()),
                 "error": None::<String>
             });
+            // Declare the reply queue
             let rpc_queue_reply = format!("rpc.reply-{}-{}", service_name, &id);
             response_channel
                 .queue_declare(
@@ -138,6 +145,7 @@ pub fn async_service(service_name: &str, f: fn(String) -> String) -> Result<()> 
                 .with_correlation_id(correlation_id.into())
                 .with_content_type("application/json".into())
                 .with_reply_to(rpc_queue_reply.into());
+            // Publish the response
             let confirm = response_channel
                 .basic_publish(
                     "nameko-rpc",
@@ -148,6 +156,7 @@ pub fn async_service(service_name: &str, f: fn(String) -> String) -> Result<()> 
                 )
                 .await?
                 .await?;
+            // The message was correctly published
             assert_eq!(confirm, Confirmation::NotRequested);
         }
         Ok(())
