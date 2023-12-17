@@ -35,5 +35,6 @@ def send_simple_message(name):
 
 
 if __name__ == "__main__":
-    response = send_simple_message("John")
-    print(response)
+    for i in range(100):
+        response = send_simple_message(f"John{i}")
+        print(response)
