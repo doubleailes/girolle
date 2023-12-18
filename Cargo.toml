@@ -3,7 +3,7 @@ name = "girolle"
 version = "0.1.0"
 edition = "2021"
 authors = ["Philippe Llerena <philippe.llerena@gmail.com>"]
-description = "A lib to mock Nameko RPC service"
+description = "A nameko like lib in rust"
 readme = "README.md"
 license-file = "LICENSE"
 
