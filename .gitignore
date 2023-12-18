@@ -16,4 +16,4 @@ Cargo.lock
 
 # Added by the author
 /docs/public
-/staging/stating_env.nu
+**/*.nu
