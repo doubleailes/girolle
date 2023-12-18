@@ -7,8 +7,8 @@ use lapin::{
 };
 pub use serde_json as JsonValue;
 use serde_json::Value;
-use std::env;
-use tracing::{error, info};
+use std::{env, collections::HashMap};
+use tracing::{error, info, warn};
 use uuid::Uuid;
 use JsonValue::json;
 
@@ -34,7 +34,8 @@ async fn publish(response_channel: &Channel, payload: String, properties: BasicP
     Ok(confirm)
 }
 
-pub fn async_service(service_name: String, f: fn(Value) -> Value) -> Result<()> {
+
+pub fn async_service(service_name: String, f: HashMap<String, fn(Value) -> Value>) -> Result<()> {
     if std::env::var("RUST_LOG").is_err() {
         std::env::set_var("RUST_LOG", "info");
     }
@@ -106,6 +107,14 @@ pub fn async_service(service_name: String, f: fn(Value) -> Value) -> Result<()> 
             // Iterate over deliveries.
         while let Some(delivery) = consumer.next().await {
             let delivery = delivery.expect("error in consumer");
+            let opt_routing_key = delivery.routing_key.to_string();
+            let fn_service: fn(Value) -> Value = match f.get(&opt_routing_key) {
+                Some(fn_service) => *fn_service,
+                None => {
+                    warn!("fn_service: None");
+                    continue;
+                }
+            };
             delivery.ack(BasicAckOptions::default()).await.expect("ack");
             let incomming_data: Value = serde_json::from_slice(&delivery.data).expect("json");
             // Get the correlation_id and reply_to_id
@@ -129,10 +138,11 @@ pub fn async_service(service_name: String, f: fn(Value) -> Value) -> Result<()> 
                 .with_correlation_id(correlation_id.into())
                 .with_content_type("application/json".into())
                 .with_reply_to(rpc_queue_reply.clone().into());
+
             // Publish the response
             let payload: String = json!(
                 {
-                    "result": f(incomming_data),
+                    "result": fn_service(incomming_data),
                     "error": null,
                 }
             )
