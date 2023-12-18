@@ -1,39 +1,14 @@
-use bson::Document;
 use futures_lite::stream::StreamExt;
 use lapin::{
     options::*, publisher_confirm::Confirmation, types::FieldTable, BasicProperties, Connection,
     ConnectionProperties, Result,
 };
-use serde::{Deserialize, Serialize};
-use serde_json::json;
+pub use serde_json as JsonValue;
+use serde_json::Value;
 use std::env;
 use tracing::{error, info};
 use uuid::Uuid;
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct ReponsePayload {
-    result: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    error: Option<String>,
-}
-impl ReponsePayload {
-    pub fn new(result: String) -> Self {
-        Self {
-            result,
-            error: None,
-        }
-    }
-}
-#[derive(Debug, Serialize, Deserialize)]
-pub struct IncommingData {
-    args: Vec<String>,
-    kwargs: Document,
-}
-impl IncommingData {
-    pub fn get_args(&self) -> &Vec<String> {
-        &self.args
-    }
-}
+use JsonValue::json;
 
 fn get_address() -> String {
     let user = env::var("RABBITMQ_USER").expect("RABBITMQ_USER not set");
@@ -42,7 +17,7 @@ fn get_address() -> String {
     format!("amqp://{}:{}@{}:5672/%2f", user, password, host)
 }
 
-pub fn async_service(service_name: &str, f: fn(String) -> String) -> Result<()> {
+pub fn async_service(service_name: &str, f: fn(Value) -> Value) -> Result<()> {
     if std::env::var("RUST_LOG").is_err() {
         std::env::set_var("RUST_LOG", "info");
     }
@@ -96,10 +71,7 @@ pub fn async_service(service_name: &str, f: fn(String) -> String) -> Result<()> 
         while let Some(delivery) = consumer.next().await {
             let delivery = delivery.expect("error in consumer");
             delivery.ack(BasicAckOptions::default()).await.expect("ack");
-            // Parse the incomming data
-            let incomming_data: IncommingData =
-                serde_json::from_slice(&delivery.data).expect("json");
-            info!("incomming_data: {:?}", incomming_data.get_args());
+            let incomming_data: Value = serde_json::from_slice(&delivery.data).expect("json");
             // Get the correlation_id and reply_to_id
             let opt_correlation_id = delivery.properties.correlation_id();
             let correlation_id = match opt_correlation_id {
@@ -117,10 +89,6 @@ pub fn async_service(service_name: &str, f: fn(String) -> String) -> Result<()> 
                     panic!("reply_to_id: None")
                 }
             };
-            let payload = json!({
-                "result": f(incomming_data.get_args()[0].clone()),
-                "error": None::<String>
-            });
             // Declare the reply queue
             let rpc_queue_reply = format!("rpc.reply-{}-{}", service_name, &id);
             response_channel
@@ -146,12 +114,19 @@ pub fn async_service(service_name: &str, f: fn(String) -> String) -> Result<()> 
                 .with_content_type("application/json".into())
                 .with_reply_to(rpc_queue_reply.into());
             // Publish the response
+            let payload: String = json!(
+                {
+                    "result": f(incomming_data),
+                    "error": null,
+                }
+            )
+            .to_string();
             let confirm = response_channel
                 .basic_publish(
                     "nameko-rpc",
                     &format!("{}", &reply_to_id),
                     BasicPublishOptions::default(),
-                    payload.to_string().as_bytes(),
+                    payload.as_bytes(),
                     properties,
                 )
                 .await?

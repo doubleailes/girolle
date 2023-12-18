@@ -6,4 +6,4 @@ class GreetingService:
 
     @rpc
     def hello(self, name):
-        return "Hello, {}!".format(name)
+        return "Hello, {}!, by nameko".format(name)

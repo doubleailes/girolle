@@ -1,5 +1,6 @@
 from nameko.standalone.rpc import ClusterRpcClient, config
 import os
+from datetime import datetime
 
 CONFIG = {
     "AMQP_URI": "pyamqp://{}:{}@{}/".format(
@@ -39,5 +40,6 @@ def send_simple_message(name) -> list:
 
 
 if __name__ == "__main__":
+    start = datetime.now()
     response = send_simple_message("John")
-    print(response)
+    print(response, datetime.now() - start)
