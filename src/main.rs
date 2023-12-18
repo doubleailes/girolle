@@ -7,5 +7,5 @@ fn hello(s: Value) -> Value {
 }
 
 fn main() {
-    async_service("video", hello).expect("service failed");
+    async_service("video".to_string(), hello).expect("service failed");
 }

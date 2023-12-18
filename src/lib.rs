@@ -1,7 +1,9 @@
 use futures_lite::stream::StreamExt;
 use lapin::{
-    options::*, publisher_confirm::Confirmation, types::FieldTable, BasicProperties, Connection,
+    options::*, types::FieldTable, BasicProperties, Connection,
     ConnectionProperties, Result,
+    Channel,
+    publisher_confirm::Confirmation,
 };
 pub use serde_json as JsonValue;
 use serde_json::Value;
@@ -16,8 +18,23 @@ fn get_address() -> String {
     let host = env::var("RABBITMQ_HOST").expect("RABBITMQ_HOST not set");
     format!("amqp://{}:{}@{}:5672/%2f", user, password, host)
 }
+async fn publish(response_channel: &Channel, payload: String, properties: BasicProperties, reply_to_id: String) -> Result<Confirmation> {
+    let confirm = response_channel
+    .basic_publish(
+        "nameko-rpc",
+        &format!("{}", &reply_to_id),
+        BasicPublishOptions::default(),
+        payload.as_bytes(),
+        properties,
+    )
+    .await?
+    .await?;
+    // The message was correctly published
+    assert_eq!(confirm, Confirmation::NotRequested);
+    Ok(confirm)
+}
 
-pub fn async_service(service_name: &str, f: fn(Value) -> Value) -> Result<()> {
+pub fn async_service(service_name: String, f: fn(Value) -> Value) -> Result<()> {
     if std::env::var("RUST_LOG").is_err() {
         std::env::set_var("RUST_LOG", "info");
     }
@@ -55,7 +72,26 @@ pub fn async_service(service_name: &str, f: fn(Value) -> Value) -> Result<()> {
             )
             .await
             .unwrap();
-
+            // Declare the reply queue
+            let rpc_queue_reply = format!("rpc.reply-{}-{}", service_name, &id);
+            response_channel
+                .queue_declare(
+                    &rpc_queue_reply,
+                    queue_declare_options,
+                    FieldTable::default(),
+                )
+                .await
+                .unwrap();
+            response_channel
+                .queue_bind(
+                    &rpc_queue_reply,
+                    "nameko-rpc",
+                    &format!("{}", &id),
+                    QueueBindOptions::default(),
+                    FieldTable::default(),
+                )
+                .await
+                .unwrap();
         info!(?queue, "Declared queue");
         // Start a consumer.
         let mut consumer = incomming_channel
@@ -66,8 +102,8 @@ pub fn async_service(service_name: &str, f: fn(Value) -> Value) -> Result<()> {
                 FieldTable::default(),
             )
             .await?;
-        info!("will consume");
-        // Iterate over deliveries.
+            info!("will consume");
+            // Iterate over deliveries.
         while let Some(delivery) = consumer.next().await {
             let delivery = delivery.expect("error in consumer");
             delivery.ack(BasicAckOptions::default()).await.expect("ack");
@@ -89,30 +125,10 @@ pub fn async_service(service_name: &str, f: fn(Value) -> Value) -> Result<()> {
                     panic!("reply_to_id: None")
                 }
             };
-            // Declare the reply queue
-            let rpc_queue_reply = format!("rpc.reply-{}-{}", service_name, &id);
-            response_channel
-                .queue_declare(
-                    &rpc_queue_reply,
-                    queue_declare_options,
-                    FieldTable::default(),
-                )
-                .await
-                .unwrap();
-            response_channel
-                .queue_bind(
-                    &rpc_queue_reply,
-                    "nameko-rpc",
-                    &format!("{}", &id),
-                    QueueBindOptions::default(),
-                    FieldTable::default(),
-                )
-                .await
-                .unwrap();
             let properties = BasicProperties::default()
                 .with_correlation_id(correlation_id.into())
                 .with_content_type("application/json".into())
-                .with_reply_to(rpc_queue_reply.into());
+                .with_reply_to(rpc_queue_reply.clone().into());
             // Publish the response
             let payload: String = json!(
                 {
@@ -121,19 +137,9 @@ pub fn async_service(service_name: &str, f: fn(Value) -> Value) -> Result<()> {
                 }
             )
             .to_string();
-            let confirm = response_channel
-                .basic_publish(
-                    "nameko-rpc",
-                    &format!("{}", &reply_to_id),
-                    BasicPublishOptions::default(),
-                    payload.as_bytes(),
-                    properties,
-                )
-                .await?
-                .await?;
-            // The message was correctly published
-            assert_eq!(confirm, Confirmation::NotRequested);
-        }
+            publish(&response_channel, payload, properties, reply_to_id).await.unwrap();
+            }
+        info!("GoodBye!");
         Ok(())
     })
 }
