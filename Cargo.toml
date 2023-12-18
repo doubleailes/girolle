@@ -3,7 +3,7 @@ name = "girolle"
 version = "0.1.0"
 edition = "2021"
 authors = ["Philippe Llerena <philippe.llerena@gmail.com>"]
-description = "a simple command line tool to list frame sequence in friendly way"
+description = "A lib to mock Nameko RPC service"
 readme = "README.md"
 license-file = "LICENSE"
 
@@ -29,5 +29,4 @@ version = "1.6.1"
 features = [
     "v4",                # Lets you generate random UUIDs
     "fast-rng",          # Use a faster (but still sufficiently random) RNG
-    "macro-diagnostics", # Enable better diagnostics for compile-time UUIDs
 ]
