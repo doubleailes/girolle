@@ -14,7 +14,8 @@ fn get_address() -> String {
     let user = env::var("RABBITMQ_USER").expect("RABBITMQ_USER not set");
     let password = env::var("RABBITMQ_PASSWORD").expect("RABBITMQ_PASSWORD not set");
     let host = env::var("RABBITMQ_HOST").expect("RABBITMQ_HOST not set");
-    format!("amqp://{}:{}@{}:5672/%2f", user, password, host)
+    let port = env::var("RABBITMQ_PORT").unwrap_or("5672".to_string());
+    format!("amqp://{}:{}@{}:{}/%2f", user, password, host, port)
 }
 async fn publish(
     response_channel: &Channel,
@@ -37,7 +38,12 @@ async fn publish(
     Ok(confirm)
 }
 
+/// Create RPC service and listen to the Nameko RPC queue for the service_name
+/// The service_name is the name of the service in the Nameko microservice
+/// The f is a HashMap of the functions that will be called when the routing key is called
+/// The function f must return a serializable value
 pub fn rpc_service(service_name: String, f: HashMap<String, fn(Vec<&Value>) -> Value>) -> Result<()> {
+    // Set the log level
     if std::env::var("RUST_LOG").is_err() {
         std::env::set_var("RUST_LOG", "info");
     }
