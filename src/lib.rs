@@ -1,13 +1,11 @@
 use futures_lite::stream::StreamExt;
 use lapin::{
-    options::*, types::FieldTable, BasicProperties, Connection,
-    ConnectionProperties, Result,
-    Channel,
-    publisher_confirm::Confirmation,
+    options::*, publisher_confirm::Confirmation, types::FieldTable, BasicProperties, Channel,
+    Connection, ConnectionProperties, Result,
 };
 pub use serde_json as JsonValue;
 use serde_json::Value;
-use std::{env, collections::HashMap};
+use std::{collections::HashMap, env};
 use tracing::{error, info, warn};
 use uuid::Uuid;
 use JsonValue::json;
@@ -18,22 +16,26 @@ fn get_address() -> String {
     let host = env::var("RABBITMQ_HOST").expect("RABBITMQ_HOST not set");
     format!("amqp://{}:{}@{}:5672/%2f", user, password, host)
 }
-async fn publish(response_channel: &Channel, payload: String, properties: BasicProperties, reply_to_id: String) -> Result<Confirmation> {
+async fn publish(
+    response_channel: &Channel,
+    payload: String,
+    properties: BasicProperties,
+    reply_to_id: String,
+) -> Result<Confirmation> {
     let confirm = response_channel
-    .basic_publish(
-        "nameko-rpc",
-        &format!("{}", &reply_to_id),
-        BasicPublishOptions::default(),
-        payload.as_bytes(),
-        properties,
-    )
-    .await?
-    .await?;
+        .basic_publish(
+            "nameko-rpc",
+            &format!("{}", &reply_to_id),
+            BasicPublishOptions::default(),
+            payload.as_bytes(),
+            properties,
+        )
+        .await?
+        .await?;
     // The message was correctly published
     assert_eq!(confirm, Confirmation::NotRequested);
     Ok(confirm)
 }
-
 
 pub fn async_service(service_name: String, f: HashMap<String, fn(Value) -> Value>) -> Result<()> {
     if std::env::var("RUST_LOG").is_err() {
@@ -73,26 +75,26 @@ pub fn async_service(service_name: String, f: HashMap<String, fn(Value) -> Value
             )
             .await
             .unwrap();
-            // Declare the reply queue
-            let rpc_queue_reply = format!("rpc.reply-{}-{}", service_name, &id);
-            response_channel
-                .queue_declare(
-                    &rpc_queue_reply,
-                    queue_declare_options,
-                    FieldTable::default(),
-                )
-                .await
-                .unwrap();
-            response_channel
-                .queue_bind(
-                    &rpc_queue_reply,
-                    "nameko-rpc",
-                    &format!("{}", &id),
-                    QueueBindOptions::default(),
-                    FieldTable::default(),
-                )
-                .await
-                .unwrap();
+        // Declare the reply queue
+        let rpc_queue_reply = format!("rpc.reply-{}-{}", service_name, &id);
+        response_channel
+            .queue_declare(
+                &rpc_queue_reply,
+                queue_declare_options,
+                FieldTable::default(),
+            )
+            .await
+            .unwrap();
+        response_channel
+            .queue_bind(
+                &rpc_queue_reply,
+                "nameko-rpc",
+                &format!("{}", &id),
+                QueueBindOptions::default(),
+                FieldTable::default(),
+            )
+            .await
+            .unwrap();
         info!(?queue, "Declared queue");
         // Start a consumer.
         let mut consumer = incomming_channel
@@ -103,8 +105,8 @@ pub fn async_service(service_name: String, f: HashMap<String, fn(Value) -> Value
                 FieldTable::default(),
             )
             .await?;
-            info!("will consume");
-            // Iterate over deliveries.
+        info!("will consume");
+        // Iterate over deliveries.
         while let Some(delivery) = consumer.next().await {
             let delivery = delivery.expect("error in consumer");
             let opt_routing_key = delivery.routing_key.to_string();
@@ -147,8 +149,10 @@ pub fn async_service(service_name: String, f: HashMap<String, fn(Value) -> Value
                 }
             )
             .to_string();
-            publish(&response_channel, payload, properties, reply_to_id).await.unwrap();
-            }
+            publish(&response_channel, payload, properties, reply_to_id)
+                .await
+                .unwrap();
+        }
         info!("GoodBye!");
         Ok(())
     })
