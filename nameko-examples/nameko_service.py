@@ -7,3 +7,10 @@ class GreetingService:
     @rpc
     def hello(self, name):
         return "Hello, {}!, by nameko".format(name)
+
+    @rpc
+    def fibonacci(self, n):
+        if n <= 1:
+            return n
+        else:
+            return self.fibonacci(n - 1) + self.fibonacci(n - 2)
