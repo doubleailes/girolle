@@ -16,6 +16,13 @@ You need to set this environement variables.
 - **RABBITMQ_PASSWORD**: The RabbitMQ password
 - **RABBITMQ_HOST**: THe rabbitMQ host adress
 
+## How to use it
+
+The core concept is to remove the pain of the queue creation and reply, and to
+use an abstract type `serde_json::Value` to manipulate a serializable data.
+
+It needed to extract the data from the a `Vec<&Value>`.
+
 ## Exemple
 
 ```rust

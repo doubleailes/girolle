@@ -37,7 +37,7 @@ async fn publish(
     Ok(confirm)
 }
 
-pub fn async_service(service_name: String, f: HashMap<String, fn(Value) -> Value>) -> Result<()> {
+pub fn async_service(service_name: String, f: HashMap<String, fn(Vec<&Value>) -> Value>) -> Result<()> {
     if std::env::var("RUST_LOG").is_err() {
         std::env::set_var("RUST_LOG", "info");
     }
@@ -110,7 +110,7 @@ pub fn async_service(service_name: String, f: HashMap<String, fn(Value) -> Value
         while let Some(delivery) = consumer.next().await {
             let delivery = delivery.expect("error in consumer");
             let opt_routing_key = delivery.routing_key.to_string();
-            let fn_service: fn(Value) -> Value = match f.get(&opt_routing_key) {
+            let fn_service: fn(Vec<&Value>) -> Value = match f.get(&opt_routing_key) {
                 Some(fn_service) => *fn_service,
                 None => {
                     warn!("fn_service: None");
@@ -119,6 +119,11 @@ pub fn async_service(service_name: String, f: HashMap<String, fn(Value) -> Value
             };
             delivery.ack(BasicAckOptions::default()).await.expect("ack");
             let incomming_data: Value = serde_json::from_slice(&delivery.data).expect("json");
+            let args: Vec<&Value> = incomming_data["args"]
+                .as_array()
+                .expect("args")
+                .iter()
+                .collect();
             // Get the correlation_id and reply_to_id
             let opt_correlation_id = delivery.properties.correlation_id();
             let correlation_id = match opt_correlation_id {
@@ -144,14 +149,14 @@ pub fn async_service(service_name: String, f: HashMap<String, fn(Value) -> Value
             // Publish the response
             let payload: String = json!(
                 {
-                    "result": fn_service(incomming_data),
+                    "result": fn_service(args),
                     "error": null,
                 }
             )
             .to_string();
             publish(&response_channel, payload, properties, reply_to_id)
                 .await
-                .unwrap();
+                .expect("Error publishing");
         }
         info!("GoodBye!");
         Ok(())
