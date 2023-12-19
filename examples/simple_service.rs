@@ -1,4 +1,4 @@
-use girolle::{async_service, JsonValue::Value};
+use girolle::{rpc_service, JsonValue::Value};
 use std::collections::HashMap;
 
 fn hello(s: Vec<&Value>) -> Value {
@@ -24,5 +24,5 @@ fn main() {
     let mut services: HashMap<String, fn(Vec<&Value>) -> Value> = HashMap::new();
     services.insert("video.hello".to_string(), hello);
     services.insert("video.fibonacci".to_string(), fibonacci_reccursive);
-    async_service("video".to_string(), services).expect("service failed");
+    rpc_service("video".to_string(), services).expect("service failed");
 }

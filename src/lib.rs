@@ -37,7 +37,7 @@ async fn publish(
     Ok(confirm)
 }
 
-pub fn async_service(service_name: String, f: HashMap<String, fn(Vec<&Value>) -> Value>) -> Result<()> {
+pub fn rpc_service(service_name: String, f: HashMap<String, fn(Vec<&Value>) -> Value>) -> Result<()> {
     if std::env::var("RUST_LOG").is_err() {
         std::env::set_var("RUST_LOG", "info");
     }
