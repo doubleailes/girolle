@@ -39,7 +39,18 @@ def send_simple_message(name) -> list:
     return data
 
 
+def fibonacci() -> list[int]:
+    """
+    fibonacci send a message to the queue
+    """
+    data = list()
+    with rpc_proxy(CONFIG) as rpc:
+        for i in range(45):
+            data.append(rpc.video.fibonacci(i))
+    return data
+
+
 if __name__ == "__main__":
     start = datetime.now()
-    response = send_simple_message("John")
+    response = fibonacci()
     print(response, datetime.now() - start)
