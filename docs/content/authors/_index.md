@@ -12,7 +12,7 @@ draft = false
 #
 # Note: We use quoted keys here.
 [extra.author_pages]
-"aaran-xu" = "authors/aaran-xu.md"
+"aaran-xu" = "authors/doubleailes.md"
 +++
 
-The authors of the blog articles.
+The authors of the project.

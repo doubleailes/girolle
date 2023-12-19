@@ -7,7 +7,7 @@ title = "A nameko like lib in rust"
 lead = 'A nameko like lib in rust'
 url = "/docs/getting-started/introduction/"
 url_button = "Get started"
-repo_version = "GitHub vX.X.X"
+repo_version = "GitHub v0.1.0"
 repo_license = "Open-source MIT License."
 repo_url = "https://github.com/doubleailes/girolle"
 
@@ -19,7 +19,15 @@ url = "/docs/getting-started/introduction/"
 weight = 10
 
 [[extra.list]]
-title = "Tittle 1 "
-content = 'Content 1'
+title = "Nameko compatible"
+content = 'Girolle is able to interact as a GRPC service with Nameko RCP services'
+
+[[extra.list]]
+title = "A simple RPC framework"
+content = 'Girolle use a simple RPC framework'
+
+[[extra.list]]
+title = "Fast"
+content = '<b>fls</b> is made to be really fast.'
 
 +++
