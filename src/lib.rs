@@ -1,20 +1,16 @@
 use futures_lite::stream::StreamExt;
-use lapin::types::{AMQPValue, LongString, ShortString};
 use lapin::{
     options::*, publisher_confirm::Confirmation, types::FieldTable, BasicProperties, Channel,
     Connection, ConnectionProperties, Result,
 };
 pub use serde_json as JsonValue;
 use serde_json::Value;
-use std::{
-    collections::{BTreeMap, HashMap},
-    env,
-};
+use std::{collections::HashMap, env};
 use tracing::{error, info, warn};
 use uuid::Uuid;
 use JsonValue::json;
 mod nameko_utils;
-use nameko_utils::push_call_id;
+use nameko_utils::insert_new_id_to_call_id;
 
 fn get_address() -> String {
     let user = env::var("RABBITMQ_USER").expect("RABBITMQ_USER not set");
@@ -157,15 +153,16 @@ pub fn rpc_service(
                 }
             };
             let opt_headers = delivery.properties.headers();
-            let headers = opt_headers.as_ref().expect("headers").clone();
-            let inner_headers = headers.inner();
-            let call_id_stack = inner_headers.get("nameko.call_id_stack").unwrap();
-            let toto = push_call_id(call_id_stack, &opt_routing_key, &id.to_string());
-            info!(?toto, "nameko_call_id");
+            let headers = insert_new_id_to_call_id(
+                opt_headers.as_ref().expect("headers").clone(),
+                &opt_routing_key,
+                &id.to_string(),
+            );
             let properties = BasicProperties::default()
                 .with_correlation_id(correlation_id.into())
                 .with_content_type("application/json".into())
-                .with_reply_to(rpc_queue_reply.clone().into());
+                .with_reply_to(rpc_queue_reply.clone().into())
+                .with_headers(headers);
 
             // Publish the response
             let payload: String = json!(
