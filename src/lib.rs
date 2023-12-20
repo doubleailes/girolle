@@ -1,19 +1,74 @@
+/// This crate is a Rust implementation of the Nameko RPC protocol.
+/// It allows to create a RPC service in Rust that can be called from a Nameko microservice.
+/// ## Description of the struct
+///
+/// The RPC service is a struct that contains a HashMap of functions.
+/// The functions are called when the routing key is called.
+/// The function must return a serializable value.
+///
+/// ## Usage
+///
+/// The RPC service can be started with the function start() or start_tokio().
+/// The function start() is blocking and start_tokio() is non-blocking.
+/// The function start_tokio() is using tokio runtime.
+/// The function start() is using async_global_executor.
+///
 use futures_lite::stream::StreamExt;
 use lapin::{
-    message::DeliveryResult,
-    options::*,
-    publisher_confirm::Confirmation,
-    types::{FieldTable, ShortString},
+    message::DeliveryResult, options::*, publisher_confirm::Confirmation, types::FieldTable,
     BasicProperties, Channel, Connection, ConnectionProperties, Result,
 };
 pub use serde_json as JsonValue;
 use serde_json::Value;
 use std::{collections::HashMap, env};
-use tracing::{error, info, warn};
+use tracing::{info, warn};
 use uuid::Uuid;
 use JsonValue::json;
 mod nameko_utils;
-use nameko_utils::insert_new_id_to_call_id;
+use nameko_utils::{get_id, insert_new_id_to_call_id};
+
+/// The RPC service is a struct that contains a HashMap of functions.
+/// The functions are called when the routing key is called.
+pub struct RpcService {
+    service_name: String,
+    f: HashMap<String, fn(Vec<&Value>) -> Value>,
+}
+impl RpcService {
+    // Create a new RPC service with a emptry HashMap of functions
+    pub fn new(service_name: String) -> Self {
+        Self {
+            service_name,
+            f: HashMap::new(),
+        }
+    }
+    // Set a new service name
+    pub fn set_service_name(&mut self, service_name: String) {
+        self.service_name = service_name;
+    }
+    // Insert a new function in the HashMap
+    pub fn insert(&mut self, function: String, f: fn(Vec<&Value>) -> Value) {
+        let routing_key = format!("{}.{}", self.service_name, function);
+        self.f.insert(routing_key, f);
+    }
+    // Start the RPC service
+    pub fn start(&self) -> Result<()> {
+        if self.f.is_empty() {
+            panic!("No function insert");
+        }
+        rpc_service(self.service_name.clone(), self.f.clone())
+    }
+    // Start the RPC service with tokio runtime
+    pub fn start_tokio(&self) {
+        if self.f.is_empty() {
+            panic!("No function insert");
+        }
+        tokio_rpc_service(self.service_name.clone(), self.f.clone());
+    }
+    // Get the list of the routing keys
+    pub fn get_routing_keys(&self) -> Vec<String> {
+        self.f.keys().map(|x| x.to_string()).collect()
+    }
+}
 
 fn get_address() -> String {
     let user = env::var("RABBITMQ_USER").expect("RABBITMQ_USER not set");
@@ -43,25 +98,13 @@ async fn publish(
     Ok(confirm)
 }
 
-fn get_id(opt_id: &Option<ShortString>, id_name: &str) -> String {
-    match opt_id {
-        Some(id) => id.to_string(),
-        None => {
-            error!("{}: None", id_name);
-            panic!("{}: None", id_name)
-        }
-    }
-}
-
 /// Create RPC service and listen to the Nameko RPC queue for the service_name
 /// The service_name is the name of the service in the Nameko microservice
 /// The f is a HashMap of the functions that will be called when the routing key is called
 /// The function f must return a serializable value
-pub fn rpc_service(
-    service_name: String,
-    f: HashMap<String, fn(Vec<&Value>) -> Value>,
-) -> Result<()> {
+fn rpc_service(service_name: String, f: HashMap<String, fn(Vec<&Value>) -> Value>) -> Result<()> {
     const PREFETCH_COUNT: u16 = 10;
+    const QUEUE_TTL: u32 = 300000;
     // Set the log level
     if std::env::var("RUST_LOG").is_err() {
         std::env::set_var("RUST_LOG", "info");
@@ -74,6 +117,8 @@ pub fn rpc_service(
     let addr = get_address();
     // Uuid of the service
     let id = Uuid::new_v4();
+    // check list of function
+    info!("List of functions {:?}", f.keys());
 
     async_global_executor::block_on(async {
         // Connect to RabbitMQ
@@ -103,7 +148,7 @@ pub fn rpc_service(
         // Declare the reply queue
         let rpc_queue_reply = format!("rpc.reply-{}-{}", service_name, &id);
         let mut response_arguments = FieldTable::default();
-        response_arguments.insert("x-expires".into(), 300000.into());
+        response_arguments.insert("x-expires".into(), QUEUE_TTL.into());
 
         response_channel
             .queue_declare(&rpc_queue_reply, queue_declare_options, response_arguments)
@@ -137,7 +182,7 @@ pub fn rpc_service(
             let fn_service: fn(Vec<&Value>) -> Value = match f.get(&opt_routing_key) {
                 Some(fn_service) => *fn_service,
                 None => {
-                    warn!("fn_service: None");
+                    warn!("fn_service: {} not found", &opt_routing_key);
                     continue;
                 }
             };
@@ -182,6 +227,8 @@ pub fn rpc_service(
 
 #[tokio::main]
 pub async fn tokio_rpc_service(service_name: String, f: HashMap<String, fn(Vec<&Value>) -> Value>) {
+    const PREFETCH_COUNT: u16 = 10;
+    const QUEUE_TTL: u32 = 300000;
     // Set the log level
     if std::env::var("RUST_LOG").is_err() {
         std::env::set_var("RUST_LOG", "info");
@@ -209,7 +256,7 @@ pub async fn tokio_rpc_service(service_name: String, f: HashMap<String, fn(Vec<&
     let response_channel = conn.create_channel().await.unwrap();
 
     incomming_channel
-        .basic_qos(10, BasicQosOptions::default())
+        .basic_qos(PREFETCH_COUNT, BasicQosOptions::default())
         .await
         .unwrap();
     let mut queue_declare_options = QueueDeclareOptions::default();
@@ -230,12 +277,10 @@ pub async fn tokio_rpc_service(service_name: String, f: HashMap<String, fn(Vec<&
         .unwrap();
     // Declare the reply queue
     let rpc_queue_reply = format!("rpc.reply-{}-{}", service_name, &id);
+    let mut response_arguments = FieldTable::default();
+    response_arguments.insert("x-expires".into(), QUEUE_TTL.into());
     response_channel
-        .queue_declare(
-            &rpc_queue_reply,
-            queue_declare_options,
-            FieldTable::default(),
-        )
+        .queue_declare(&rpc_queue_reply, queue_declare_options, response_arguments)
         .await
         .unwrap();
     response_channel

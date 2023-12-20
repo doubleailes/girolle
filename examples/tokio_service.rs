@@ -1,5 +1,4 @@
-use girolle::{tokio_rpc_service, JsonValue::Value};
-use std::collections::HashMap;
+use girolle::{JsonValue::Value, RpcService};
 
 fn hello(s: Vec<&Value>) -> Value {
     // Parse the incomming data
@@ -21,8 +20,8 @@ fn fibonacci_reccursive(s: Vec<&Value>) -> Value {
 }
 
 fn main() {
-    let mut services: HashMap<String, fn(Vec<&Value>) -> Value> = HashMap::new();
-    services.insert("video.hello".to_string(), hello);
-    services.insert("video.fibonacci".to_string(), fibonacci_reccursive);
-    tokio_rpc_service("video".to_string(), services);
+    let mut services: RpcService = RpcService::new("video".to_string());
+    services.insert("hello".to_string(), hello);
+    services.insert("fibonacci".to_string(), fibonacci_reccursive);
+    let _ = services.start_tokio();
 }

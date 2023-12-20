@@ -1,4 +1,5 @@
 use lapin::types::{AMQPValue, FieldTable, LongString, ShortString};
+use tracing::error;
 
 fn set_current_call_id(function_name: &str, id: &str) -> AMQPValue {
     // package_cg_asset.get_filepaths_from_tags.4c5615e2-9367-46aa-8f90-b87e89723fa0
@@ -23,4 +24,14 @@ pub fn insert_new_id_to_call_id(
     let key_field = ShortString::from("nameko.call_id_stack");
     headers.insert(key_field, to_amqp);
     headers
+}
+
+pub fn get_id(opt_id: &Option<ShortString>, id_name: &str) -> String {
+    match opt_id {
+        Some(id) => id.to_string(),
+        None => {
+            error!("{}: None", id_name);
+            panic!("{}: None", id_name)
+        }
+    }
 }
