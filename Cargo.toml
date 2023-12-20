@@ -6,7 +6,7 @@ authors = ["Philippe Llerena <philippe.llerena@gmail.com>"]
 description = "A nameko like lib in rust"
 readme = "README.md"
 license-file = "LICENSE"
-exclude = ["staging", ".devcontainer", ".github"]
+exclude = ["staging", ".devcontainer", ".github", "images"]
 
 [lib]
 bench = false
