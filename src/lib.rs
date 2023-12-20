@@ -151,6 +151,12 @@ pub fn rpc_service(
             // Get the correlation_id and reply_to_id
             let correlation_id = get_id(delivery.properties.correlation_id(), "correlation_id");
             let reply_to_id = get_id(delivery.properties.reply_to(), "reply_to_id");
+            let opt_headers = delivery.properties.headers();
+            let headers = insert_new_id_to_call_id(
+                opt_headers.as_ref().expect("headers").clone(),
+                &opt_routing_key,
+                &id.to_string(),
+            );
             let properties = BasicProperties::default()
                 .with_correlation_id(correlation_id.into())
                 .with_content_type("application/json".into())
@@ -288,11 +294,17 @@ pub async fn tokio_rpc_service(service_name: String, f: HashMap<String, fn(Vec<&
             // Get the correlation_id and reply_to_id
             let correlation_id = get_id(delivery.properties.correlation_id(), "correlation_id");
             let reply_to_id = get_id(delivery.properties.reply_to(), "reply_to_id");
+            let opt_headers = delivery.properties.headers();
+            let headers = insert_new_id_to_call_id(
+                opt_headers.as_ref().expect("headers").clone(),
+                &opt_routing_key,
+                &id.to_string(),
+            );
             let properties = BasicProperties::default()
                 .with_correlation_id(correlation_id.into())
                 .with_content_type("application/json".into())
-                .with_reply_to(rpc_queue_reply_clone.clone().into());
-
+                .with_reply_to(rpc_queue_reply_clone.into())
+                .with_headers(headers);
             // Publish the response
             let payload: String = json!(
                 {
