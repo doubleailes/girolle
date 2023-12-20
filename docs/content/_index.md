@@ -28,6 +28,6 @@ content = 'Girolle use a simple RPC framework'
 
 [[extra.list]]
 title = "Fast"
-content = '<b>fls</b> is made to be really fast.'
+content = '<b>Girolle</b> is made to be really fast.'
 
 +++
