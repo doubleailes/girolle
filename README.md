@@ -67,6 +67,7 @@ fn main() {
 ## TODO
 
 - [ ] Handle the error
+- [ ] write test
 - [ ] create a proxy service in rust to interact with an other service
 nameko-rpc
 - [ ] listen to a pub/sub queue
