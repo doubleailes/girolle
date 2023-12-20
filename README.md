@@ -1,5 +1,7 @@
 # girolle
 
+![girolle](./images/girolle.png)
+
 ## Description
 
 A [nameko-rpc](https://github.com/nameko/nameko) like lib in rust.
