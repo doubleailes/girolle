@@ -34,37 +34,37 @@ pub struct RpcService {
     f: HashMap<String, fn(Vec<&Value>) -> Value>,
 }
 impl RpcService {
-    // Create a new RPC service with a emptry HashMap of functions
+    /// Create a new RPC service with a emptry HashMap of functions
     pub fn new(service_name: String) -> Self {
         Self {
             service_name,
             f: HashMap::new(),
         }
     }
-    // Set a new service name
+    /// Set a new service name
     pub fn set_service_name(&mut self, service_name: String) {
         self.service_name = service_name;
     }
-    // Insert a new function in the HashMap
+    /// Insert a new function in the HashMap
     pub fn insert(&mut self, function: String, f: fn(Vec<&Value>) -> Value) {
         let routing_key = format!("{}.{}", self.service_name, function);
         self.f.insert(routing_key, f);
     }
-    // Start the RPC service
+    /// Start the RPC service
     pub fn start(&self) -> Result<()> {
         if self.f.is_empty() {
             panic!("No function insert");
         }
         rpc_service(self.service_name.clone(), self.f.clone())
     }
-    // Start the RPC service with tokio runtime
+    /// Start the RPC service with tokio runtime
     pub fn start_tokio(&self) {
         if self.f.is_empty() {
             panic!("No function insert");
         }
         tokio_rpc_service(self.service_name.clone(), self.f.clone());
     }
-    // Get the list of the routing keys
+    /// Get the list of the routing keys
     pub fn get_routing_keys(&self) -> Vec<String> {
         self.f.keys().map(|x| x.to_string()).collect()
     }
@@ -226,7 +226,7 @@ fn rpc_service(service_name: String, f: HashMap<String, fn(Vec<&Value>) -> Value
 }
 
 #[tokio::main]
-pub async fn tokio_rpc_service(service_name: String, f: HashMap<String, fn(Vec<&Value>) -> Value>) {
+async fn tokio_rpc_service(service_name: String, f: HashMap<String, fn(Vec<&Value>) -> Value>) {
     const PREFETCH_COUNT: u16 = 10;
     const QUEUE_TTL: u32 = 300000;
     // Set the log level
