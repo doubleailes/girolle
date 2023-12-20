@@ -1,14 +1,20 @@
 use futures_lite::stream::StreamExt;
+use lapin::types::{AMQPValue, LongString, ShortString};
 use lapin::{
     options::*, publisher_confirm::Confirmation, types::FieldTable, BasicProperties, Channel,
     Connection, ConnectionProperties, Result,
 };
 pub use serde_json as JsonValue;
 use serde_json::Value;
-use std::{collections::HashMap, env};
+use std::{
+    collections::{BTreeMap, HashMap},
+    env,
+};
 use tracing::{error, info, warn};
 use uuid::Uuid;
 use JsonValue::json;
+mod nameko_utils;
+use nameko_utils::push_call_id;
 
 fn get_address() -> String {
     let user = env::var("RABBITMQ_USER").expect("RABBITMQ_USER not set");
@@ -42,7 +48,11 @@ async fn publish(
 /// The service_name is the name of the service in the Nameko microservice
 /// The f is a HashMap of the functions that will be called when the routing key is called
 /// The function f must return a serializable value
-pub fn rpc_service(service_name: String, f: HashMap<String, fn(Vec<&Value>) -> Value>) -> Result<()> {
+pub fn rpc_service(
+    service_name: String,
+    f: HashMap<String, fn(Vec<&Value>) -> Value>,
+) -> Result<()> {
+    const PREFETCH_COUNT: u16 = 10;
     // Set the log level
     if std::env::var("RUST_LOG").is_err() {
         std::env::set_var("RUST_LOG", "info");
@@ -64,7 +74,7 @@ pub fn rpc_service(service_name: String, f: HashMap<String, fn(Vec<&Value>) -> V
         let incomming_channel = conn.create_channel().await?;
         let response_channel = conn.create_channel().await?;
         incomming_channel
-            .basic_qos(10, BasicQosOptions::default())
+            .basic_qos(PREFETCH_COUNT, BasicQosOptions::default())
             .await?;
         let mut queue_declare_options = QueueDeclareOptions::default();
         queue_declare_options.durable = true;
@@ -83,12 +93,11 @@ pub fn rpc_service(service_name: String, f: HashMap<String, fn(Vec<&Value>) -> V
             .unwrap();
         // Declare the reply queue
         let rpc_queue_reply = format!("rpc.reply-{}-{}", service_name, &id);
+        let mut response_arguments = FieldTable::default();
+        response_arguments.insert("x-expires".into(), 300000.into());
+
         response_channel
-            .queue_declare(
-                &rpc_queue_reply,
-                queue_declare_options,
-                FieldTable::default(),
-            )
+            .queue_declare(&rpc_queue_reply, queue_declare_options, response_arguments)
             .await
             .unwrap();
         response_channel
@@ -147,6 +156,12 @@ pub fn rpc_service(service_name: String, f: HashMap<String, fn(Vec<&Value>) -> V
                     panic!("reply_to_id: None")
                 }
             };
+            let opt_headers = delivery.properties.headers();
+            let headers = opt_headers.as_ref().expect("headers").clone();
+            let inner_headers = headers.inner();
+            let call_id_stack = inner_headers.get("nameko.call_id_stack").unwrap();
+            let toto = push_call_id(call_id_stack, &opt_routing_key, &id.to_string());
+            info!(?toto, "nameko_call_id");
             let properties = BasicProperties::default()
                 .with_correlation_id(correlation_id.into())
                 .with_content_type("application/json".into())

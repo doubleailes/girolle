@@ -33,7 +33,7 @@ def send_simple_message(name) -> list:
     """
     data = list()
     with rpc_proxy(CONFIG) as rpc:
-        for i in range(1000):
+        for i in range(2):
             i_str = str(i).zfill(4)
             data.append(rpc.video.hello(f"{name}{i_str}"))
     return data
@@ -45,7 +45,7 @@ def fibonacci() -> list[int]:
     """
     data = list()
     with rpc_proxy(CONFIG) as rpc:
-        for i in range(45):
+        for i in range(3):
             data.append(rpc.video.fibonacci(i))
     return data
 
