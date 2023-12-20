@@ -52,5 +52,5 @@ def fibonacci() -> list[int]:
 
 if __name__ == "__main__":
     start = datetime.now()
-    response = fibonacci()
+    response = send_simple_message("John")
     print(response, datetime.now() - start)
