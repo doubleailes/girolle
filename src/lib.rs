@@ -1,6 +1,9 @@
 use futures_lite::stream::StreamExt;
 use lapin::{
-    message::DeliveryResult, options::*, publisher_confirm::Confirmation, types::FieldTable,
+    message::DeliveryResult,
+    options::*,
+    publisher_confirm::Confirmation,
+    types::{FieldTable, ShortString},
     BasicProperties, Channel, Connection, ConnectionProperties, Result,
 };
 pub use serde_json as JsonValue;
@@ -38,6 +41,16 @@ async fn publish(
     // The message was correctly published
     assert_eq!(confirm, Confirmation::NotRequested);
     Ok(confirm)
+}
+
+fn get_id(opt_id: &Option<ShortString>, id_name: &str) -> String {
+    match opt_id {
+        Some(id) => id.to_string(),
+        None => {
+            error!("{}: None", id_name);
+            panic!("{}: None", id_name)
+        }
+    }
 }
 
 /// Create RPC service and listen to the Nameko RPC queue for the service_name
@@ -136,28 +149,8 @@ pub fn rpc_service(
                 .iter()
                 .collect();
             // Get the correlation_id and reply_to_id
-            let opt_correlation_id = delivery.properties.correlation_id();
-            let correlation_id = match opt_correlation_id {
-                Some(correlation_id) => correlation_id.to_string(),
-                None => {
-                    error!("correlation_id: None");
-                    panic!("correlation_id: None")
-                }
-            };
-            let opt_reply_to_id = delivery.properties.reply_to();
-            let reply_to_id = match opt_reply_to_id {
-                Some(reply_to_id) => reply_to_id.to_string(),
-                None => {
-                    error!("reply_to_id: None");
-                    panic!("reply_to_id: None")
-                }
-            };
-            let opt_headers = delivery.properties.headers();
-            let headers = insert_new_id_to_call_id(
-                opt_headers.as_ref().expect("headers").clone(),
-                &opt_routing_key,
-                &id.to_string(),
-            );
+            let correlation_id = get_id(delivery.properties.correlation_id(), "correlation_id");
+            let reply_to_id = get_id(delivery.properties.reply_to(), "reply_to_id");
             let properties = BasicProperties::default()
                 .with_correlation_id(correlation_id.into())
                 .with_content_type("application/json".into())
@@ -293,22 +286,8 @@ pub async fn tokio_rpc_service(service_name: String, f: HashMap<String, fn(Vec<&
                 .iter()
                 .collect();
             // Get the correlation_id and reply_to_id
-            let opt_correlation_id = delivery.properties.correlation_id();
-            let correlation_id = match opt_correlation_id {
-                Some(correlation_id) => correlation_id.to_string(),
-                None => {
-                    error!("correlation_id: None");
-                    panic!("correlation_id: None")
-                }
-            };
-            let opt_reply_to_id = delivery.properties.reply_to();
-            let reply_to_id = match opt_reply_to_id {
-                Some(reply_to_id) => reply_to_id.to_string(),
-                None => {
-                    error!("reply_to_id: None");
-                    panic!("reply_to_id: None")
-                }
-            };
+            let correlation_id = get_id(delivery.properties.correlation_id(), "correlation_id");
+            let reply_to_id = get_id(delivery.properties.reply_to(), "reply_to_id");
             let properties = BasicProperties::default()
                 .with_correlation_id(correlation_id.into())
                 .with_content_type("application/json".into())
