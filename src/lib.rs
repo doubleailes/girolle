@@ -26,12 +26,12 @@ use uuid::Uuid;
 use JsonValue::json;
 mod nameko_utils;
 use nameko_utils::{get_id, insert_new_id_to_call_id};
-
+pub type NamekoFunction = fn(Vec<&Value>) -> Value;
 /// The RPC service is a struct that contains a HashMap of functions.
 /// The functions are called when the routing key is called.
 pub struct RpcService {
     service_name: String,
-    f: HashMap<String, fn(Vec<&Value>) -> Value>,
+    f: HashMap<String, NamekoFunction>,
 }
 impl RpcService {
     // Create a new RPC service with a emptry HashMap of functions
@@ -46,7 +46,7 @@ impl RpcService {
         self.service_name = service_name;
     }
     // Insert a new function in the HashMap
-    pub fn insert(&mut self, function: String, f: fn(Vec<&Value>) -> Value) {
+    pub fn insert(&mut self, function: String, f: NamekoFunction) {
         let routing_key = format!("{}.{}", self.service_name, function);
         self.f.insert(routing_key, f);
     }
@@ -149,7 +149,7 @@ async fn setup_queues(
 }
 
 /// Execute the delivery
-async fn execute_delivery(delivery: Delivery, id: &Uuid, fn_service: fn(Vec<&Value>) -> Value, response_channel: &Channel, rpc_queue_reply: &String){
+async fn execute_delivery(delivery: Delivery, id: &Uuid, fn_service: NamekoFunction, response_channel: &Channel, rpc_queue_reply: &String){
     let opt_routing_key = delivery.routing_key.to_string();
     let incomming_data: Value = serde_json::from_slice(&delivery.data).expect("json");
     let args: Vec<&Value> = incomming_data["args"]
@@ -189,7 +189,7 @@ async fn execute_delivery(delivery: Delivery, id: &Uuid, fn_service: fn(Vec<&Val
 /// The service_name is the name of the service in the Nameko microservice
 /// The f is a HashMap of the functions that will be called when the routing key is called
 /// The function f must return a serializable value
-fn rpc_service(service_name: String, f: HashMap<String, fn(Vec<&Value>) -> Value>) -> Result<()> {
+fn rpc_service(service_name: String, f: HashMap<String, NamekoFunction>) -> Result<()> {
     // Define the queue name1
     let rpc_queue = format!("rpc-{}", service_name);
     // Add tracing
@@ -201,7 +201,6 @@ fn rpc_service(service_name: String, f: HashMap<String, fn(Vec<&Value>) -> Value
 
     async_global_executor::block_on(async {
         let (incomming_channel, response_channel,rpc_queue_reply) = setup_queues(&service_name, &id, ConnectionProperties::default()).await?;
-        let rpc_queue_reply = format!("rpc.reply-{}-{}", service_name, &id);
         // Start a consumer.
         let mut consumer = incomming_channel
             .basic_consume(
@@ -216,7 +215,7 @@ fn rpc_service(service_name: String, f: HashMap<String, fn(Vec<&Value>) -> Value
         while let Some(delivery) = consumer.next().await {
             let delivery = delivery.expect("error in consumer");
             let opt_routing_key = delivery.routing_key.to_string();
-            let fn_service: fn(Vec<&Value>) -> Value = match f.get(&opt_routing_key) {
+            let fn_service: NamekoFunction = match f.get(&opt_routing_key) {
                 Some(fn_service) => *fn_service,
                 None => {
                     warn!("fn_service: {} not found", &opt_routing_key);
@@ -231,8 +230,12 @@ fn rpc_service(service_name: String, f: HashMap<String, fn(Vec<&Value>) -> Value
     })
 }
 
+/// tokio_rpc_service is a non-blocking function that start the RPC service
+/// The service_name is the name of the service in the Nameko microservice
+/// The f is a HashMap of the functions that will be called when the routing key is called
+/// The function f must return a serializable value
 #[tokio::main]
-pub async fn tokio_rpc_service(service_name: String, f: HashMap<String, fn(Vec<&Value>) -> Value>) -> Result<()> {
+async fn tokio_rpc_service(service_name: String, f: HashMap<String, NamekoFunction>) -> Result<()> {
     // Set the log level
     if std::env::var("RUST_LOG").is_err() {
         std::env::set_var("RUST_LOG", "info");
