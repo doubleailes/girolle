@@ -225,6 +225,10 @@ fn rpc_service(service_name: String, f: HashMap<String, fn(Vec<&Value>) -> Value
     })
 }
 
+/// tokio_rpc_service is a non-blocking function that start the RPC service
+/// The service_name is the name of the service in the Nameko microservice
+/// The f is a HashMap of the functions that will be called when the routing key is called
+/// The function f must return a serializable value
 #[tokio::main]
 async fn tokio_rpc_service(service_name: String, f: HashMap<String, fn(Vec<&Value>) -> Value>) {
     const PREFETCH_COUNT: u16 = 10;
