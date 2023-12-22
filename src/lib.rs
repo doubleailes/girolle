@@ -105,6 +105,8 @@ async fn setup_queues(
     id: &Uuid,
     options: ConnectionProperties,
 ) -> lapin::Result<(lapin::Channel, lapin::Channel,std::string::String)> {
+    const PREFETCH_COUNT: u16 = 10;
+    const QUEUE_TTL: u32 = 300000;
     let addr = get_address();
     // Connect to RabbitMQ
     let conn = Connection::connect(&addr, options).await?;
@@ -112,7 +114,9 @@ async fn setup_queues(
     // Open a channel and set the QOS
     let incomming_channel = conn.create_channel().await?;
     let response_channel = conn.create_channel().await?;
-    const QUEUE_TTL: u32 = 300000;
+    incomming_channel
+    .basic_qos(PREFETCH_COUNT, BasicQosOptions::default())
+    .await?;
     let rpc_queue = format!("rpc-{}", service_name);
     let routing_key = format!("{}.*", service_name);
     let mut queue_declare_options = QueueDeclareOptions::default();
