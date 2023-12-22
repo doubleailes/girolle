@@ -16,17 +16,18 @@
 use futures_lite::stream::StreamExt;
 use lapin::{
     message::{DeliveryResult, Delivery}, options::*, publisher_confirm::Confirmation, types::FieldTable,
-    BasicProperties, Channel, Connection, ConnectionProperties, Result,
+    BasicProperties, Channel, Connection, ConnectionProperties,
 };
 pub use serde_json as JsonValue;
 use serde_json::Value;
 use std::{collections::HashMap, env};
-use tracing::{info, warn, debug};
+use tracing::{info, warn, debug, error};
 use uuid::Uuid;
 use JsonValue::json;
 mod nameko_utils;
 use nameko_utils::{get_id, insert_new_id_to_call_id};
-pub type NamekoFunction = fn(Vec<&Value>) -> Value;
+pub type Result<T> = std::result::Result<T, serde_json::Error>;
+pub type NamekoFunction = fn(Vec<&Value>) -> Result<Value>;
 /// The RPC service is a struct that contains a HashMap of functions.
 /// The functions are called when the routing key is called.
 pub struct RpcService {
@@ -51,14 +52,14 @@ impl RpcService {
         self.f.insert(routing_key, f);
     }
     // Start the RPC service
-    pub fn start(&self) -> Result<()> {
+    pub fn start(&self) -> lapin::Result<()>{
         if self.f.is_empty() {
             panic!("No function insert");
         }
         rpc_service(self.service_name.clone(), self.f.clone())
     }
     // Start the RPC service with tokio runtime
-    pub fn start_tokio(&self) -> Result<()> {
+    pub fn start_tokio(&self) -> lapin::Result<()> {
         if self.f.is_empty() {
             panic!("No function insert");
         }
@@ -82,7 +83,7 @@ async fn publish(
     payload: String,
     properties: BasicProperties,
     reply_to_id: String,
-) -> Result<Confirmation> {
+) -> lapin::Result<Confirmation> {
     let confirm = response_channel
         .basic_publish(
             "nameko-rpc",
@@ -103,7 +104,7 @@ async fn setup_queues(
     service_name: &String,
     id: &Uuid,
     options: ConnectionProperties,
-) -> Result<(lapin::Channel, lapin::Channel,std::string::String)> {
+) -> lapin::Result<(lapin::Channel, lapin::Channel,std::string::String)> {
     let addr = get_address();
     // Connect to RabbitMQ
     let conn = Connection::connect(&addr, options).await?;
@@ -171,15 +172,33 @@ async fn execute_delivery(delivery: Delivery, id: &Uuid, fn_service: NamekoFunct
                 .with_content_type("application/json".into())
                 .with_reply_to(rpc_queue_reply.clone().into())
                 .with_headers(headers);
-
             // Publish the response
-            let payload: String = json!(
-                {
-                    "result": fn_service(args),
-                    "error": null,
+            let payload: String = match fn_service(args) {
+                Ok(result) => json!(
+                    {
+                        "result": result,
+                        "error": null,
+                    }
+                )
+                .to_string(),
+                Err(error) =>{
+                    error!("Error: {}", &error);
+                    let err_str = error.to_string();
+                    let exc = HashMap::from([
+                        ("exc_path", "builtins.Exception"),
+                        ("exc_type", "Exception"),
+                        ("exc_args", "Error"),
+                        ("value", &err_str),
+                    ]);
+                    json!(
+                        {
+                            "result": null,
+                            "error": exc,
+                        }
+                    )
+                    .to_string()
                 }
-            )
-            .to_string();
+            };
             publish(&response_channel, payload, properties, reply_to_id)
                 .await
                 .expect("Error publishing");
@@ -189,7 +208,7 @@ async fn execute_delivery(delivery: Delivery, id: &Uuid, fn_service: NamekoFunct
 /// The service_name is the name of the service in the Nameko microservice
 /// The f is a HashMap of the functions that will be called when the routing key is called
 /// The function f must return a serializable value
-fn rpc_service(service_name: String, f: HashMap<String, NamekoFunction>) -> Result<()> {
+fn rpc_service(service_name: String, f: HashMap<String, NamekoFunction>) -> lapin::Result<()> {
     // Define the queue name1
     let rpc_queue = format!("rpc-{}", service_name);
     // Add tracing
@@ -235,7 +254,7 @@ fn rpc_service(service_name: String, f: HashMap<String, NamekoFunction>) -> Resu
 /// The f is a HashMap of the functions that will be called when the routing key is called
 /// The function f must return a serializable value
 #[tokio::main]
-async fn tokio_rpc_service(service_name: String, f: HashMap<String, NamekoFunction>) -> Result<()> {
+async fn tokio_rpc_service(service_name: String, f: HashMap<String, NamekoFunction>) -> lapin::Result<()> {
     // Set the log level
     if std::env::var("RUST_LOG").is_err() {
         std::env::set_var("RUST_LOG", "info");
@@ -284,7 +303,7 @@ async fn tokio_rpc_service(service_name: String, f: HashMap<String, NamekoFuncti
             };
 
             let opt_routing_key = delivery.routing_key.to_string();
-            let fn_service: fn(Vec<&Value>) -> Value = match f_clone.get(&opt_routing_key) {
+            let fn_service: NamekoFunction = match f_clone.get(&opt_routing_key) {
                 Some(fn_service) => *fn_service,
                 None => {
                     warn!("fn_service: None");
