@@ -21,7 +21,7 @@ use lapin::{
 pub use serde_json as JsonValue;
 use serde_json::Value;
 use std::{collections::HashMap, env};
-use tracing::{info, warn};
+use tracing::{info, warn, debug};
 use uuid::Uuid;
 use JsonValue::json;
 mod nameko_utils;
@@ -197,7 +197,7 @@ fn rpc_service(service_name: String, f: HashMap<String, NamekoFunction>) -> Resu
     // Uuid of the service
     let id = Uuid::new_v4();
     // check list of function
-    dbg!("List of functions {:?}", f.keys());
+    debug!("List of functions {:?}", f.keys());
 
     async_global_executor::block_on(async {
         let (incomming_channel, response_channel,rpc_queue_reply) = setup_queues(&service_name, &id, ConnectionProperties::default()).await?;
@@ -219,7 +219,7 @@ fn rpc_service(service_name: String, f: HashMap<String, NamekoFunction>) -> Resu
                 Some(fn_service) => *fn_service,
                 None => {
                     warn!("fn_service: {} not found", &opt_routing_key);
-                    continue;
+                    return Ok(());
                 }
             };
             delivery.ack(BasicAckOptions::default()).await.expect("ack");
