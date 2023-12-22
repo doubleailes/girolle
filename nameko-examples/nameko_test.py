@@ -24,7 +24,7 @@ def rpc_proxy(CONFIG) -> ClusterRpcClient:
     return ClusterRpcClient(CONFIG)
 
 
-def send_simple_message(name) -> list:
+def send_messages(name: str, count: int = 1) -> list:
     """
     send_simple_message send a message to the queue
 
@@ -33,24 +33,34 @@ def send_simple_message(name) -> list:
     """
     data = list()
     with rpc_proxy(CONFIG) as rpc:
-        for i in range(2):
+        for i in range(count):
             i_str = str(i).zfill(4)
             data.append(rpc.video.hello(f"{name}{i_str}"))
     return data
 
+def send_simple_message(name: str) -> str:
+    """
+    send_simple_message send a message to the queue
 
-def fibonacci() -> list[int]:
+    :param name: name of the person
+    :type name: str
+    """
+    with rpc_proxy(CONFIG) as rpc:
+        return rpc.video.hello(name)
+
+
+def fibonacci(n: int = 10) -> list[int]:
     """
     fibonacci send a message to the queue
     """
     data = list()
     with rpc_proxy(CONFIG) as rpc:
-        for i in range(3):
+        for i in range(n):
             data.append(rpc.video.fibonacci(i))
     return data
 
 
 if __name__ == "__main__":
     start = datetime.now()
-    response = send_simple_message("John")
+    response = send_simple_message(True)
     print(response, datetime.now() - start)
