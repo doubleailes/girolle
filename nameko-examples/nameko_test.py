@@ -1,4 +1,5 @@
 from nameko.standalone.rpc import ClusterRpcClient, config
+from nameko.exceptions import RemoteError
 import os
 from datetime import datetime
 
@@ -62,5 +63,16 @@ def fibonacci(n: int = 10) -> list[int]:
 
 if __name__ == "__main__":
     start = datetime.now()
-    response = send_simple_message(True)
+    response = send_simple_message("John Doe")
     print(response, datetime.now() - start)
+    start = datetime.now()
+    response = send_messages("John Doe", 10)
+    print(response, datetime.now() - start)
+    start = datetime.now()
+    response = fibonacci(10)
+    print(response, datetime.now() - start)
+    try:
+        response = send_simple_message(True)
+    except RemoteError as e:
+        print(e)
+
