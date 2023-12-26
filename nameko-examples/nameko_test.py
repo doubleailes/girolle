@@ -2,6 +2,7 @@ from nameko.standalone.rpc import ClusterRpcClient, config
 from nameko.exceptions import RemoteError
 import os
 from datetime import datetime
+import time
 
 CONFIG = {
     "AMQP_URI": "pyamqp://{}:{}@{}/".format(
@@ -60,6 +61,16 @@ def fibonacci(n: int = 10) -> list[int]:
             data.append(rpc.video.fibonacci(i))
     return data
 
+def async_fibonacci(n: int = 10) -> list[int]:
+    """
+    fibonacci send a message to the queue
+    """
+    data = list()
+    with rpc_proxy(CONFIG) as rpc:
+        for i in range(n):
+            data.append(rpc.video.fibonacci.call_async(i))
+        return [d.result() for d in data]
+
 
 if __name__ == "__main__":
     start = datetime.now()
@@ -69,10 +80,8 @@ if __name__ == "__main__":
     response = send_messages("John Doe", 10)
     print(response, datetime.now() - start)
     start = datetime.now()
-    response = fibonacci(10)
+    response = fibonacci(40)
     print(response, datetime.now() - start)
-    try:
-        response = send_simple_message(True)
-    except RemoteError as e:
-        print(e)
-
+    start = datetime.now()
+    response = async_fibonacci(40)
+    print(response, datetime.now() - start)
