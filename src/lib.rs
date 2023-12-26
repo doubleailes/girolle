@@ -24,6 +24,8 @@ use std::{collections::HashMap, env};
 use tracing::{info, warn, debug, error};
 use uuid::Uuid;
 use JsonValue::json;
+mod config;
+use config::get_config;
 mod nameko_utils;
 use nameko_utils::{get_id, insert_new_id_to_call_id};
 pub type Result<T> = std::result::Result<T, serde_json::Error>;
@@ -71,11 +73,13 @@ impl RpcService {
     }
 }
 
+
 fn get_address() -> String {
-    let user = env::var("RABBITMQ_USER").expect("RABBITMQ_USER not set");
-    let password = env::var("RABBITMQ_PASSWORD").expect("RABBITMQ_PASSWORD not set");
-    let host = env::var("RABBITMQ_HOST").expect("RABBITMQ_HOST not set");
-    let port = env::var("RABBITMQ_PORT").unwrap_or("5672".to_string());
+    let cfg = get_config();
+    let user = env::var("RABBITMQ_USER").unwrap_or(cfg.get_rabbitmq_user());
+    let password = env::var("RABBITMQ_PASSWORD").unwrap_or(cfg.get_rabbitmq_password());
+    let host = env::var("RABBITMQ_HOST").unwrap_or(cfg.get_rabitmq_host());
+    let port = env::var("RABBITMQ_PORT").unwrap_or(cfg.get_rabbitmq_port());
     format!("amqp://{}:{}@{}:{}/%2f", user, password, host, port)
 }
 async fn publish(
@@ -105,8 +109,9 @@ async fn setup_queues(
     id: &Uuid,
     options: ConnectionProperties,
 ) -> lapin::Result<(lapin::Channel, lapin::Channel,std::string::String)> {
-    const PREFETCH_COUNT: u16 = 10;
-    const QUEUE_TTL: u32 = 300000;
+    let cfg = get_config();
+    let prefetch_count: u16 = cfg.get_prefetch_count();
+    let queue_ttl: u32 = cfg.get_queue_ttl();
     let addr = get_address();
     // Connect to RabbitMQ
     let conn = Connection::connect(&addr, options).await?;
@@ -115,7 +120,7 @@ async fn setup_queues(
     let incomming_channel = conn.create_channel().await?;
     let response_channel = conn.create_channel().await?;
     incomming_channel
-    .basic_qos(PREFETCH_COUNT, BasicQosOptions::default())
+    .basic_qos(prefetch_count, BasicQosOptions::default())
     .await?;
     let rpc_queue = format!("rpc-{}", service_name);
     let routing_key = format!("{}.*", service_name);
@@ -136,7 +141,7 @@ async fn setup_queues(
     info!(?queue, "Declared queue");
     // Declare the reply queue
     let mut response_arguments = FieldTable::default();
-    response_arguments.insert("x-expires".into(), QUEUE_TTL.into());
+    response_arguments.insert("x-expires".into(), queue_ttl.into());
     let rpc_queue_reply = format!("rpc.reply-{}-{}", service_name, &id);
     response_channel
         .queue_declare(&rpc_queue_reply, queue_declare_options, response_arguments)
