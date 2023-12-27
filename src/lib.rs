@@ -1,5 +1,11 @@
+/// # Girolle
+/// 
+/// ## Description
+/// 
 /// This crate is a Rust implementation of the Nameko RPC protocol.
-/// It allows to create a RPC service in Rust that can be called from a Nameko microservice.
+/// It allows to create a RPC service or Rpc Call in Rust that can be called
+/// from or to a Nameko microservice.
+/// 
 /// ## Description of the struct
 ///
 /// The RPC service is a struct that contains a HashMap of functions.
@@ -8,26 +14,213 @@
 ///
 /// ## Usage
 ///
+/// ### RPC service
+/// 
 /// The RPC service can be started with the function start() or start_tokio().
 /// The function start() is blocking and start_tokio() is non-blocking.
 /// The function start_tokio() is using tokio runtime.
 /// The function start() is using async_global_executor.
-///
+/// 
+/// ### RPC call
+/// 
+/// The RPC call is a struct that contains an identifier.
+/// The identifier is used to identify the RPC call.
+/// The function send() is used to send the payload to the Nameko microservice.
+/// The function send() is **async**.
 use futures_lite::stream::StreamExt;
 use lapin::{
-    message::{DeliveryResult, Delivery}, options::*, publisher_confirm::Confirmation, types::FieldTable,
-    BasicProperties, Channel, Connection, ConnectionProperties,
+    message::Delivery,
+    options::*,
+    publisher_confirm::Confirmation,
+    types::{AMQPValue, FieldArray, FieldTable},
+    BasicProperties, Channel,
+    Consumer,
 };
 pub use serde_json as JsonValue;
 use serde_json::Value;
-use std::{collections::HashMap, env};
-use tracing::{info, warn, debug, error};
+use std::collections::HashMap;
+use tracing::{debug, error, info, warn};
 use uuid::Uuid;
 use JsonValue::json;
 mod nameko_utils;
 use nameko_utils::{get_id, insert_new_id_to_call_id};
 pub type Result<T> = std::result::Result<T, serde_json::Error>;
 pub type NamekoFunction = fn(Vec<&Value>) -> Result<Value>;
+use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
+mod queue;
+use queue::{create_message_queue, create_service_queue, get_address};
+
+#[derive(Debug, Serialize, Deserialize)]
+struct Payload {
+    args: Vec<Value>,
+    kwargs: HashMap<String, String>,
+}
+impl Payload {
+    pub fn new(args: Vec<Value>) -> Self {
+        Self { args, kwargs: HashMap::new() }
+    }
+}
+pub struct RpcCall {
+    identifier: Uuid,
+}
+impl RpcCall {
+    /// # new
+    /// 
+    /// ## Description
+    /// 
+    /// This function create a new RpcCall struct
+    /// 
+    /// ## Example
+    /// 
+    /// ```rust
+    /// use girolle::RpcCall;
+    /// 
+    /// #[tokio::main]
+    /// async fn main() {
+    ///   let rpc_call = RpcCall::new();
+    /// }
+    pub fn new() -> Self {
+        Self {
+            identifier: Uuid::new_v4(),
+        }
+    }
+    /// # get_identifier
+    /// 
+    /// ## Description
+    /// 
+    /// This function return the identifier of the RpcCall struct
+    /// 
+    /// ## Example
+    /// 
+    /// ```rust
+    /// use girolle::RpcCall;
+    /// 
+    /// #[tokio::main]
+    /// async fn main() {
+    ///  let rpc_call = RpcCall::new();
+    /// let identifier = rpc_call.get_identifier();
+    /// }
+    pub fn get_identifier(&self) -> String {
+        self.identifier.to_string()
+    }
+    pub async fn call_async(
+        &self,
+        service_name: String,
+        method_name: String,
+        args: Vec<Value>,
+    ) -> lapin::Result<Consumer> {
+        let payload = Payload::new(args);
+        let correlation_id = Uuid::new_v4().to_string();
+        let routing_key = format!("{}.{}", service_name, method_name);
+        let channel = create_service_queue(service_name.clone()).await?;
+        let mut headers = BTreeMap::new();
+        headers.insert(
+            "nameko.AMQP_URI".into(),
+            AMQPValue::LongString(get_address().into()),
+        );
+        headers.insert(
+            "nameko.call_id_stack".into(),
+            AMQPValue::FieldArray(FieldArray::from(vec![AMQPValue::LongString(
+                self.identifier.to_string().into(),
+            )])),
+        );
+        let properties = BasicProperties::default()
+            .with_reply_to(self.identifier.to_string().into())
+            .with_correlation_id(correlation_id.into())
+            .with_content_type("application/json".into())
+            .with_content_encoding("utf-8".into())
+            .with_headers(FieldTable::from(headers));
+        // The message was correctly published
+        let reply_name = "rpc.listener".to_string();
+        let rpc_queue_reply = format!("{}-{}", reply_name, &self.identifier);
+        let reply_queue = create_message_queue(rpc_queue_reply.clone(), &self.identifier).await?;
+        let consumer = reply_queue
+            .basic_consume(
+                &rpc_queue_reply,
+                "my_consumer",
+                BasicConsumeOptions::default(),
+                FieldTable::default(),
+            )
+            .await?;
+        let confirm = channel
+            .basic_publish(
+                "nameko-rpc",
+                &routing_key,
+                BasicPublishOptions::default(),
+                serde_json::to_value(payload)
+                    .expect("json")
+                    .to_string()
+                    .as_bytes(),
+                properties,
+            )
+            .await?
+            .await?;
+        assert_eq!(confirm, Confirmation::NotRequested);
+        //Ok(self.result(&mut consumer).await)
+        Ok(consumer)
+    }
+    pub async fn result(&self, consumer: &mut Consumer) -> Value {
+        let delivery = consumer
+            .next()
+            .await
+            .expect("error in consumer")
+            .expect("error in consumer");
+        let incomming_data: Value = serde_json::from_slice(&delivery.data).expect("json");
+        delivery.ack(BasicAckOptions::default()).await.expect("ack");
+        match incomming_data["error"].as_object() {
+            Some(error) => {
+                let value = error["value"].as_str().expect("value");
+                error!("Error: {}", value);
+                panic!("Error: {}", value);
+            }
+            None => {}
+        }
+        incomming_data["result"].clone()
+    }
+    /// # send
+    /// 
+    /// ## Description
+    /// 
+    /// This function send the payload to the Nameko microservice, using the
+    /// service name and the function to target. This function is async.
+    /// 
+    /// ## Arguments
+    /// 
+    /// * `service_name` - The name of the service in the Nameko microservice
+    /// * `method_name` - The name of the function to call
+    /// * `args` - The arguments of the function
+    /// 
+    /// ## Example
+    /// 
+    /// ```rust
+    /// use std::vec;
+    /// use girolle::{JsonValue::Value, RpcCall};
+    /// use serde_json::Number;
+    /// 
+    /// #[tokio::main]
+    /// async fn main() {
+    ///    let rpc_call = RpcCall::new();
+    ///    let t:Number = serde_json::from_str("30").unwrap();
+    ///    let payload  = vec![t.into()];
+    ///    let result = rpc_call.send("video".to_string(), "fibonacci".to_string(), new_payload).await.unwrap();
+    ///    println!("{:?}", result);
+    /// }
+    /// ```
+    pub async fn send(
+        &self,
+        service_name: String,
+        method_name: String,
+        args: Vec<Value>,
+    ) -> Result<Value> {
+        let mut consumer = self
+            .call_async(service_name, method_name, args)
+            .await
+            .expect("call");
+        Ok(self.result(&mut consumer).await)
+    }
+}
+
 /// The RPC service is a struct that contains a HashMap of functions.
 /// The functions are called when the routing key is called.
 pub struct RpcService {
@@ -35,49 +228,141 @@ pub struct RpcService {
     f: HashMap<String, NamekoFunction>,
 }
 impl RpcService {
-    // Create a new RPC service with a emptry HashMap of functions
+    /// # new
+    /// 
+    /// ## Description
+    /// 
+    /// This function create a new RpcService struct
+    /// 
+    /// ## Arguments
+    /// 
+    /// * `service_name` - The name of the service in the Nameko microservice
+    /// 
+    /// ## Example
+    /// 
+    /// ```rust
+    /// use girolle::RpcService;
+    /// 
+    /// fn main() {
+    ///     let services: RpcService = RpcService::new("video".to_string());
+    /// }
     pub fn new(service_name: String) -> Self {
         Self {
             service_name,
             f: HashMap::new(),
         }
     }
-    // Set a new service name
+    /// # set_service_name
+    /// 
+    /// ## Description
+    /// 
+    /// This function set the service name of the RpcService struct
+    /// 
+    /// ## Arguments
+    /// 
+    /// * `service_name` - The name of the service in the Nameko microservice
+    /// 
+    /// ## Example
+    /// 
+    /// ```rust
+    /// use girolle::RpcService;
+    /// 
+    /// fn main() {
+    ///    let mut services: RpcService = RpcService::new("video".to_string());
+    ///    services.set_service_name("other".to_string());
+    /// }
     pub fn set_service_name(&mut self, service_name: String) {
         self.service_name = service_name;
     }
-    // Insert a new function in the HashMap
-    pub fn insert(&mut self, function: String, f: NamekoFunction) {
-        let routing_key = format!("{}.{}", self.service_name, function);
+    /// # insert
+    /// 
+    /// ## Description
+    /// 
+    /// This function insert a function in the RpcService struct
+    /// 
+    /// ## Arguments
+    /// 
+    /// * `method_name` - The name of the function to call
+    /// * `f` - The function to call
+    /// 
+    /// ## Example
+    /// 
+    /// ```rust
+    /// use girolle::{JsonValue::Value, RpcService};
+    /// 
+    /// fn hello(s: Vec<&Value>) -> Result<Value> {
+    ///    // Parse the incomming data
+    ///   let n: String = serde_json::from_value(s[0].clone())?;
+    ///   let hello_str: Value = format!("Hello, {}!, by Girolle", n).into();
+    ///   Ok(hello_str)
+    /// }
+    /// 
+    /// fn main() {
+    ///   let mut services: RpcService = RpcService::new("video".to_string());
+    ///   services.insert("hello".to_string(), hello);
+    /// }
+    pub fn insert(&mut self, method_name: String, f: NamekoFunction) {
+        let routing_key = format!("{}.{}", self.service_name, method_name);
         self.f.insert(routing_key, f);
     }
-    // Start the RPC service
-    pub fn start(&self) -> lapin::Result<()>{
+    /// # start
+    /// 
+    /// ## Description
+    /// 
+    /// This function start the RpcService struct
+    /// 
+    /// ## Example
+    /// 
+    /// ```rust
+    /// use girolle::{JsonValue::Value, RpcService};
+    /// 
+    /// fn hello(s: Vec<&Value>) -> Result<Value> {
+    ///     // Parse the incomming data
+    ///     let n: String = serde_json::from_value(s[0].clone())?;
+    ///     let hello_str: Value = format!("Hello, {}!, by Girolle", n).into();
+    ///    Ok(hello_str)
+    /// }
+    /// 
+    /// fn main() {
+    ///    let mut services: RpcService = RpcService::new("video".to_string());
+    ///    services.insert("hello".to_string(), hello);
+    ///    services.start();
+    /// }
+    pub fn start(&self) -> lapin::Result<()> {
         if self.f.is_empty() {
             panic!("No function insert");
         }
         rpc_service(self.service_name.clone(), self.f.clone())
     }
-    // Start the RPC service with tokio runtime
-    pub fn start_tokio(&self) -> lapin::Result<()> {
-        if self.f.is_empty() {
-            panic!("No function insert");
-        }
-        tokio_rpc_service(self.service_name.clone(), self.f.clone())
-    }
-    // Get the list of the routing keys
+    /// # get_routing_keys
+    /// 
+    /// ## Description
+    /// 
+    /// This function return the routing keys of the RpcService struct
+    /// 
+    /// ## Example
+    /// 
+    /// ```rust
+    /// use girolle::{JsonValue::Value, RpcService};
+    /// 
+    /// fn hello(s: Vec<&Value>) -> Result<Value> {
+    /// 
+    ///    // Parse the incomming data
+    ///    let n: String = serde_json::from_value(s[0].clone())?;
+    ///    let hello_str: Value = format!("Hello, {}!, by Girolle", n).into();
+    ///    Ok(hello_str)
+    /// }
+    /// 
+    /// fn main() {
+    ///    let mut services: RpcService = RpcService::new("video".to_string());
+    ///    services.insert("hello".to_string(), hello);
+    ///    let routing_keys = services.get_routing_keys();
+    /// }
     pub fn get_routing_keys(&self) -> Vec<String> {
         self.f.keys().map(|x| x.to_string()).collect()
     }
 }
 
-fn get_address() -> String {
-    let user = env::var("RABBITMQ_USER").expect("RABBITMQ_USER not set");
-    let password = env::var("RABBITMQ_PASSWORD").expect("RABBITMQ_PASSWORD not set");
-    let host = env::var("RABBITMQ_HOST").expect("RABBITMQ_HOST not set");
-    let port = env::var("RABBITMQ_PORT").unwrap_or("5672".to_string());
-    format!("amqp://{}:{}@{}:{}/%2f", user, password, host, port)
-}
 async fn publish(
     response_channel: &Channel,
     payload: String,
@@ -99,119 +384,78 @@ async fn publish(
     Ok(confirm)
 }
 
-/// Setup the queues for the RPC service
-async fn setup_queues(
-    service_name: &String,
-    id: &Uuid,
-    options: ConnectionProperties,
-) -> lapin::Result<(lapin::Channel, lapin::Channel,std::string::String)> {
-    const PREFETCH_COUNT: u16 = 10;
-    const QUEUE_TTL: u32 = 300000;
-    let addr = get_address();
-    // Connect to RabbitMQ
-    let conn = Connection::connect(&addr, options).await?;
-    info!("CONNECTED");
-    // Open a channel and set the QOS
-    let incomming_channel = conn.create_channel().await?;
-    let response_channel = conn.create_channel().await?;
-    incomming_channel
-    .basic_qos(PREFETCH_COUNT, BasicQosOptions::default())
-    .await?;
-    let rpc_queue = format!("rpc-{}", service_name);
-    let routing_key = format!("{}.*", service_name);
-    let mut queue_declare_options = QueueDeclareOptions::default();
-    queue_declare_options.durable = true;
-    let queue = incomming_channel
-        .queue_declare(&rpc_queue, queue_declare_options, FieldTable::default())
-        .await?;
-    let _incomming_queue = incomming_channel
-        .queue_bind(
-            &rpc_queue,
-            "nameko-rpc",
-            &routing_key,
-            QueueBindOptions::default(),
-            FieldTable::default(),
-        )
-        .await?;
-    info!(?queue, "Declared queue");
-    // Declare the reply queue
-    let mut response_arguments = FieldTable::default();
-    response_arguments.insert("x-expires".into(), QUEUE_TTL.into());
-    let rpc_queue_reply = format!("rpc.reply-{}-{}", service_name, &id);
-    response_channel
-        .queue_declare(&rpc_queue_reply, queue_declare_options, response_arguments)
-        .await?;
-    response_channel
-        .queue_bind(
-            &rpc_queue_reply,
-            "nameko-rpc",
-            &format!("{}", &id),
-            QueueBindOptions::default(),
-            FieldTable::default(),
-        )
-        .await?;
-    Ok((incomming_channel, response_channel, rpc_queue_reply))
-}
 
 /// Execute the delivery
-async fn execute_delivery(delivery: Delivery, id: &Uuid, fn_service: NamekoFunction, response_channel: &Channel, rpc_queue_reply: &String){
+async fn execute_delivery(
+    delivery: Delivery,
+    id: &Uuid,
+    fn_service: NamekoFunction,
+    response_channel: &Channel,
+    rpc_queue_reply: &String,
+) {
     let opt_routing_key = delivery.routing_key.to_string();
     let incomming_data: Value = serde_json::from_slice(&delivery.data).expect("json");
     let args: Vec<&Value> = incomming_data["args"]
-                .as_array()
-                .expect("args")
-                .iter()
-                .collect();
-            // Get the correlation_id and reply_to_id
-            let correlation_id = get_id(delivery.properties.correlation_id(), "correlation_id");
-            let reply_to_id = get_id(delivery.properties.reply_to(), "reply_to_id");
-            let opt_headers = delivery.properties.headers();
-            let headers = insert_new_id_to_call_id(
-                opt_headers.as_ref().expect("headers").clone(),
-                &opt_routing_key,
-                &id.to_string(),
-            );
-            let properties = BasicProperties::default()
-                .with_correlation_id(correlation_id.into())
-                .with_content_type("application/json".into())
-                .with_reply_to(rpc_queue_reply.clone().into())
-                .with_headers(headers);
-            // Publish the response
-            let payload: String = match fn_service(args) {
-                Ok(result) => json!(
-                    {
-                        "result": result,
-                        "error": null,
-                    }
-                )
-                .to_string(),
-                Err(error) =>{
-                    error!("Error: {}", &error);
-                    let err_str = error.to_string();
-                    let exc = HashMap::from([
-                        ("exc_path", "builtins.Exception"),
-                        ("exc_type", "Exception"),
-                        ("exc_args", "Error"),
-                        ("value", &err_str),
-                    ]);
-                    json!(
-                        {
-                            "result": null,
-                            "error": exc,
-                        }
-                    )
-                    .to_string()
+        .as_array()
+        .expect("args")
+        .iter()
+        .collect();
+    // Get the correlation_id and reply_to_id
+    let correlation_id = get_id(delivery.properties.correlation_id(), "correlation_id");
+    let reply_to_id = get_id(delivery.properties.reply_to(), "reply_to_id");
+    let opt_headers = delivery.properties.headers();
+    let headers = insert_new_id_to_call_id(
+        opt_headers.as_ref().expect("headers").clone(),
+        &opt_routing_key,
+        &id.to_string(),
+    );
+    let properties = BasicProperties::default()
+        .with_correlation_id(correlation_id.into())
+        .with_content_type("application/json".into())
+        .with_reply_to(rpc_queue_reply.clone().into())
+        .with_headers(headers);
+    // Publish the response
+    let payload: String = match fn_service(args) {
+        Ok(result) => json!(
+            {
+                "result": result,
+                "error": null,
+            }
+        )
+        .to_string(),
+        Err(error) => {
+            error!("Error: {}", &error);
+            let err_str = error.to_string();
+            let exc = HashMap::from([
+                ("exc_path", "builtins.Exception"),
+                ("exc_type", "Exception"),
+                ("exc_args", "Error"),
+                ("value", &err_str),
+            ]);
+            json!(
+                {
+                    "result": null,
+                    "error": exc,
                 }
-            };
-            publish(&response_channel, payload, properties, reply_to_id)
-                .await
-                .expect("Error publishing");
+            )
+            .to_string()
+        }
+    };
+    publish(&response_channel, payload, properties, reply_to_id)
+        .await
+        .expect("Error publishing");
 }
 
-/// Create RPC service and listen to the Nameko RPC queue for the service_name
-/// The service_name is the name of the service in the Nameko microservice
-/// The f is a HashMap of the functions that will be called when the routing key is called
-/// The function f must return a serializable value
+/// # rpc_service
+/// 
+/// ## Description
+/// 
+/// This function start the RPC service
+/// 
+/// ## Arguments
+/// 
+/// * `service_name` - The name of the service in the Nameko microservice
+/// * `f` - The function to call
 fn rpc_service(service_name: String, f: HashMap<String, NamekoFunction>) -> lapin::Result<()> {
     // Define the queue name1
     let rpc_queue = format!("rpc-{}", service_name);
@@ -223,7 +467,9 @@ fn rpc_service(service_name: String, f: HashMap<String, NamekoFunction>) -> lapi
     debug!("List of functions {:?}", f.keys());
 
     async_global_executor::block_on(async {
-        let (incomming_channel, response_channel,rpc_queue_reply) = setup_queues(&service_name, &id, ConnectionProperties::default()).await?;
+        let rpc_queue_reply = format!("rpc.reply-{}-{}", service_name, &id);
+        let response_channel = create_message_queue(rpc_queue_reply.clone(), &id).await?;
+        let incomming_channel = create_service_queue(service_name).await?;
         // Start a consumer.
         let mut consumer = incomming_channel
             .basic_consume(
@@ -246,79 +492,16 @@ fn rpc_service(service_name: String, f: HashMap<String, NamekoFunction>) -> lapi
                 }
             };
             delivery.ack(BasicAckOptions::default()).await.expect("ack");
-            execute_delivery(delivery, &id, fn_service, &response_channel, &rpc_queue_reply).await;
+            execute_delivery(
+                delivery,
+                &id,
+                fn_service,
+                &response_channel,
+                &rpc_queue_reply,
+            )
+            .await;
         }
         info!("GoodBye!");
         Ok(())
     })
-}
-
-/// tokio_rpc_service is a non-blocking function that start the RPC service
-/// The service_name is the name of the service in the Nameko microservice
-/// The f is a HashMap of the functions that will be called when the routing key is called
-/// The function f must return a serializable value
-#[tokio::main]
-async fn tokio_rpc_service(service_name: String, f: HashMap<String, NamekoFunction>) -> lapin::Result<()> {
-    // Set the log level
-    if std::env::var("RUST_LOG").is_err() {
-        std::env::set_var("RUST_LOG", "info");
-    }
-    // Define the queue name1
-    let rpc_queue = format!("rpc-{}", service_name);
-    // Add tracing
-    tracing_subscriber::fmt::init();
-
-    // Uuid of the service
-    let id = Uuid::new_v4();
-
-    let options = ConnectionProperties::default()
-        // Use tokio executor and reactor.
-        // At the moment the reactor is only available for unix.
-        .with_executor(tokio_executor_trait::Tokio::current())
-        .with_reactor(tokio_reactor_trait::Tokio);
-
-    // Connect to RabbitMQ
-    let (incomming_channel, response_channel, rpc_queue_reply) = setup_queues(&service_name, &id, options).await?;
-    // Start a consumer.
-    let consumer = incomming_channel
-        .basic_consume(
-            &rpc_queue,
-            "my_consumer",
-            BasicConsumeOptions::default(),
-            FieldTable::default(),
-        )
-        .await
-        .unwrap();
-    consumer.set_delegate(move |delivery: DeliveryResult| {
-        let response_channel_clone = response_channel.clone();
-        let f_clone = f.clone();
-        let rpc_queue_reply_clone = rpc_queue_reply.clone();
-        async move {
-            let delivery = match delivery {
-                // Carries the delivery alongside its channel
-                Ok(Some(delivery)) => delivery,
-                // The consumer got canceled
-                Ok(None) => return,
-                // Carries the error and is always followed by Ok(None)
-                Err(error) => {
-                    dbg!("Failed to consume queue message {}", error);
-                    return;
-                }
-            };
-
-            let opt_routing_key = delivery.routing_key.to_string();
-            let fn_service: NamekoFunction = match f_clone.get(&opt_routing_key) {
-                Some(fn_service) => *fn_service,
-                None => {
-                    warn!("fn_service: None");
-                    return;
-                }
-            };
-            delivery.ack(BasicAckOptions::default()).await.expect("ack");
-            execute_delivery(delivery, &id, fn_service, &response_channel_clone, &rpc_queue_reply_clone).await;
-        }
-    });
-
-    std::future::pending::<()>().await;
-    Ok(())
 }

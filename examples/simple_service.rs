@@ -1,4 +1,4 @@
-use girolle::{JsonValue::Value, RpcService, Result};
+use girolle::{JsonValue::Value, Result, RpcService};
 use serde_json;
 
 fn hello(s: Vec<&Value>) -> Result<Value> {
@@ -22,8 +22,11 @@ fn fibonacci_reccursive(s: Vec<&Value>) -> Result<Value> {
 }
 
 fn main() {
+    // Create the rpc service struct
     let mut services: RpcService = RpcService::new("video".to_string());
+    // Add the services
     services.insert("hello".to_string(), hello);
     services.insert("fibonacci".to_string(), fibonacci_reccursive);
+    // Start the services
     let _ = services.start();
 }
