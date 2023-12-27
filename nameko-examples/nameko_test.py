@@ -2,6 +2,7 @@ from nameko.standalone.rpc import ClusterRpcClient, config
 from nameko.exceptions import RemoteError
 import os
 from datetime import datetime
+import time
 
 CONFIG = {
     "AMQP_URI": "pyamqp://{}:{}@{}/".format(
@@ -38,6 +39,21 @@ def send_messages(name: str, count: int = 1) -> list:
             i_str = str(i).zfill(4)
             data.append(rpc.video.hello(f"{name}{i_str}"))
     return data
+
+def send_message_async(name: str, count: int = 1) -> list:
+    """
+    send_simple_message send a message to the queue
+
+    :param name: name of the person
+    :type name: str
+    """
+    data = list()
+    with rpc_proxy(CONFIG) as rpc:
+        for i in range(count):
+            i_str = str(i).zfill(4)
+            data.append(rpc.video.hello.call_async(f"{name}{i_str}"))
+        time.sleep(1)
+        return [d.result() for d in data]
 
 def send_simple_message(name: str) -> str:
     """

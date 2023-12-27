@@ -1,12 +1,19 @@
-from nameko.rpc import rpc
+from nameko.rpc import rpc, RpcProxy
 
 
 class GreetingService:
     name = "video"
 
+    video_proxy = RpcProxy("video")
+
     @rpc
     def hello(self, name):
         return "Hello, {}!, by nameko".format(name)
+    
+    @rpc
+    def double_hello(self, name):
+        n_name = self.video_proxy.hello(name)
+        return n_name + " " + n_name
 
     @rpc
     def fibonacci(self, n):
