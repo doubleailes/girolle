@@ -194,21 +194,8 @@ impl RpcCall {
     /// * `args` - The arguments of the function
     ///
     /// ## Example
-    ///
-    /// ```rust
-    /// use std::vec;
-    /// use girolle::{JsonValue::Value, RpcCall};
-    /// use serde_json::Number;
-    ///
-    /// #[tokio::main]
-    /// async fn main() {
-    ///    let rpc_call = RpcCall::new();
-    ///    let t:Number = serde_json::from_str("30").unwrap();
-    ///    let payload  = vec![t.into()];
-    ///    let result = rpc_call.send("video".to_string(), "fibonacci".to_string(), payload).await.unwrap();
-    ///    println!("{:?}", result);
-    /// }
-    /// ```
+    /// 
+    /// See example simple_sender in the examples folder
     pub async fn send(
         &self,
         service_name: String,
