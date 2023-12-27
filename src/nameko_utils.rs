@@ -1,3 +1,6 @@
+/// # nameko_utils
+/// 
+/// This module contains functions to manipulate the headers of the AMQP messages.
 use lapin::types::{AMQPValue, FieldTable, LongString, ShortString};
 use tracing::error;
 
