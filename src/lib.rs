@@ -205,7 +205,7 @@ impl RpcCall {
     ///    let rpc_call = RpcCall::new();
     ///    let t:Number = serde_json::from_str("30").unwrap();
     ///    let payload  = vec![t.into()];
-    ///    let result = rpc_call.send("video".to_string(), "fibonacci".to_string(), new_payload).await.unwrap();
+    ///    let result = rpc_call.send("video".to_string(), "fibonacci".to_string(), payload).await.unwrap();
     ///    println!("{:?}", result);
     /// }
     /// ```
@@ -233,7 +233,7 @@ impl RpcCall {
 /// ## Example
 ///
 /// ```rust
-/// use girolle::{JsonValue::Value, RpcService};
+/// use girolle::{JsonValue::Value, RpcService, Result};
 ///
 /// fn hello(s: Vec<&Value>) -> Result<Value> {
 ///     // Parse the incomming data
@@ -245,7 +245,6 @@ impl RpcCall {
 /// fn main() {
 ///     let mut services: RpcService = RpcService::new("video".to_string());
 ///     services.insert("hello".to_string(), hello);
-///     services.start();
 /// }
 pub struct RpcService {
     service_name: String,
@@ -312,7 +311,7 @@ impl RpcService {
     /// ## Example
     ///
     /// ```rust
-    /// use girolle::{JsonValue::Value, RpcService};
+    /// use girolle::{JsonValue::Value, RpcService, Result};
     ///
     /// fn hello(s: Vec<&Value>) -> Result<Value> {
     ///    // Parse the incomming data
@@ -338,7 +337,7 @@ impl RpcService {
     /// ## Example
     ///
     /// ```rust
-    /// use girolle::{JsonValue::Value, RpcService};
+    /// use girolle::{JsonValue::Value, RpcService, Result};
     ///
     /// fn hello(s: Vec<&Value>) -> Result<Value> {
     ///     // Parse the incomming data
@@ -350,7 +349,6 @@ impl RpcService {
     /// fn main() {
     ///    let mut services: RpcService = RpcService::new("video".to_string());
     ///    services.insert("hello".to_string(), hello);
-    ///    services.start();
     /// }
     pub fn start(&self) -> lapin::Result<()> {
         if self.f.is_empty() {
@@ -367,7 +365,7 @@ impl RpcService {
     /// ## Example
     ///
     /// ```rust
-    /// use girolle::{JsonValue::Value, RpcService};
+    /// use girolle::{JsonValue::Value, RpcService, Result};
     ///
     /// fn hello(s: Vec<&Value>) -> Result<Value> {
     ///
