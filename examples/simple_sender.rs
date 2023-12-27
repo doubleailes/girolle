@@ -1,18 +1,18 @@
 use std::vec;
 use std::{thread, time};
-use girolle::{JsonValue::Value, RpcCall};
+use girolle::{JsonValue::Value, RpcClient};
 use serde_json;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Create the rpc call struct
-    let rpc_call = RpcCall::new();
+    let rpc_client = RpcClient::new();
     // Transform the number into a JsonValue
     let t: serde_json::Number = serde_json::from_str("30").unwrap();
     // Create the payload
     let new_payload = vec![t.into()];
     // Send the payload
-    let new_result = rpc_call
+    let new_result = rpc_client
         .send("video".to_string(), "fibonacci".to_string(), new_payload)
         .await?;
     let fib_result: u64 = serde_json::from_value(new_result).unwrap();
@@ -20,13 +20,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("fibonacci :{:?}", fib_result);
     assert_eq!(fib_result, 832040);
     // Create a future result
-    let future_result = rpc_call.call_async(
+    let future_result = rpc_client.call_async(
         "video".to_string(),
         "hello".to_string(),
         vec![Value::String("Toto".to_string())],
     );
     // Send a message
-    let result = rpc_call
+    let result = rpc_client
         .send(
             "video".to_string(),
             "hello".to_string(),
@@ -46,7 +46,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let two_sec = time::Duration::from_secs(20);
     thread::sleep(two_sec);
     // Print the result
-    let async_result = rpc_call.result(&mut consumer).await;
+    let async_result = rpc_client.result(&mut consumer).await;
     println!("{:?}", async_result);
     assert_eq!(
         async_result,

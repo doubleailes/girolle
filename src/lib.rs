@@ -63,10 +63,10 @@ impl Payload {
         }
     }
 }
-pub struct RpcCall {
+pub struct RpcClient {
     identifier: Uuid,
 }
-impl RpcCall {
+impl RpcClient {
     /// # new
     ///
     /// ## Description
@@ -76,11 +76,11 @@ impl RpcCall {
     /// ## Example
     ///
     /// ```rust
-    /// use girolle::RpcCall;
+    /// use girolle::RpcClient;
     ///
     /// #[tokio::main]
     /// async fn main() {
-    ///   let rpc_call = RpcCall::new();
+    ///   let rpc_call = RpcClient::new();
     /// }
     pub fn new() -> Self {
         Self {
@@ -96,11 +96,11 @@ impl RpcCall {
     /// ## Example
     ///
     /// ```rust
-    /// use girolle::RpcCall;
+    /// use girolle::RpcClient;
     ///
     /// #[tokio::main]
     /// async fn main() {
-    ///     let rpc_call = RpcCall::new();
+    ///     let rpc_call = RpcClient::new();
     ///     let identifier = rpc_call.get_identifier();
     /// }
     pub fn get_identifier(&self) -> String {
