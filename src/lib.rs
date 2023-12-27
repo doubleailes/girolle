@@ -3,40 +3,41 @@
 //! This crate is a Rust implementation of the Nameko RPC protocol.
 //! It allows to create a RPC service or Rpc Call in Rust that can be called
 //! from or to a Nameko microservice.
-//! 
+//!
 //! **Girolle** mock Nameko architecture to send request and get response.
-//! 
+//!
 //! ## Example
-//! 
+//!
 //! ### RPC Service
-//! 
+//!
 //! ```rust
-//! 
+//!
 //! use girolle::{JsonValue::Value, RpcService, Result};
-//! 
+//!
 //! fn hello(s: Vec<&Value>) -> Result<Value> {
 //!    // Parse the incomming data
 //!   let n: String = serde_json::from_value(s[0].clone())?;
 //!  let hello_str: Value = format!("Hello, {}!, by Girolle", n).into();
 //!  Ok(hello_str)
 //! }
-//! 
+//!
 //! fn main() {
 //!   let mut services: RpcService = RpcService::new("video".to_string());
 //!   services.insert("hello".to_string(), hello);
 //! }
 //! ```
-//! 
+//!
 //! ### RPC Client
-//! 
+//!
 //! ```rust
 //! use girolle::RpcClient;
-//! 
+//!
 //! #[tokio::main]
 //! async fn main() {
 //!    let rpc_call = RpcClient::new();
 //! }
 //! ```
+use futures::executor;
 use futures_lite::stream::StreamExt;
 use lapin::{
     message::Delivery,
@@ -54,15 +55,15 @@ use JsonValue::json;
 mod nameko_utils;
 use nameko_utils::{get_id, insert_new_id_to_call_id};
 /// # Result
-/// 
+///
 /// ## Description
-/// 
+///
 /// This type is used to return a Result<Value> in the RPC call
 pub type Result<T> = std::result::Result<T, serde_json::Error>;
 /// # NamekoFunction
-/// 
+///
 /// ## Description
-/// 
+///
 /// This type is used to define the function to call in the RPC service
 pub type NamekoFunction = fn(Vec<&Value>) -> Result<Value>;
 use serde::{Deserialize, Serialize};
@@ -84,20 +85,20 @@ impl Payload {
     }
 }
 /// # RpcClient
-/// 
+///
 /// ## Description
-/// 
+///
 /// This struct is used to create a RPC client. This client is used to call a
 /// function in the Nameko microservice and get a result.
-/// 
+///
 /// ## Example
-/// 
+///
 /// ```rust
 /// use girolle::RpcClient;
-/// 
+///
 /// #[tokio::main]
 /// async fn main() {
-///    let rpc_call = RpcClient::new();
+///    let rpc_client = RpcClient::new();
 /// }
 pub struct RpcClient {
     identifier: Uuid,
@@ -169,7 +170,6 @@ impl RpcClient {
             .with_content_type("application/json".into())
             .with_content_encoding("utf-8".into())
             .with_headers(FieldTable::from(headers));
-        // The message was correctly published
         let reply_name = "rpc.listener".to_string();
         let rpc_queue_reply = format!("{}-{}", reply_name, &self.identifier);
         let reply_queue = create_message_queue(rpc_queue_reply.clone(), &self.identifier).await?;
@@ -198,7 +198,8 @@ impl RpcClient {
         //Ok(self.result(&mut consumer).await)
         Ok(consumer)
     }
-    pub async fn result(&self, consumer: &mut Consumer) -> Value {
+    pub async fn result(&self, ref_consumer: Consumer) -> Value {
+        let mut consumer = ref_consumer;
         let delivery = consumer
             .next()
             .await
@@ -230,19 +231,17 @@ impl RpcClient {
     /// * `args` - The arguments of the function
     ///
     /// ## Example
-    /// 
+    ///
     /// See example simple_sender in the examples folder
-    pub async fn send(
+    pub fn send(
         &self,
         service_name: String,
         method_name: String,
         args: Vec<Value>,
     ) -> Result<Value> {
-        let mut consumer = self
-            .call_async(service_name, method_name, args)
-            .await
-            .expect("call");
-        Ok(self.result(&mut consumer).await)
+        let consumer =
+            executor::block_on(self.call_async(service_name, method_name, args)).expect("call");
+        Ok(executor::block_on(self.result(consumer)))
     }
 }
 
@@ -457,6 +456,7 @@ async fn execute_delivery(
         .with_correlation_id(correlation_id.into())
         .with_content_type("application/json".into())
         .with_reply_to(rpc_queue_reply.clone().into())
+        .with_content_encoding("utf-8".into())
         .with_headers(headers);
     // Publish the response
     let payload: String = match fn_service(args) {
