@@ -14,9 +14,9 @@ use uuid::Uuid;
 /// This function returns the address of the RabbitMQ server.
 ///
 pub fn get_address() -> String {
-    let user = env::var("RABBITMQ_USER").expect("RABBITMQ_USER not set");
-    let password = env::var("RABBITMQ_PASSWORD").expect("RABBITMQ_PASSWORD not set");
-    let host = env::var("RABBITMQ_HOST").expect("RABBITMQ_HOST not set");
+    let user = env::var("RABBITMQ_USER").unwrap_or_else(|_| "guest".into());
+    let password = env::var("RABBITMQ_PASSWORD").unwrap_or_else(|_| "guest".into());
+    let host = env::var("RABBITMQ_HOST").unwrap_or_else(|_| "127.0.0.1".into());
     let port = env::var("RABBITMQ_PORT").unwrap_or("5672".to_string());
     format!("amqp://{}:{}@{}:{}/%2f", user, password, host, port)
 }
