@@ -1,32 +1,42 @@
-/// # Girolle
-///
-/// ## Description
-///
-/// This crate is a Rust implementation of the Nameko RPC protocol.
-/// It allows to create a RPC service or Rpc Call in Rust that can be called
-/// from or to a Nameko microservice.
-///
-/// ## Description of the struct
-///
-/// The RPC service is a struct that contains a HashMap of functions.
-/// The functions are called when the routing key is called.
-/// The function must return a serializable value.
-///
-/// ## Usage
-///
-/// ### RPC service
-///
-/// The RPC service can be started with the function start() or start_tokio().
-/// The function start() is blocking and start_tokio() is non-blocking.
-/// The function start_tokio() is using tokio runtime.
-/// The function start() is using async_global_executor.
-///
-/// ### RPC call
-///
-/// The RPC call is a struct that contains an identifier.
-/// The identifier is used to identify the RPC call.
-/// The function send() is used to send the payload to the Nameko microservice.
-/// The function send() is **async**.
+//! ## Description
+//!
+//! This crate is a Rust implementation of the Nameko RPC protocol.
+//! It allows to create a RPC service or Rpc Call in Rust that can be called
+//! from or to a Nameko microservice.
+//! 
+//! **Girolle** mock Nameko architecture to send request and get response.
+//! 
+//! ## Example
+//! 
+//! ### RPC Service
+//! 
+//! ```rust
+//! 
+//! use girolle::{JsonValue::Value, RpcService, Result};
+//! 
+//! fn hello(s: Vec<&Value>) -> Result<Value> {
+//!    // Parse the incomming data
+//!   let n: String = serde_json::from_value(s[0].clone())?;
+//!  let hello_str: Value = format!("Hello, {}!, by Girolle", n).into();
+//!  Ok(hello_str)
+//! }
+//! 
+//! fn main() {
+//!   let mut services: RpcService = RpcService::new("video".to_string());
+//!   services.insert("hello".to_string(), hello);
+//! }
+//! ```
+//! 
+//! ### RPC Client
+//! 
+//! ```rust
+//! use girolle::RpcClient;
+//! 
+//! #[tokio::main]
+//! async fn main() {
+//!    let rpc_call = RpcClient::new();
+//! }
+//! ```
 use futures_lite::stream::StreamExt;
 use lapin::{
     message::Delivery,
@@ -43,7 +53,17 @@ use uuid::Uuid;
 use JsonValue::json;
 mod nameko_utils;
 use nameko_utils::{get_id, insert_new_id_to_call_id};
+/// # Result
+/// 
+/// ## Description
+/// 
+/// This type is used to return a Result<Value> in the RPC call
 pub type Result<T> = std::result::Result<T, serde_json::Error>;
+/// # NamekoFunction
+/// 
+/// ## Description
+/// 
+/// This type is used to define the function to call in the RPC service
 pub type NamekoFunction = fn(Vec<&Value>) -> Result<Value>;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
@@ -63,6 +83,22 @@ impl Payload {
         }
     }
 }
+/// # RpcClient
+/// 
+/// ## Description
+/// 
+/// This struct is used to create a RPC client. This client is used to call a
+/// function in the Nameko microservice and get a result.
+/// 
+/// ## Example
+/// 
+/// ```rust
+/// use girolle::RpcClient;
+/// 
+/// #[tokio::main]
+/// async fn main() {
+///    let rpc_call = RpcClient::new();
+/// }
 pub struct RpcClient {
     identifier: Uuid,
 }
