@@ -1,11 +1,11 @@
 /// # Girolle
-/// 
+///
 /// ## Description
-/// 
+///
 /// This crate is a Rust implementation of the Nameko RPC protocol.
 /// It allows to create a RPC service or Rpc Call in Rust that can be called
 /// from or to a Nameko microservice.
-/// 
+///
 /// ## Description of the struct
 ///
 /// The RPC service is a struct that contains a HashMap of functions.
@@ -15,14 +15,14 @@
 /// ## Usage
 ///
 /// ### RPC service
-/// 
+///
 /// The RPC service can be started with the function start() or start_tokio().
 /// The function start() is blocking and start_tokio() is non-blocking.
 /// The function start_tokio() is using tokio runtime.
 /// The function start() is using async_global_executor.
-/// 
+///
 /// ### RPC call
-/// 
+///
 /// The RPC call is a struct that contains an identifier.
 /// The identifier is used to identify the RPC call.
 /// The function send() is used to send the payload to the Nameko microservice.
@@ -33,8 +33,7 @@ use lapin::{
     options::*,
     publisher_confirm::Confirmation,
     types::{AMQPValue, FieldArray, FieldTable},
-    BasicProperties, Channel,
-    Consumer,
+    BasicProperties, Channel, Consumer,
 };
 pub use serde_json as JsonValue;
 use serde_json::Value;
@@ -58,7 +57,10 @@ struct Payload {
 }
 impl Payload {
     pub fn new(args: Vec<Value>) -> Self {
-        Self { args, kwargs: HashMap::new() }
+        Self {
+            args,
+            kwargs: HashMap::new(),
+        }
     }
 }
 pub struct RpcCall {
@@ -66,16 +68,16 @@ pub struct RpcCall {
 }
 impl RpcCall {
     /// # new
-    /// 
+    ///
     /// ## Description
-    /// 
+    ///
     /// This function create a new RpcCall struct
-    /// 
+    ///
     /// ## Example
-    /// 
+    ///
     /// ```rust
     /// use girolle::RpcCall;
-    /// 
+    ///
     /// #[tokio::main]
     /// async fn main() {
     ///   let rpc_call = RpcCall::new();
@@ -86,20 +88,20 @@ impl RpcCall {
         }
     }
     /// # get_identifier
-    /// 
+    ///
     /// ## Description
-    /// 
+    ///
     /// This function return the identifier of the RpcCall struct
-    /// 
+    ///
     /// ## Example
-    /// 
+    ///
     /// ```rust
     /// use girolle::RpcCall;
-    /// 
+    ///
     /// #[tokio::main]
     /// async fn main() {
-    ///  let rpc_call = RpcCall::new();
-    /// let identifier = rpc_call.get_identifier();
+    ///     let rpc_call = RpcCall::new();
+    ///     let identifier = rpc_call.get_identifier();
     /// }
     pub fn get_identifier(&self) -> String {
         self.identifier.to_string()
@@ -179,25 +181,25 @@ impl RpcCall {
         incomming_data["result"].clone()
     }
     /// # send
-    /// 
+    ///
     /// ## Description
-    /// 
+    ///
     /// This function send the payload to the Nameko microservice, using the
     /// service name and the function to target. This function is async.
-    /// 
+    ///
     /// ## Arguments
-    /// 
+    ///
     /// * `service_name` - The name of the service in the Nameko microservice
     /// * `method_name` - The name of the function to call
     /// * `args` - The arguments of the function
-    /// 
+    ///
     /// ## Example
-    /// 
+    ///
     /// ```rust
     /// use std::vec;
     /// use girolle::{JsonValue::Value, RpcCall};
     /// use serde_json::Number;
-    /// 
+    ///
     /// #[tokio::main]
     /// async fn main() {
     ///    let rpc_call = RpcCall::new();
@@ -221,28 +223,50 @@ impl RpcCall {
     }
 }
 
-/// The RPC service is a struct that contains a HashMap of functions.
-/// The functions are called when the routing key is called.
+/// # RpcService
+///
+/// ## Description
+///
+/// This struct is used to create a RPC service. This service will run
+/// infinitly.
+///
+/// ## Example
+///
+/// ```rust
+/// use girolle::{JsonValue::Value, RpcService};
+///
+/// fn hello(s: Vec<&Value>) -> Result<Value> {
+///     // Parse the incomming data
+///     let n: String = serde_json::from_value(s[0].clone())?;
+///     let hello_str: Value = format!("Hello, {}!, by Girolle", n).into();
+///     Ok(hello_str)
+/// }
+///
+/// fn main() {
+///     let mut services: RpcService = RpcService::new("video".to_string());
+///     services.insert("hello".to_string(), hello);
+///     services.start();
+/// }
 pub struct RpcService {
     service_name: String,
     f: HashMap<String, NamekoFunction>,
 }
 impl RpcService {
     /// # new
-    /// 
+    ///
     /// ## Description
-    /// 
+    ///
     /// This function create a new RpcService struct
-    /// 
+    ///
     /// ## Arguments
-    /// 
+    ///
     /// * `service_name` - The name of the service in the Nameko microservice
-    /// 
+    ///
     /// ## Example
-    /// 
+    ///
     /// ```rust
     /// use girolle::RpcService;
-    /// 
+    ///
     /// fn main() {
     ///     let services: RpcService = RpcService::new("video".to_string());
     /// }
@@ -253,20 +277,20 @@ impl RpcService {
         }
     }
     /// # set_service_name
-    /// 
+    ///
     /// ## Description
-    /// 
+    ///
     /// This function set the service name of the RpcService struct
-    /// 
+    ///
     /// ## Arguments
-    /// 
+    ///
     /// * `service_name` - The name of the service in the Nameko microservice
-    /// 
+    ///
     /// ## Example
-    /// 
+    ///
     /// ```rust
     /// use girolle::RpcService;
-    /// 
+    ///
     /// fn main() {
     ///    let mut services: RpcService = RpcService::new("video".to_string());
     ///    services.set_service_name("other".to_string());
@@ -275,28 +299,28 @@ impl RpcService {
         self.service_name = service_name;
     }
     /// # insert
-    /// 
+    ///
     /// ## Description
-    /// 
+    ///
     /// This function insert a function in the RpcService struct
-    /// 
+    ///
     /// ## Arguments
-    /// 
+    ///
     /// * `method_name` - The name of the function to call
     /// * `f` - The function to call
-    /// 
+    ///
     /// ## Example
-    /// 
+    ///
     /// ```rust
     /// use girolle::{JsonValue::Value, RpcService};
-    /// 
+    ///
     /// fn hello(s: Vec<&Value>) -> Result<Value> {
     ///    // Parse the incomming data
     ///   let n: String = serde_json::from_value(s[0].clone())?;
     ///   let hello_str: Value = format!("Hello, {}!, by Girolle", n).into();
     ///   Ok(hello_str)
     /// }
-    /// 
+    ///
     /// fn main() {
     ///   let mut services: RpcService = RpcService::new("video".to_string());
     ///   services.insert("hello".to_string(), hello);
@@ -306,23 +330,23 @@ impl RpcService {
         self.f.insert(routing_key, f);
     }
     /// # start
-    /// 
+    ///
     /// ## Description
-    /// 
+    ///
     /// This function start the RpcService struct
-    /// 
+    ///
     /// ## Example
-    /// 
+    ///
     /// ```rust
     /// use girolle::{JsonValue::Value, RpcService};
-    /// 
+    ///
     /// fn hello(s: Vec<&Value>) -> Result<Value> {
     ///     // Parse the incomming data
     ///     let n: String = serde_json::from_value(s[0].clone())?;
     ///     let hello_str: Value = format!("Hello, {}!, by Girolle", n).into();
     ///    Ok(hello_str)
     /// }
-    /// 
+    ///
     /// fn main() {
     ///    let mut services: RpcService = RpcService::new("video".to_string());
     ///    services.insert("hello".to_string(), hello);
@@ -335,24 +359,24 @@ impl RpcService {
         rpc_service(self.service_name.clone(), self.f.clone())
     }
     /// # get_routing_keys
-    /// 
+    ///
     /// ## Description
-    /// 
+    ///
     /// This function return the routing keys of the RpcService struct
-    /// 
+    ///
     /// ## Example
-    /// 
+    ///
     /// ```rust
     /// use girolle::{JsonValue::Value, RpcService};
-    /// 
+    ///
     /// fn hello(s: Vec<&Value>) -> Result<Value> {
-    /// 
+    ///
     ///    // Parse the incomming data
     ///    let n: String = serde_json::from_value(s[0].clone())?;
     ///    let hello_str: Value = format!("Hello, {}!, by Girolle", n).into();
     ///    Ok(hello_str)
     /// }
-    /// 
+    ///
     /// fn main() {
     ///    let mut services: RpcService = RpcService::new("video".to_string());
     ///    services.insert("hello".to_string(), hello);
@@ -383,7 +407,6 @@ async fn publish(
     assert_eq!(confirm, Confirmation::NotRequested);
     Ok(confirm)
 }
-
 
 /// Execute the delivery
 async fn execute_delivery(
@@ -447,13 +470,13 @@ async fn execute_delivery(
 }
 
 /// # rpc_service
-/// 
+///
 /// ## Description
-/// 
+///
 /// This function start the RPC service
-/// 
+///
 /// ## Arguments
-/// 
+///
 /// * `service_name` - The name of the service in the Nameko microservice
 /// * `f` - The function to call
 fn rpc_service(service_name: String, f: HashMap<String, NamekoFunction>) -> lapin::Result<()> {
