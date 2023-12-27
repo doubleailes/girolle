@@ -154,7 +154,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 - [x] write test
 - [x] create a proxy service in rust to interact with an other service
 nameko-rpc
-- supporting SSL
+- [ ] supporting SSL
 - [ ] listen to a pub/sub queue
 
 ## Limitation
