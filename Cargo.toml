@@ -21,6 +21,7 @@ serde_json = "1.0.108"
 tokio = { version = "1.35.1", features = ["full"] }
 tokio-executor-trait = "2.1.1"
 tokio-reactor-trait = "1.1.0"
+serde = { version = "1.0.193", features = ["derive"] }
 
 [dependencies.tracing]
 version = "0.1.40"
