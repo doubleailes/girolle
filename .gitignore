@@ -19,3 +19,4 @@ Cargo.lock
 # Added by the author
 /docs/public
 **/*.nu
+nameko-examples/__pycache__/nameko_service.cpython-311.pyc
