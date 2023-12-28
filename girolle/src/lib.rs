@@ -71,7 +71,6 @@ use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 mod queue;
 use queue::{create_message_queue, create_service_queue, get_address};
-pub use girolle_macro;
 
 #[derive(Debug, Serialize, Deserialize)]
 struct Payload {
