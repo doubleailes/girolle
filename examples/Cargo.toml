@@ -1,0 +1,26 @@
+[package]
+name = "examples"
+version = "0.0.0"
+publish = false
+edition = "2021"
+
+[dev-dependencies]
+girolle = { path = "../girolle" }
+tokio = { version = "1.35.1", features = ["full"] }
+serde_json = "1.0.108"
+
+[[example]]
+name = "advance_senders"
+path = "advance_senders.rs"
+
+[[example]]
+name = "simple_senders"
+path = "simple_senders.rs"
+
+[[example]]
+name = "simple_service"
+path = "simple_service.rs"
+
+[[example]]
+name = "macro_derive"
+path = "macro_derive.rs"
