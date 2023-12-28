@@ -14,8 +14,8 @@ name = "advance_senders"
 path = "advance_senders.rs"
 
 [[example]]
-name = "simple_senders"
-path = "simple_senders.rs"
+name = "simple_sender"
+path = "simple_sender.rs"
 
 [[example]]
 name = "simple_service"
