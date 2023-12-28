@@ -38,3 +38,4 @@ features = [
 ]
 
 [dev-dependencies]
+tokio = { version = "1.35.1", features = ["full"] }
