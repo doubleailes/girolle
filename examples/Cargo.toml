@@ -23,5 +23,5 @@ name = "simple_service"
 path = "simple_service.rs"
 
 [[example]]
-name = "macro_derive"
-path = "macro_derive.rs"
+name = "simple_macro"
+path = "simple_macro.rs"
