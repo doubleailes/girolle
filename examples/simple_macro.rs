@@ -1,5 +1,5 @@
-use girolle_macro::trace_var;
 use girolle::{JsonValue::Value, Result, RpcService};
+use girolle_macro::girolle;
 
 fn hello(s: Vec<&Value>) -> Result<Value> {
     // Parse the incomming data
@@ -8,6 +8,18 @@ fn hello(s: Vec<&Value>) -> Result<Value> {
     Ok(hello_str)
 }
 
+#[girolle(video)]
+fn factorial(num: u64) -> u64 {
+    match num {
+        0 => 1,
+        1 => 1,
+        _ => factorial(num - 1) * num,
+    }
+}
+
 fn main() {
-    println!("Hello, {}", hello(vec![&Value::String("Phil".to_string())]).unwrap());
+    let y = Value::from(5);
+    let t: Vec<&Value> = vec![&y];
+    let toto: Value = factorial(t).unwrap();
+    println!("toto: {:?}", toto);
 }
