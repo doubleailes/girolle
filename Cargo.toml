@@ -1,6 +1,6 @@
 [package]
 name = "girolle"
-version = "0.5.2"
+version = "0.5.3"
 edition = "2021"
 authors = ["Philippe Llerena <philippe.llerena@gmail.com>"]
 description = "A nameko like lib in rust"
