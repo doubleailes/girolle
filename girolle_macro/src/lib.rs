@@ -1,5 +1,6 @@
 use proc_macro::TokenStream;
 use quote::quote;
+use std::any::Any;
 use std::collections::HashSet;
 use syn::parse::{Parse, ParseStream};
 use syn::punctuated::Punctuated;
@@ -11,6 +12,8 @@ pub fn girolle(_metadata: TokenStream, tokens: TokenStream) -> TokenStream {
     let input_fn = parse_macro_input!(tokens as ItemFn);
     let fn_name = &input_fn.sig.ident;
     let fn_params = &input_fn.sig.inputs;
+    let first_input = fn_params.first().unwrap();
+    println!("firt_input: {:?}", first_input);
     let fn_output = &input_fn.sig.output;
     let expanded = quote! {
         fn #fn_name(s: Vec<&Value>) -> Result<Value> {
