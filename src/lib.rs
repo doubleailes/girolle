@@ -10,7 +10,7 @@
 //!
 //! ### RPC Service
 //!
-//! ```rust
+//! ```rust,no_run
 //!
 //! use girolle::{JsonValue::Value, RpcService, Result};
 //!
@@ -24,6 +24,7 @@
 //! fn main() {
 //!   let mut services: RpcService = RpcService::new("video".to_string());
 //!   services.insert("hello".to_string(), hello);
+//!   services.start();
 //! }
 //! ```
 //!
@@ -143,6 +144,36 @@ impl RpcClient {
     pub fn get_identifier(&self) -> String {
         self.identifier.to_string()
     }
+    /// # call_async
+    ///
+    /// ## Description
+    ///
+    /// This function call the Nameko microservice, using the service name and
+    /// the function to target. This function return an async consumer.
+    ///
+    /// ## Arguments
+    ///
+    /// * `service_name` - The name of the service in the Nameko microservice
+    /// * `method_name` - The name of the function to call
+    /// * `args` - The arguments of the function
+    ///
+    /// ## Example
+    ///
+    /// See example simple_sender in the examples folder
+    ///
+    /// ```rust,no_run
+    /// use girolle::RpcClient;
+    /// use girolle::JsonValue::Value;
+    ///
+    /// #[tokio::main]
+    /// async fn main() {
+    ///    let rpc_call = RpcClient::new();
+    ///    let service_name = "video".to_string();
+    ///    let method_name = "hello".to_string();
+    ///    let args = vec![Value::String("John Doe".to_string())];
+    ///    let consumer = rpc_call.call_async(service_name, method_name, args).await.expect("call");
+    /// }
+    ///
     pub async fn call_async(
         &self,
         service_name: String,
@@ -198,6 +229,36 @@ impl RpcClient {
         //Ok(self.result(&mut consumer).await)
         Ok(consumer)
     }
+    /// # result
+    ///
+    /// ## Description
+    ///
+    /// This function return the result of the call to the Nameko microservice.
+    /// This function is async.
+    /// It return a Result<Value> as Value is serde_json::Value
+    ///
+    /// ## Arguments
+    ///
+    /// * `ref_consumer` - The consumer to use to get the result
+    ///
+    /// ## Example
+    ///
+    /// See example simple_sender in the examples folder
+    ///
+    /// ```rust,no_run
+    /// use girolle::RpcClient;
+    /// use girolle::JsonValue::Value;
+    ///
+    /// #[tokio::main]
+    ///
+    /// async fn main() {
+    ///    let rpc_call = RpcClient::new();
+    ///    let service_name = "video".to_string();
+    ///    let method_name = "hello".to_string();
+    ///    let args = vec![Value::String("John".to_string())];
+    ///    let consumer = rpc_call.call_async(service_name, method_name, args).await.expect("call");
+    ///    let result = rpc_call.result(consumer).await;
+    /// }
     pub async fn result(&self, ref_consumer: Consumer) -> Value {
         let mut consumer = ref_consumer;
         let delivery = consumer
@@ -222,7 +283,8 @@ impl RpcClient {
     /// ## Description
     ///
     /// This function send the payload to the Nameko microservice, using the
-    /// service name and the function to target. This function is async.
+    /// service name and the function to target. This function is sync.
+    /// It return a Result<Value> as Value is serde_json::Value
     ///
     /// ## Arguments
     ///
@@ -233,6 +295,19 @@ impl RpcClient {
     /// ## Example
     ///
     /// See example simple_sender in the examples folder
+    ///
+    /// ```rust,no_run
+    /// use girolle::RpcClient;
+    /// use girolle::JsonValue::Value;
+    ///
+    /// #[tokio::main]
+    /// async fn main() {
+    ///     let rpc_call = RpcClient::new();
+    ///     let service_name = "video".to_string();
+    ///     let method_name = "hello".to_string();
+    ///     let args = vec![Value::String("Toto".to_string())];
+    ///     let result = rpc_call.send(service_name, method_name, args).expect("call");
+    /// }
     pub fn send(
         &self,
         service_name: String,
@@ -254,7 +329,7 @@ impl RpcClient {
 ///
 /// ## Example
 ///
-/// ```rust
+/// ```rust, no_run
 /// use girolle::{JsonValue::Value, RpcService, Result};
 ///
 /// fn hello(s: Vec<&Value>) -> Result<Value> {
@@ -267,6 +342,7 @@ impl RpcClient {
 /// fn main() {
 ///     let mut services: RpcService = RpcService::new("video".to_string());
 ///     services.insert("hello".to_string(), hello);
+///     services.start();
 /// }
 pub struct RpcService {
     service_name: String,
