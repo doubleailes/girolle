@@ -5,7 +5,7 @@ use std::{thread, time};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let video_name = "video".to_string();
+    let video_name = "video";
     // Create the rpc call struct
     let rpc_client = RpcClient::new();
     // Transform the number into a JsonValue
@@ -13,21 +13,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Create the payload
     let new_payload = vec![t.into()];
     // Send the payload
-    let new_result = rpc_client.send(video_name.clone(), "fibonacci".to_string(), new_payload)?;
+    let new_result = rpc_client.send(video_name, "fibonacci", new_payload)?;
     let fib_result: u64 = serde_json::from_value(new_result).unwrap();
     // Print the result
     println!("fibonacci :{:?}", fib_result);
     assert_eq!(fib_result, 832040);
     // Create a future result
-    let future_result = rpc_client.call_async(
-        video_name.clone(),
-        "hello".to_string(),
-        vec![Value::String("Toto".to_string())],
-    );
+    let future_result =
+        rpc_client.call_async(video_name, "hello", vec![Value::String("Toto".to_string())]);
     // Send a message during the previous async process
     let result = rpc_client.send(
-        video_name.clone(),
-        "hello".to_string(),
+        video_name,
+        "hello",
         vec![Value::String("Girolle".to_string())],
     )?;
     // Print the result
@@ -51,8 +48,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut consummers: Vec<_> = Vec::new();
     for n in 1..101 {
         consummers.push(rpc_client.call_async(
-            video_name.clone(),
-            "hello".to_string(),
+            video_name,
+            "hello",
             vec![Value::String(n.to_string())],
         ));
     }
