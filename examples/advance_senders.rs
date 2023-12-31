@@ -4,19 +4,16 @@ use std::{thread, time};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let video_name = "video".to_string();
+    let video_name = "video";
     // Create the rpc call struct
     let rpc_client = RpcClient::new();
     // Create a future result
-    let future_result = rpc_client.call_async(
-        video_name.clone(),
-        "hello".to_string(),
-        vec![Value::String("Toto".to_string())],
-    );
+    let future_result =
+        rpc_client.call_async(video_name, "hello", vec![Value::String("Toto".to_string())]);
     // Send a message during the previous async process
     let result = rpc_client.send(
-        video_name.clone(),
-        "hello".to_string(),
+        video_name,
+        "hello",
         vec![Value::String("Girolle".to_string())],
     )?;
     // Print the result
@@ -40,8 +37,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut consummers: Vec<_> = Vec::new();
     for n in 1..101 {
         consummers.push(rpc_client.call_async(
-            video_name.clone(),
-            "hello".to_string(),
+            video_name,
+            "hello",
             vec![Value::String(n.to_string())],
         ));
     }

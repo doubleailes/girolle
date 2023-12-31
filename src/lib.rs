@@ -22,8 +22,8 @@
 //! }
 //!
 //! fn main() {
-//!   let mut services: RpcService = RpcService::new("video".to_string());
-//!   services.insert("hello".to_string(), hello);
+//!   let mut services: RpcService = RpcService::new("video");
+//!   services.insert("hello", hello);
 //!   services.start();
 //! }
 //! ```
@@ -168,18 +168,20 @@ impl RpcClient {
     /// #[tokio::main]
     /// async fn main() {
     ///    let rpc_call = RpcClient::new();
-    ///    let service_name = "video".to_string();
-    ///    let method_name = "hello".to_string();
+    ///    let service_name = "video";
+    ///    let method_name = "hello";
     ///    let args = vec![Value::String("John Doe".to_string())];
     ///    let consumer = rpc_call.call_async(service_name, method_name, args).await.expect("call");
     /// }
     ///
     pub async fn call_async(
         &self,
-        service_name: String,
-        method_name: String,
+        service_name: &'static str,
+        method_name: &'static str,
         args: Vec<Value>,
     ) -> lapin::Result<Consumer> {
+        let service_name = service_name.to_string();
+        let method_name = method_name.to_string();
         let payload = Payload::new(args);
         let correlation_id = Uuid::new_v4().to_string();
         let routing_key = format!("{}.{}", service_name, method_name);
@@ -253,8 +255,8 @@ impl RpcClient {
     ///
     /// async fn main() {
     ///    let rpc_call = RpcClient::new();
-    ///    let service_name = "video".to_string();
-    ///    let method_name = "hello".to_string();
+    ///    let service_name = "video";
+    ///    let method_name = "hello";
     ///    let args = vec![Value::String("John".to_string())];
     ///    let consumer = rpc_call.call_async(service_name, method_name, args).await.expect("call");
     ///    let result = rpc_call.result(consumer).await;
@@ -303,20 +305,88 @@ impl RpcClient {
     /// #[tokio::main]
     /// async fn main() {
     ///     let rpc_call = RpcClient::new();
-    ///     let service_name = "video".to_string();
-    ///     let method_name = "hello".to_string();
+    ///     let service_name = "video";
+    ///     let method_name = "hello";
     ///     let args = vec![Value::String("Toto".to_string())];
     ///     let result = rpc_call.send(service_name, method_name, args).expect("call");
     /// }
     pub fn send(
         &self,
-        service_name: String,
-        method_name: String,
+        service_name: &'static str,
+        method_name: &'static str,
         args: Vec<Value>,
     ) -> Result<Value> {
         let consumer =
             executor::block_on(self.call_async(service_name, method_name, args)).expect("call");
         Ok(executor::block_on(self.result(consumer)))
+    }
+}
+
+/// # RpcTask
+///
+/// ## Description
+///
+/// This struct is used to create a RPC task. This task will be used to register
+/// a function in the RpcService struct.
+///
+/// ## Example
+///
+/// ```rust,no_run
+/// use girolle::{JsonValue::Value, RpcService, Result, RpcTask};
+///
+/// fn hello(s: Vec<&Value>) -> Result<Value> {
+///    // Parse the incomming data
+///    let n: String = serde_json::from_value(s[0].clone())?;
+///    let hello_str: Value = format!("Hello, {}!, by Girolle", n).into();
+///    Ok(hello_str)
+/// }
+///  
+///
+/// fn main() {
+///     let mut services: RpcService = RpcService::new("video");
+///     let rpc_task = RpcTask::new("hello", hello);
+///     services.register(rpc_task).start();
+/// }
+///
+pub struct RpcTask {
+    name: &'static str,
+    inner_function: NamekoFunction,
+}
+impl RpcTask {
+    /// # new
+    ///
+    /// ## Description
+    ///
+    /// This function create a new RpcTask struct
+    ///
+    /// ## Arguments
+    ///
+    /// * `name` - The name of the function to call
+    /// * `inner_function` - The function to call
+    ///
+    /// ## Example
+    ///
+    /// ```rust
+    /// use girolle::{JsonValue::Value, RpcService, Result, RpcTask};
+    ///
+    /// fn hello(s: Vec<&Value>) -> Result<Value> {
+    ///    // Parse the incomming data
+    ///    let n: String = serde_json::from_value(s[0].clone())?;
+    ///    let hello_str: Value = format!("Hello, {}!, by Girolle", n).into();
+    ///    Ok(hello_str)
+    /// }
+    ///
+    /// fn main() {
+    ///     let mut services: RpcService = RpcService::new("video");
+    ///     let rpc_task = RpcTask::new("hello", hello);
+    ///     services.register(rpc_task).start();
+    /// }
+    ///
+    pub fn new(name: &'static str, inner_function: NamekoFunction) -> Self {
+        Self {
+            name,
+            inner_function,
+        }
     }
 }
 
@@ -340,8 +410,8 @@ impl RpcClient {
 /// }
 ///
 /// fn main() {
-///     let mut services: RpcService = RpcService::new("video".to_string());
-///     services.insert("hello".to_string(), hello);
+///     let mut services: RpcService = RpcService::new("video");
+///     services.insert("hello", hello);
 ///     services.start();
 /// }
 pub struct RpcService {
@@ -365,11 +435,11 @@ impl RpcService {
     /// use girolle::RpcService;
     ///
     /// fn main() {
-    ///     let services: RpcService = RpcService::new("video".to_string());
+    ///     let services: RpcService = RpcService::new("video");
     /// }
-    pub fn new(service_name: String) -> Self {
+    pub fn new(service_name: &'static str) -> Self {
         Self {
-            service_name,
+            service_name: service_name.to_string(),
             f: HashMap::new(),
         }
     }
@@ -389,7 +459,7 @@ impl RpcService {
     /// use girolle::RpcService;
     ///
     /// fn main() {
-    ///    let mut services: RpcService = RpcService::new("video".to_string());
+    ///    let mut services: RpcService = RpcService::new("video");
     ///    services.set_service_name("other".to_string());
     /// }
     pub fn set_service_name(&mut self, service_name: String) {
@@ -419,12 +489,16 @@ impl RpcService {
     /// }
     ///
     /// fn main() {
-    ///   let mut services: RpcService = RpcService::new("video".to_string());
-    ///   services.insert("hello".to_string(), hello);
+    ///   let mut services: RpcService = RpcService::new("video");
+    ///   services.insert("hello", hello);
     /// }
-    pub fn insert(&mut self, method_name: String, f: NamekoFunction) {
+    pub fn insert(&mut self, method_name: &'static str, f: NamekoFunction) {
         let routing_key = format!("{}.{}", self.service_name, method_name);
-        self.f.insert(routing_key, f);
+        self.f.insert(routing_key.to_string(), f);
+    }
+    pub fn register(mut self, rpc_task: RpcTask) -> Self {
+        self.insert(rpc_task.name, rpc_task.inner_function);
+        self
     }
     /// # start
     ///
@@ -445,8 +519,8 @@ impl RpcService {
     /// }
     ///
     /// fn main() {
-    ///    let mut services: RpcService = RpcService::new("video".to_string());
-    ///    services.insert("hello".to_string(), hello);
+    ///    let mut services: RpcService = RpcService::new("video");
+    ///    services.insert("hello", hello);
     /// }
     pub fn start(&self) -> lapin::Result<()> {
         if self.f.is_empty() {
@@ -474,8 +548,8 @@ impl RpcService {
     /// }
     ///
     /// fn main() {
-    ///    let mut services: RpcService = RpcService::new("video".to_string());
-    ///    services.insert("hello".to_string(), hello);
+    ///    let mut services: RpcService = RpcService::new("video");
+    ///    services.insert("hello", hello);
     ///    let routing_keys = services.get_routing_keys();
     /// }
     pub fn get_routing_keys(&self) -> Vec<String> {
