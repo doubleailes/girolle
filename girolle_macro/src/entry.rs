@@ -1,3 +1,4 @@
+#[allow(unused_imports)]
 use girolle::{JsonValue::Value, Result};
 use proc_macro2::TokenStream;
 use quote::quote;
@@ -15,15 +16,15 @@ impl Task {
 }
 
 impl Fold for Task {
-    fn fold_fn_arg(&mut self, i: FnArg) -> FnArg {
-        self.args.push(i.clone());
-        i
-    }
     fn fold_signature(&mut self, i: syn::Signature) -> syn::Signature {
         let mut folded_item = i.clone();
+        // Capture the original inputs
+        self.args = folded_item.inputs.iter().cloned().collect();
+        // Replace inputs by the NamekoFunction inputs
         folded_item.inputs = parse_quote! {
             data: Vec<&Value>
         };
+        // Replace the return type by the NamekoFunction return type
         folded_item.output = parse_quote! {
             -> girolle::Result<Value>
         };

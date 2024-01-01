@@ -1,3 +1,4 @@
+#![allow(unused_imports)]
 use girolle::{JsonValue::Value, Result};
 use girolle_macro::girolle;
 
@@ -11,5 +12,5 @@ fn hello(s: String) -> String {
 fn main() {
     let binding = serde_json::to_value("World".to_string()).unwrap();
     let s = vec![&binding];
-    hello(s);
+    let _ = hello(s);
 }
