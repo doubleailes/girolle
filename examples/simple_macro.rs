@@ -1,25 +1,15 @@
-use girolle::{JsonValue::Value, Result, RpcService};
+use girolle::{JsonValue::Value, Result};
 use girolle_macro::girolle;
 
-fn hello(s: Vec<&Value>) -> Result<Value> {
-    // Parse the incomming data
-    let n: String = serde_json::from_value(s[0].clone())?;
-    let hello_str: Value = format!("Hello, {}!, by Girolle", n).into();
-    Ok(hello_str)
-}
-
-#[girolle(video)]
-fn factorial(num: u64) -> u64 {
-    match num {
-        0 => 1,
-        1 => 1,
-        _ => factorial(num - 1) * num,
-    }
+#[girolle]
+fn hello(s: String) -> String {
+    let n: String = serde_json::from_value(data[0].clone()).unwrap();
+    let out: Value = serde_json::to_value(format!("Hello, {}!", n)).unwrap();
+    Ok(out)
 }
 
 fn main() {
-    let y = Value::from(5);
-    let t: Vec<&Value> = vec![&y];
-    let toto: Value = factorial(t).unwrap();
-    println!("toto: {:?}", toto);
+    let binding = serde_json::to_value("World".to_string()).unwrap();
+    let s = vec![&binding];
+    hello(s);
 }

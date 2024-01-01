@@ -348,6 +348,7 @@ impl RpcClient {
 ///     services.register(rpc_task).start();
 /// }
 ///
+#[derive(Clone)]
 pub struct RpcTask {
     name: &'static str,
     inner_function: NamekoFunction,
