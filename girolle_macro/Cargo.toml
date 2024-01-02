@@ -9,10 +9,10 @@ edition = "2021"
 proc-macro = true
 
 [dependencies]
-proc-macro2 = "1.0.71"
-quote = "1.0.33"
-syn = { version = "2.0.43", features = ["fold", "full"] }
+proc-macro2 = "1.0.74"
+quote = "1.0.35"
+syn = { version = "2.0.46", features = ["fold", "full"] }
 girolle = { path = "../girolle" }
-serde_json = "1.0.108"
+serde_json = "1.0.110"
 
 [dev-dependencies]
