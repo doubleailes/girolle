@@ -1,9 +1,10 @@
 [package]
 name = "girolle_macro"
-version = "1.0.0"
+version = "1.0.1"
 edition = "2021"
 readme = "../README.md"
 license-file = "../LICENSE"
+description = "A nameko macro proc-macro to generate a Nameko Function"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
