@@ -367,7 +367,7 @@ impl RpcTask {
     ///
     /// ## Example
     ///
-    /// ```rust
+    /// ```rust,no_run
     /// use girolle::{JsonValue::Value, RpcService, Result, RpcTask};
     ///
     /// fn hello(s: Vec<&Value>) -> Result<Value> {
