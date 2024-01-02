@@ -1,5 +1,4 @@
-#![allow(unused_imports)]
-use girolle::{JsonValue::Value, Result};
+use girolle::JsonValue::Value;
 use girolle_macro::girolle;
 
 #[girolle]
