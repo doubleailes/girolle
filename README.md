@@ -53,14 +53,12 @@ fn fibonacci_reccursive(s: Vec<&Value>) -> Result<Value> {
 ### Create a simple service
 
 ```rust
-use girolle::{JsonValue::Value, Result, RpcService};
-use serde_json;
+use girolle::{JsonValue::Value,RpcTask, RpcService};
+use girolle_macro::girolle;
 
-fn hello(s: Vec<&Value>) -> Result<Value> {
-    // Parse the incomming data
-    let n: String = serde_json::from_value(s[0].clone())?;
-    let hello_str: Value = format!("Hello, {}!, by Girolle", n).into();
-    Ok(hello_str)
+#[girolle]
+fn hello(s: String) -> String {
+    format!("Hello, {}!", s)
 }
 
 fn fibonacci(n: u64) -> u64 {
@@ -70,20 +68,19 @@ fn fibonacci(n: u64) -> u64 {
     return fibonacci(n - 1) + fibonacci(n - 2);
 }
 
-fn fibonacci_reccursive(s: Vec<&Value>) -> Result<Value> {
-    let n: u64 = serde_json::from_value(s[0].clone())?;
-    let result: Value = serde_json::to_value(fibonacci(n))?;
-    Ok(result)
+// Because the function is recursive, it need to be warp in a function
+#[girolle]
+fn fib_warp(n: u64) -> u64 {
+    fibonacci(n)
 }
 
 fn main() {
-    // Create the rpc service struct
-    let mut services: RpcService = RpcService::new("video".to_string());
-    // Declare the services by adding them to the service
-    services.insert("hello".to_string(), hello);
-    services.insert("fibonacci".to_string(), fibonacci_reccursive);
-    // Start the services
-    let _ = services.start();
+    let rpc_task = RpcTask::new("hello", hello);
+    let rpc_task_fib = RpcTask::new("fibonacci", fib_warp);
+    let _ = RpcService::new("video")
+        .register(rpc_task)
+        .register(rpc_task_fib)
+        .start();
 }
 ```
 
