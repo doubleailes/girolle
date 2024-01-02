@@ -1,5 +1,3 @@
-#[allow(unused_imports)]
-use girolle::{JsonValue::Value, Result};
 use proc_macro2::TokenStream;
 use quote::quote;
 use syn::fold::Fold;
