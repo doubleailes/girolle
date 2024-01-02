@@ -4,9 +4,8 @@ version = "1.0.0"
 edition = "2021"
 authors = ["Philippe Llerena <philippe.llerena@gmail.com>"]
 description = "A nameko like lib in rust"
-readme = "README.md"
-license-file = "LICENSE"
-exclude = ["staging", ".devcontainer", ".github", "images"]
+readme = "../README.md"
+license-file = "../LICENSE"
 
 [lib]
 bench = false
