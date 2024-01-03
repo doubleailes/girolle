@@ -47,12 +47,6 @@ impl Task {
         let final_line: syn::Stmt = parse_quote! {return Ok(serde_json::to_value(output)?);};
         self.inner_statements.push(final_line);
     }
-    #[allow(dead_code)]
-    fn print_stmts(&self) {
-        for stmt in &self.inner_statements {
-            println!("{}", quote!(#stmt).to_string());
-        }
-    }
 }
 
 impl Fold for Task {
