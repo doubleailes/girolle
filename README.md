@@ -4,12 +4,12 @@
 
 ## Description
 
-A [nameko-rpc](https://github.com/nameko/nameko) like lib in rust. Check the TO-Do
+A [nameko-rpc](https://github.com/nameko/nameko) like lib in rust. Check the To-Do
 section to see limitation.
 
-Do not use in production!
+**Do not use in production!**
 
-**Girolle** use Nameko architecture to send request and get response.
+**Girolle** use **Nameko** architecture to send request and get response.
 
 ## Documentation
 
@@ -35,10 +35,12 @@ You need to set this environement variables.
 
 ## How to use it
 
-The core concept is to remove the pain of the queue creation and reply, and to
-use an abstract type `serde_json::Value` to manipulate a serializable data.
+The core concept is to remove the pain of the queue creation and reply by
+mokcing the **Nameko** architecture, and to use an abstract type
+`serde_json::Value` to manipulate a serializable data.
 
-It needed to extract the data from the a `Vec<&Value>` like this
+if you do not use the macro `#[girolle]` you need to create a function that 
+extract the data from the a `Vec<&Value>` like this:
 
 ```rust
 fn fibonacci_reccursive(s: Vec<&Value>) -> Result<Value> {
@@ -68,15 +70,15 @@ fn fibonacci(n: u64) -> u64 {
     return fibonacci(n - 1) + fibonacci(n - 2);
 }
 
-// Because the function is recursive, it need to be warp in a function
+// Because the function is recursive, it need to be wrap in a function
 #[girolle]
-fn fib_warp(n: u64) -> u64 {
+fn fib_wrap(n: u64) -> u64 {
     fibonacci(n)
 }
 
 fn main() {
     let rpc_task = RpcTask::new("hello", hello);
-    let rpc_task_fib = RpcTask::new("fibonacci", fib_warp);
+    let rpc_task_fib = RpcTask::new("fibonacci", fib_wrap);
     let _ = RpcService::new("video")
         .register(rpc_task)
         .register(rpc_task_fib)
@@ -145,13 +147,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 ```
 
-## TODO
+## To-Do
 
 - [x] Handle the error
 - [x] write test
 - [x] create a proxy service in rust to interact with an other service
 nameko-rpc
-- [ ] supporting SSL
+- [ ] Add macro to simplify the creation of a service
+    - [x] Add basic macro
+    - [ ] fix macro to handle `return`
+    - [ ] fix macro to handle recursive function
 - [ ] listen to a pub/sub queue
 
 ## Limitation
@@ -163,3 +168,4 @@ repository.
 |-----------------|-----------------|-------------------|
 | simple_service  |       x         |         x         |
 | nameko_service  |       x         |         x         |
+| simple_macro    |       x         |         x         |
