@@ -62,6 +62,19 @@ impl Fold for Task {
         folded_item.output = parse_quote! {-> NamekoResult<Value>};
         folded_item
     }
+    fn fold_expr(&mut self, e: syn::Expr) -> syn::Expr {
+        match e {
+            syn::Expr::Return(expr_return) => {
+                let expr = expr_return.expr;
+                let expr_quote = quote! {
+                    let output = #expr
+                };
+                let expr_return_quote: syn::Stmt = parse_quote! {#expr_quote;};
+                parse_quote! {#expr_return_quote}
+            }
+            _ => e,
+        }
+    }
     fn fold_stmt(&mut self, i: syn::Stmt) -> syn::Stmt {
         let folded_item = i.clone();
         // Capture the original statements
@@ -83,5 +96,6 @@ pub(crate) fn main(input: TokenStream) -> TokenStream {
     task.add_output_serialize();
     task.add_output_final();
     new_item_fn.block.stmts = task.inner_statements.clone();
+    println!("new_item_fn: {:?}", quote!(#new_item_fn).to_string());
     TokenStream::from(quote!(#new_item_fn))
 }
