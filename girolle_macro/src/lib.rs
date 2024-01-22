@@ -26,23 +26,6 @@ mod entry;
 ///}
 /// ```
 /// The function must be deterministic, which means that it must always return a serializable result.
-///
-/// ## Example
-///
-/// ```rust,no_run
-/// use girolle_macro::girolle;
-/// use serde_json::{to_value, Value, Result};
-///
-/// #[girolle]
-/// fn add(a: i32, b: i32) -> i32 {
-///    a + b
-/// }
-/// let a:Value = to_value(1).unwrap();
-/// let b:Value = to_value(2).unwrap();
-/// let input: Vec<&Value> = vec![&a, &b];
-/// assert_eq!(add(input).unwrap(), to_value(3).unwrap());
-/// ```
-///
 #[proc_macro_attribute]
 pub fn girolle(_metadata: TokenStream, input: TokenStream) -> TokenStream {
     entry::main(input.into()).into()

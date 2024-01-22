@@ -1,5 +1,4 @@
-use girolle::JsonValue::Value;
-use girolle_macro::girolle;
+use girolle::prelude::*;
 
 #[girolle]
 fn hello(s: String) -> String {
