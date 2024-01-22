@@ -1,4 +1,5 @@
 use girolle::prelude::*;
+use girolle::{RpcService, RpcTask};
 
 #[girolle]
 fn hello(s: String) -> String {
@@ -18,9 +19,9 @@ fn fib_warp(n: u64) -> u64 {
 }
 
 fn main() {
-    let rpc_task = girolle::RpcTask::new("hello", hello);
-    let rpc_task_fib = girolle::RpcTask::new("fibonacci", fib_warp);
-    let _ = girolle::RpcService::new("video")
+    let rpc_task = RpcTask::new("hello", hello);
+    let rpc_task_fib = RpcTask::new("fibonacci", fib_warp);
+    let _ = RpcService::new("video")
         .register(rpc_task)
         .register(rpc_task_fib)
         .start();
