@@ -1,4 +1,5 @@
-use girolle::{JsonValue::Value, Result, RpcService, RpcTask};
+use girolle::{Result, RpcService, RpcTask};
+use girolle::prelude::*;
 use serde_json;
 
 fn hello(s: Vec<&Value>) -> Result<Value> {
