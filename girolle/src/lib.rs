@@ -48,12 +48,12 @@ use lapin::{
     BasicProperties, Channel, Consumer,
 };
 pub use serde_json as JsonValue;
-use serde_json::Value;
 use std::collections::HashMap;
 use tracing::{debug, error, info, warn};
 use uuid::Uuid;
-use JsonValue::json;
+use JsonValue::{json, Value};
 mod nameko_utils;
+pub mod prelude;
 use nameko_utils::{get_id, insert_new_id_to_call_id};
 /// # Result
 ///

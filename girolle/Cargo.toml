@@ -20,6 +20,7 @@ serde_json = "1.0.108"
 serde = { version = "1.0.193", features = ["derive"] }
 futures = "0.3.30"
 syn = { version = "2.0.43", features = ["fold", "full"] }
+girolle_macro = { path = "../girolle_macro" }
 
 [dependencies.tracing]
 version = "0.1.40"
