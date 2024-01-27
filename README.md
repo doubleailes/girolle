@@ -169,3 +169,9 @@ repository.
 | simple_service  |       x         |         x         |
 | nameko_service  |       x         |         x         |
 | simple_macro    |       x         |         x         |
+
+## Benchmark
+
+The benchmark is done to test the overhead of the macro.
+
+![benchmark](./girolle/benches/lines.svg)
