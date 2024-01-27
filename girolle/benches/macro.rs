@@ -30,7 +30,7 @@ fn build_payload(n: u64)->Vec<Value>{
 
 fn bench_macro(c: &mut Criterion) {
     let mut group = c.benchmark_group("Macro");
-    for i in [100u64, 101u64].iter() {
+    for i in [1u64,50u64, 101u64].iter() {
         group.bench_with_input(BenchmarkId::new("Naive", i), i, 
             |b, i| b.iter(|| fibonacci_fast(*i)));
         let payload = build_payload(*i);
