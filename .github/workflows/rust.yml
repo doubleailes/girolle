@@ -24,6 +24,14 @@ jobs:
         run: cargo build
       - name: ✔️ Tests
         run: cargo test
+  bench:
+    runs-on: ubuntu-latest
+    needs: [build_test]
+    steps:
+      - uses: actions/checkout@v3
+      - uses: dtolnay/rust-toolchain@stable
+      - name: ⏲️ Bench
+        run: cargo bench
   dry_publish:
     runs-on: ubuntu-latest
     needs: [build_test]

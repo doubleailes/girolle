@@ -2,7 +2,7 @@ use girolle::{Result, RpcService, RpcTask};
 use girolle::prelude::*;
 use serde_json;
 
-fn hello(s: Vec<&Value>) -> Result<Value> {
+fn hello(s: Vec<Value>) -> Result<Value> {
     // Parse the incomming data
     let n: String = serde_json::from_value(s[0].clone())?;
     let hello_str: Value = format!("Hello, {}!, by Girolle", n).into();
@@ -10,13 +10,23 @@ fn hello(s: Vec<&Value>) -> Result<Value> {
 }
 
 fn fibonacci(n: u64) -> u64 {
-    if n <= 1 {
-        return n;
+    let mut a = 0;
+    let mut b = 1;
+
+    match n {
+        0 => b,
+        _ => {
+            for _ in 0..n {
+                let c = a + b;
+                a = b;
+                b = c;
+            }
+            b
+        }
     }
-    return fibonacci(n - 1) + fibonacci(n - 2);
 }
 
-fn fibonacci_reccursive(s: Vec<&Value>) -> Result<Value> {
+fn fibonacci_reccursive(s: Vec<Value>) -> Result<Value> {
     let n: u64 = serde_json::from_value(s[0].clone())?;
     let result: Value = serde_json::to_value(fibonacci(n))?;
     Ok(result)
