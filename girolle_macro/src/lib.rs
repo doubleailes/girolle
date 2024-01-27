@@ -10,7 +10,7 @@ mod entry;
 /// The function must be serializable, which means that it must not have any reference to a type that is not serializable.
 /// The function match the type NamekoFunction which is defined as follow:
 ///
-/// `type NamekoFunction = fn(Vec<&Value>) -> Result<Value>`
+/// `type NamekoFunction = fn(Vec<Value>) -> Result<Value>`
 ///
 /// It support the serde serialization types.
 /// ```rust,no_run
