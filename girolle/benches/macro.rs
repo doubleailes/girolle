@@ -1,4 +1,4 @@
-use criterion::{criterion_group, criterion_main, Criterion,BenchmarkId};
+use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 
 use girolle_macro::girolle;
 use serde_json::Value;
@@ -20,22 +20,24 @@ fn fibonacci_fast(n: u64) -> u64 {
     }
 }
 #[girolle]
-fn fibonacci_macro(u: u64)-> u64{
+fn fibonacci_macro(u: u64) -> u64 {
     fibonacci_fast(u)
 }
 
-fn build_payload(n: u64)->Vec<Value>{
+fn build_payload(n: u64) -> Vec<Value> {
     vec![serde_json::from_str(&n.to_string()).unwrap()]
 }
 
 fn bench_macro(c: &mut Criterion) {
     let mut group = c.benchmark_group("Macro");
-    for i in [1u64,50u64, 101u64].iter() {
-        group.bench_with_input(BenchmarkId::new("Naive", i), i, 
-            |b, i| b.iter(|| fibonacci_fast(*i)));
+    for i in [1u64, 50u64, 101u64].iter() {
+        group.bench_with_input(BenchmarkId::new("Naive", i), i, |b, i| {
+            b.iter(|| fibonacci_fast(*i))
+        });
         let payload = build_payload(*i);
-        group.bench_with_input(BenchmarkId::new("Girolle", i), i, 
-            |b, _i| b.iter(|| fibonacci_macro(payload.clone())));
+        group.bench_with_input(BenchmarkId::new("Girolle", i), i, |b, _i| {
+            b.iter(|| fibonacci_macro(payload.clone()))
+        });
     }
     group.finish();
 }
