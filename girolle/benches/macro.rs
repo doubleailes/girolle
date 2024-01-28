@@ -34,7 +34,7 @@ fn bench_macro(c: &mut Criterion) {
         group.bench_with_input(BenchmarkId::new("Naive", i), i, 
             |b, i| b.iter(|| fibonacci_fast(*i)));
         let payload = build_payload(*i);
-        group.bench_with_input(BenchmarkId::new("Iterative", i), i, 
+        group.bench_with_input(BenchmarkId::new("Girolle", i), i, 
             |b, _i| b.iter(|| fibonacci_macro(payload.clone())));
     }
     group.finish();
