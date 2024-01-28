@@ -38,6 +38,7 @@
 //!    let rpc_call = RpcClient::new();
 //! }
 //! ```
+use crate::prelude::{json, Value};
 use futures::executor;
 use futures_lite::stream::StreamExt;
 use lapin::{
@@ -51,7 +52,6 @@ pub use serde_json as JsonValue;
 use std::collections::HashMap;
 use tracing::{debug, error, info, warn};
 use uuid::Uuid;
-use crate::prelude::{json, Value};
 mod nameko_utils;
 pub mod prelude;
 use nameko_utils::{get_id, insert_new_id_to_call_id};
