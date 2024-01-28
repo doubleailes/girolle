@@ -15,6 +15,6 @@ proc-macro = true
 proc-macro2 = "1.0.74"
 quote = "1.0.35"
 syn = { version = "2.0.46", features = ["fold", "full"] }
-serde_json = "1.0.110"
+serde_json_borrow = "0.3.0"
 
 [dev-dependencies]

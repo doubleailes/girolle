@@ -1,6 +1,6 @@
 use girolle::RpcClient;
 use girolle::prelude::*;
-use serde_json;
+use serde_json_borrow;
 use std::vec;
 use std::{thread, time};
 
@@ -10,12 +10,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Create the rpc call struct
     let rpc_client = RpcClient::new();
     // Transform the number into a JsonValue
-    let t: serde_json::Number = serde_json::from_str("30").unwrap();
+    let t: serde_json_borrow::Number = serde_json_borrow::from_str("30").unwrap();
     // Create the payload
     let new_payload = vec![t.into()];
     // Send the payload
     let new_result = rpc_client.send(video_name, "fibonacci", new_payload)?;
-    let fib_result: u64 = serde_json::from_value(new_result).unwrap();
+    let fib_result: u64 = serde_json_borrow::from_value(new_result).unwrap();
     // Print the result
     println!("fibonacci :{:?}", fib_result);
     assert_eq!(fib_result, 832040);

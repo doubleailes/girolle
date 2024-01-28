@@ -27,7 +27,7 @@ impl Task {
                     let pat = &pat_type.pat;
                     let ty = &pat_type.ty;
                     stmts.push(
-                        parse_quote! {let #pat: #ty = serde_json::from_value(#data_quote.clone())?;},
+                        parse_quote! {let #pat: #ty = serde_json_borrow::from_value(#data_quote.clone())?;},
                     );
                 }
                 _ => {}
@@ -44,7 +44,7 @@ impl Task {
         self.inner_statements.push(output_quote);
     }
     fn add_output_final(&mut self) {
-        let final_line: syn::Stmt = parse_quote! {return Ok(serde_json::to_value(output)?);};
+        let final_line: syn::Stmt = parse_quote! {return Ok(serde_json_borrow::to_value(output)?);};
         self.inner_statements.push(final_line);
     }
     #[allow(dead_code)]

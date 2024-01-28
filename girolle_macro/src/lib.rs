@@ -14,7 +14,7 @@ mod entry;
 ///
 /// It support the serde serialization types.
 /// ```rust,no_run
-/// use serde_json::{Number, Map};
+/// use serde_json_borrow::{Number, Map};
 ///
 /// enum Value {
 ///    Null,

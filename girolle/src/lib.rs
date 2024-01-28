@@ -16,7 +16,7 @@
 //!
 //! fn hello(s: Vec<Value>) -> Result<Value> {
 //!    // Parse the incomming data
-//!   let n: String = serde_json::from_value(s[0].clone())?;
+//!   let n: String = serde_json_borrow::from_value(s[0].clone())?;
 //!  let hello_str: Value = format!("Hello, {}!, by Girolle", n).into();
 //!  Ok(hello_str)
 //! }
@@ -47,7 +47,7 @@ use lapin::{
     types::{AMQPValue, FieldArray, FieldTable},
     BasicProperties, Channel, Consumer,
 };
-pub use serde_json as JsonValue;
+pub use serde_json_borrow as JsonValue;
 use std::collections::HashMap;
 use tracing::{debug, error, info, warn};
 use uuid::Uuid;
@@ -60,7 +60,7 @@ use nameko_utils::{get_id, insert_new_id_to_call_id};
 /// ## Description
 ///
 /// This type is used to return a Result<Value> in the RPC call
-pub type Result<T> = std::result::Result<T, serde_json::Error>;
+pub type Result<T> = std::result::Result<T, serde_json_borrow::Error>;
 /// # NamekoFunction
 ///
 /// ## Description
@@ -219,7 +219,7 @@ impl RpcClient {
                 "nameko-rpc",
                 &routing_key,
                 BasicPublishOptions::default(),
-                serde_json::to_value(payload)
+                serde_json_borrow::to_value(payload)
                     .expect("json")
                     .to_string()
                     .as_bytes(),
@@ -237,7 +237,7 @@ impl RpcClient {
     ///
     /// This function return the result of the call to the Nameko microservice.
     /// This function is async.
-    /// It return a Result<Value> as Value is serde_json::Value
+    /// It return a Result<Value> as Value is serde_json_borrow::Value
     ///
     /// ## Arguments
     ///
@@ -268,7 +268,7 @@ impl RpcClient {
             .await
             .expect("error in consumer")
             .expect("error in consumer");
-        let incomming_data: Value = serde_json::from_slice(&delivery.data).expect("json");
+        let incomming_data: Value = serde_json_borrow::from_slice(&delivery.data).expect("json");
         delivery.ack(BasicAckOptions::default()).await.expect("ack");
         match incomming_data["error"].as_object() {
             Some(error) => {
@@ -286,7 +286,7 @@ impl RpcClient {
     ///
     /// This function send the payload to the Nameko microservice, using the
     /// service name and the function to target. This function is sync.
-    /// It return a Result<Value> as Value is serde_json::Value
+    /// It return a Result<Value> as Value is serde_json_borrow::Value
     ///
     /// ## Arguments
     ///
@@ -336,7 +336,7 @@ impl RpcClient {
 ///
 /// fn hello(s: Vec<Value>) -> Result<Value> {
 ///    // Parse the incomming data
-///    let n: String = serde_json::from_value(s[0].clone())?;
+///    let n: String = serde_json_borrow::from_value(s[0].clone())?;
 ///    let hello_str: Value = format!("Hello, {}!, by Girolle", n).into();
 ///    Ok(hello_str)
 /// }
@@ -372,7 +372,7 @@ impl RpcTask {
     ///
     /// fn hello(s: Vec<Value>) -> Result<Value> {
     ///    // Parse the incomming data
-    ///    let n: String = serde_json::from_value(s[0].clone())?;
+    ///    let n: String = serde_json_borrow::from_value(s[0].clone())?;
     ///    let hello_str: Value = format!("Hello, {}!, by Girolle", n).into();
     ///    Ok(hello_str)
     /// }
@@ -405,7 +405,7 @@ impl RpcTask {
 ///
 /// fn hello(s: Vec<Value>) -> Result<Value> {
 ///     // Parse the incomming data
-///     let n: String = serde_json::from_value(s[0].clone())?;
+///     let n: String = serde_json_borrow::from_value(s[0].clone())?;
 ///     let hello_str: Value = format!("Hello, {}!, by Girolle", n).into();
 ///     Ok(hello_str)
 /// }
@@ -484,7 +484,7 @@ impl RpcService {
     ///
     /// fn hello(s: Vec<Value>) -> Result<Value> {
     ///    // Parse the incomming data
-    ///   let n: String = serde_json::from_value(s[0].clone())?;
+    ///   let n: String = serde_json_borrow::from_value(s[0].clone())?;
     ///   let hello_str: Value = format!("Hello, {}!, by Girolle", n).into();
     ///   Ok(hello_str)
     /// }
@@ -514,7 +514,7 @@ impl RpcService {
     ///
     /// fn hello(s: Vec<Value>) -> Result<Value> {
     ///     // Parse the incomming data
-    ///     let n: String = serde_json::from_value(s[0].clone())?;
+    ///     let n: String = serde_json_borrow::from_value(s[0].clone())?;
     ///     let hello_str: Value = format!("Hello, {}!, by Girolle", n).into();
     ///    Ok(hello_str)
     /// }
@@ -543,7 +543,7 @@ impl RpcService {
     /// fn hello(s: Vec<Value>) -> Result<Value> {
     ///
     ///    // Parse the incomming data
-    ///    let n: String = serde_json::from_value(s[0].clone())?;
+    ///    let n: String = serde_json_borrow::from_value(s[0].clone())?;
     ///    let hello_str: Value = format!("Hello, {}!, by Girolle", n).into();
     ///    Ok(hello_str)
     /// }
@@ -588,7 +588,7 @@ async fn execute_delivery(
     rpc_queue_reply: &String,
 ) {
     let opt_routing_key = delivery.routing_key.to_string();
-    let incomming_data: Value = serde_json::from_slice(&delivery.data).expect("json");
+    let incomming_data: Value = serde_json_borrow::from_slice(&delivery.data).expect("json");
     let args: Vec<Value> = incomming_data["args"]
         .as_array()
         .expect("args")

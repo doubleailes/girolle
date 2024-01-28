@@ -1,7 +1,7 @@
 use criterion::{criterion_group, criterion_main, Criterion,BenchmarkId};
 
 use girolle_macro::girolle;
-use serde_json::Value;
+use serde_json_borrow::Value;
 
 fn fibonacci_fast(n: u64) -> u64 {
     let mut a = 0;
@@ -25,7 +25,7 @@ fn fibonacci_macro(u: u64)-> u64{
 }
 
 fn build_payload(n: u64)->Vec<Value>{
-    vec![serde_json::from_str(&n.to_string()).unwrap()]
+    vec![serde_json_borrow::from_str(&n.to_string()).unwrap()]
 }
 
 fn bench_macro(c: &mut Criterion) {
