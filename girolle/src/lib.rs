@@ -39,8 +39,7 @@
 //! }
 //! ```
 use crate::prelude::{json, Value};
-use futures::executor;
-use futures_lite::stream::StreamExt;
+use futures::{executor, stream::StreamExt};
 use lapin::{
     message::Delivery,
     options::*,
