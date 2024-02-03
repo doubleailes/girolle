@@ -15,12 +15,11 @@ bench = false
 [dependencies]
 lapin = "2.3.1"
 async-global-executor = "2.4.1"
-futures-lite = "2.1.0"
+futures-lite = "2.2.0"
 serde_json = "1.0.108"
-serde = { version = "1.0.193", features = ["derive"] }
+serde = { version = "1.0.196", features = ["derive"] }
 futures = "0.3.30"
-syn = { version = "2.0.43", features = ["fold", "full"] }
-girolle_macro = { path = "../girolle_macro", version = "1.1.0"}
+girolle_macro = { path = "../girolle_macro", version = "1.1.0" }
 
 [dependencies.tracing]
 version = "0.1.40"
@@ -31,7 +30,7 @@ version = "0.3.18"
 features = ["fmt"]
 
 [dependencies.uuid]
-version = "1.6.1"
+version = "1.7.0"
 features = [
     "v4",       # Lets you generate random UUIDs
     "fast-rng", # Use a faster (but still sufficiently random) RNG
