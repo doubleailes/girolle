@@ -204,7 +204,7 @@ impl RpcClient {
             .with_headers(FieldTable::from(headers));
         let reply_name = "rpc.listener".to_string();
         let rpc_queue_reply = format!("{}-{}", reply_name, &self.identifier);
-        let reply_queue = create_message_queue(rpc_queue_reply.clone(), &self.identifier).await?;
+        let reply_queue = create_message_queue(&rpc_queue_reply, &self.identifier).await?;
         let consumer = reply_queue
             .basic_consume(
                 &rpc_queue_reply,
@@ -663,7 +663,7 @@ fn rpc_service(service_name: String, f: HashMap<String, NamekoFunction>) -> lapi
 
     async_global_executor::block_on(async {
         let rpc_queue_reply = format!("rpc.reply-{}-{}", service_name, &id);
-        let response_channel = create_message_queue(rpc_queue_reply.clone(), &id).await?;
+        let response_channel = create_message_queue(&rpc_queue_reply, &id).await?;
         let incomming_channel = create_service_queue(service_name).await?;
         // Start a consumer.
         let mut consumer = incomming_channel
