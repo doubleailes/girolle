@@ -69,7 +69,7 @@ pub async fn create_service_queue(service_name: String) -> lapin::Result<lapin::
 /// * `rpc_queue_reply` - A string slice that holds the name of the queue.
 /// * `id` - A string slice that holds the id of the message.
 pub async fn create_message_queue(
-    rpc_queue_reply: String,
+    rpc_queue_reply: &str,
     id: &Uuid,
 ) -> lapin::Result<lapin::Channel> {
     const QUEUE_TTL: u32 = 300000;
@@ -80,11 +80,11 @@ pub async fn create_message_queue(
     let mut queue_declare_options = QueueDeclareOptions::default();
     queue_declare_options.durable = true;
     response_channel
-        .queue_declare(&rpc_queue_reply, queue_declare_options, response_arguments)
+        .queue_declare(rpc_queue_reply, queue_declare_options, response_arguments)
         .await?;
     response_channel
         .queue_bind(
-            &rpc_queue_reply,
+            rpc_queue_reply,
             "nameko-rpc",
             &id.to_string(),
             QueueBindOptions::default(),
