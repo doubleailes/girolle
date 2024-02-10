@@ -202,9 +202,15 @@ impl RpcClient {
             .with_content_type("application/json".into())
             .with_content_encoding("utf-8".into())
             .with_headers(FieldTable::from(headers));
-        let reply_name = "rpc.listener".to_string();
-        let rpc_queue_reply = format!("{}-{}", reply_name, &self.identifier);
-        let reply_queue = create_message_queue(&rpc_queue_reply, &self.identifier).await?;
+        let reply_name = "rpc.listener";
+        let rpc_queue_reply = create_rpc_queue_reply_name(reply_name, &self.identifier.to_string());
+        let reply_queue = match create_message_queue(&rpc_queue_reply, &self.identifier).await {
+            Ok(queue) => queue,
+            Err(e) => {
+                // Handle error, e.g., log it or retry
+                return Err(e);
+            }
+        };
         let consumer = reply_queue
             .basic_consume(
                 &rpc_queue_reply,
@@ -578,6 +584,10 @@ async fn publish(
     Ok(confirm)
 }
 
+fn create_rpc_queue_reply_name(base_name: &str, identifier: &str) -> String {
+    format!("{}-{}", base_name, identifier)
+}
+
 /// Execute the delivery
 async fn execute_delivery(
     delivery: Delivery,
@@ -663,8 +673,8 @@ fn rpc_service(service_name: String, f: HashMap<String, NamekoFunction>) -> lapi
 
     async_global_executor::block_on(async {
         let rpc_queue_reply = format!("rpc.reply-{}-{}", service_name, &id);
-        let response_channel = create_message_queue(&rpc_queue_reply, &id).await?;
-        let incomming_channel = create_service_queue(service_name).await?;
+        let response_channel: Channel = create_message_queue(&rpc_queue_reply, &id).await?;
+        let incomming_channel: Channel = create_service_queue(service_name).await?;
         // Start a consumer.
         let mut consumer = incomming_channel
             .basic_consume(

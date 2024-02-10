@@ -9,6 +9,9 @@ use std::env;
 use tracing::info;
 use uuid::Uuid;
 
+/// # QUEUE_TTL
+const QUEUE_TTL: u32 = 300000;
+
 /// # get_address
 ///
 /// This function returns the address of the RabbitMQ server.
@@ -72,7 +75,6 @@ pub async fn create_message_queue(
     rpc_queue_reply: &str,
     id: &Uuid,
 ) -> lapin::Result<lapin::Channel> {
-    const QUEUE_TTL: u32 = 300000;
     let conn = get_connection().await?;
     let response_channel = conn.create_channel().await?;
     let mut response_arguments = FieldTable::default();
@@ -81,7 +83,11 @@ pub async fn create_message_queue(
     queue_declare_options.durable = true;
     response_channel
         .queue_declare(rpc_queue_reply, queue_declare_options, response_arguments)
-        .await?;
+        .await
+        .map_err(|e| {
+            // Handle or log the error
+            e
+        })?;
     response_channel
         .queue_bind(
             rpc_queue_reply,
@@ -90,6 +96,10 @@ pub async fn create_message_queue(
             QueueBindOptions::default(),
             FieldTable::default(),
         )
-        .await?;
+        .await
+        .map_err(|e| {
+            // Handle or log the error
+            e
+        })?;
     Ok(response_channel)
 }
