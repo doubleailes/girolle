@@ -36,7 +36,7 @@ async fn get_connection() -> lapin::Result<Connection> {
 /// ## Arguments
 ///
 /// * `service_name` - A string slice that holds the name of the service.
-pub async fn create_service_queue(service_name: String) -> lapin::Result<lapin::Channel> {
+pub async fn create_service_queue(service_name: &str) -> lapin::Result<lapin::Channel> {
     let routing_key = format!("{}.*", service_name);
     const PREFETCH_COUNT: u16 = 10;
     let conn = get_connection().await?;
