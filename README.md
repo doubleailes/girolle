@@ -40,10 +40,10 @@ mokcing the **Nameko** architecture, and to use an abstract type
 `serde_json::Value` to manipulate a serializable data.
 
 if you do not use the macro `#[girolle]` you need to create a function that 
-extract the data from the a `Vec<Value>` like this:
+extract the data from the a `&[Value]` like this:
 
 ```rust
-fn fibonacci_reccursive(s: Vec<Value>) -> Result<Value> {
+fn fibonacci_reccursive(s: &[Value]) -> Result<Value> {
     let n: u64 = serde_json::from_value(s[0].clone())?;
     let result: Value = serde_json::to_value(fibonacci(n))?;
     Ok(result)

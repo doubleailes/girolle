@@ -36,7 +36,7 @@ fn bench_macro(c: &mut Criterion) {
         });
         let payload = build_payload(*i);
         group.bench_with_input(BenchmarkId::new("Girolle", i), i, |b, _i| {
-            b.iter(|| fibonacci_macro(payload.clone()))
+            b.iter(|| fibonacci_macro(&payload))
         });
     }
     group.finish();
