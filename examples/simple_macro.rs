@@ -1,5 +1,4 @@
 use girolle::prelude::*;
-use girolle::{RpcService, RpcTask};
 
 #[girolle]
 fn hello(s: String) -> String {
