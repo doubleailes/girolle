@@ -184,7 +184,7 @@ impl RpcClient {
         let payload = Payload::new(args);
         let correlation_id = Uuid::new_v4().to_string();
         let routing_key = format!("{}.{}", service_name, method_name);
-        let channel = create_service_queue(service_name.clone()).await?;
+        let channel = create_service_queue(&service_name).await?;
         let mut headers = BTreeMap::new();
         headers.insert(
             "nameko.AMQP_URI".into(),
@@ -532,7 +532,7 @@ impl RpcService {
         if self.f.is_empty() {
             panic!("No function insert");
         }
-        rpc_service(self.service_name.clone(), &self.f)
+        rpc_service(&self.service_name, &self.f)
     }
     /// # get_routing_keys
     ///
@@ -661,7 +661,7 @@ async fn execute_delivery(
 ///
 /// * `service_name` - The name of the service in the Nameko microservice
 /// * `f` - The function to call
-fn rpc_service(service_name: String, f: &HashMap<String, NamekoFunction>) -> lapin::Result<()> {
+fn rpc_service(service_name: &str, f: &HashMap<String, NamekoFunction>) -> lapin::Result<()> {
     // Define the queue name1
     let rpc_queue = format!("rpc-{}", service_name);
     // Add tracing
