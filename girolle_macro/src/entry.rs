@@ -62,7 +62,7 @@ impl Fold for Task {
         self.args = folded_item.inputs.iter().cloned().collect();
         // Replace inputs by the NamekoFunction inputs
         folded_item.inputs = parse_quote! {
-            data: Vec<Value>
+            data: &[Value]
         };
         // Replace the return type by the NamekoFunction return type
         folded_item.output = parse_quote! {-> girolle::Result<Value>};

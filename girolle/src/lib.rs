@@ -14,7 +14,7 @@
 //!
 //! use girolle::{JsonValue::Value, RpcService, Result};
 //!
-//! fn hello(s: Vec<Value>) -> Result<Value> {
+//! fn hello(s: &[Value]) -> Result<Value> {
 //!    // Parse the incomming data
 //!   let n: String = serde_json::from_value(s[0].clone())?;
 //!  let hello_str: Value = format!("Hello, {}!, by Girolle", n).into();
@@ -65,7 +65,7 @@ pub type Result<T> = std::result::Result<T, serde_json::Error>;
 /// ## Description
 ///
 /// This type is used to define the function to call in the RPC service
-pub type NamekoFunction = fn(Vec<Value>) -> Result<Value>;
+pub type NamekoFunction = fn(&[Value]) -> Result<Value>;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 mod queue;
@@ -339,7 +339,7 @@ impl RpcClient {
 /// ```rust,no_run
 /// use girolle::{JsonValue::Value, RpcService, Result, RpcTask};
 ///
-/// fn hello(s: Vec<Value>) -> Result<Value> {
+/// fn hello(s: &[Value]) -> Result<Value> {
 ///    // Parse the incomming data
 ///    let n: String = serde_json::from_value(s[0].clone())?;
 ///    let hello_str: Value = format!("Hello, {}!, by Girolle", n).into();
@@ -375,7 +375,7 @@ impl RpcTask {
     /// ```rust,no_run
     /// use girolle::{JsonValue::Value, RpcService, Result, RpcTask};
     ///
-    /// fn hello(s: Vec<Value>) -> Result<Value> {
+    /// fn hello(s: &[Value]) -> Result<Value> {
     ///    // Parse the incomming data
     ///    let n: String = serde_json::from_value(s[0].clone())?;
     ///    let hello_str: Value = format!("Hello, {}!, by Girolle", n).into();
@@ -408,7 +408,7 @@ impl RpcTask {
 /// ```rust, no_run
 /// use girolle::{JsonValue::Value, RpcService, Result};
 ///
-/// fn hello(s: Vec<Value>) -> Result<Value> {
+/// fn hello(s: &[Value]) -> Result<Value> {
 ///     // Parse the incomming data
 ///     let n: String = serde_json::from_value(s[0].clone())?;
 ///     let hello_str: Value = format!("Hello, {}!, by Girolle", n).into();
@@ -487,7 +487,7 @@ impl RpcService {
     /// ```rust
     /// use girolle::{JsonValue::Value, RpcService, Result};
     ///
-    /// fn hello(s: Vec<Value>) -> Result<Value> {
+    /// fn hello(s: &[Value]) -> Result<Value> {
     ///    // Parse the incomming data
     ///   let n: String = serde_json::from_value(s[0].clone())?;
     ///   let hello_str: Value = format!("Hello, {}!, by Girolle", n).into();
@@ -517,7 +517,7 @@ impl RpcService {
     /// ```rust
     /// use girolle::{JsonValue::Value, RpcService, Result};
     ///
-    /// fn hello(s: Vec<Value>) -> Result<Value> {
+    /// fn hello(s: &[Value]) -> Result<Value> {
     ///     // Parse the incomming data
     ///     let n: String = serde_json::from_value(s[0].clone())?;
     ///     let hello_str: Value = format!("Hello, {}!, by Girolle", n).into();
@@ -545,7 +545,7 @@ impl RpcService {
     /// ```rust
     /// use girolle::{JsonValue::Value, RpcService, Result};
     ///
-    /// fn hello(s: Vec<Value>) -> Result<Value> {
+    /// fn hello(s: &[Value]) -> Result<Value> {
     ///
     ///    // Parse the incomming data
     ///    let n: String = serde_json::from_value(s[0].clone())?;
@@ -620,7 +620,7 @@ async fn execute_delivery(
         .with_content_encoding("utf-8".into())
         .with_headers(headers);
     // Publish the response
-    let payload: String = match fn_service(args) {
+    let payload: String = match fn_service(&args) {
         Ok(result) => json!(
             {
                 "result": result,
