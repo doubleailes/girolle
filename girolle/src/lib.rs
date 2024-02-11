@@ -175,17 +175,15 @@ impl RpcClient {
     ///
     pub async fn call_async(
         &self,
-        service_name: &'static str,
-        method_name: &'static str,
+        service_name: &str,
+        method_name: &str,
         args: Vec<Value>,
     ) -> lapin::Result<Consumer> {
-        let service_name = service_name.to_string();
-        let method_name = method_name.to_string();
         let payload = Payload::new(args);
         let correlation_id = Uuid::new_v4().to_string();
         let routing_key = format!("{}.{}", service_name, method_name);
-        let channel = create_service_queue(&service_name).await?;
-        let mut headers = BTreeMap::new();
+        let channel = create_service_queue(service_name).await?;
+        let mut headers: BTreeMap<lapin::types::ShortString, AMQPValue> = BTreeMap::new();
         headers.insert(
             "nameko.AMQP_URI".into(),
             AMQPValue::LongString(get_address().into()),
@@ -608,11 +606,7 @@ async fn execute_delivery(
     let correlation_id = get_id(delivery.properties.correlation_id(), "correlation_id");
     let reply_to_id = get_id(delivery.properties.reply_to(), "reply_to_id");
     let opt_headers = delivery.properties.headers().clone(); //need to clone to modify the headers
-    let headers = insert_new_id_to_call_id(
-        opt_headers.unwrap(),
-        &opt_routing_key,
-        &id.to_string(),
-    );
+    let headers = insert_new_id_to_call_id(opt_headers.unwrap(), &opt_routing_key, &id.to_string());
     let properties = BasicProperties::default()
         .with_correlation_id(correlation_id.into())
         .with_content_type("application/json".into())
