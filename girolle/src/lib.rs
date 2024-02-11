@@ -594,7 +594,7 @@ async fn execute_delivery(
     id: &Uuid,
     fn_service: NamekoFunction,
     response_channel: &Channel,
-    rpc_queue_reply: &String,
+    rpc_queue_reply: &str,
 ) {
     let opt_routing_key = delivery.routing_key.to_string();
     let incomming_data: Value = serde_json::from_slice(&delivery.data).expect("json");
@@ -607,16 +607,16 @@ async fn execute_delivery(
     // Get the correlation_id and reply_to_id
     let correlation_id = get_id(delivery.properties.correlation_id(), "correlation_id");
     let reply_to_id = get_id(delivery.properties.reply_to(), "reply_to_id");
-    let opt_headers = delivery.properties.headers();
+    let opt_headers = delivery.properties.headers().clone(); //need to clone to modify the headers
     let headers = insert_new_id_to_call_id(
-        opt_headers.as_ref().expect("headers").clone(),
+        opt_headers.unwrap(),
         &opt_routing_key,
         &id.to_string(),
     );
     let properties = BasicProperties::default()
         .with_correlation_id(correlation_id.into())
         .with_content_type("application/json".into())
-        .with_reply_to(rpc_queue_reply.clone().into())
+        .with_reply_to(rpc_queue_reply.into())
         .with_content_encoding("utf-8".into())
         .with_headers(headers);
     // Publish the response
