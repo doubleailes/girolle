@@ -24,6 +24,11 @@ fn fib_warp(n: u64) -> u64 {
     fibonacci(n)
 }
 
+#[test]
+fn test_simple_operation() {
+    assert_eq!(simple_operation(1, 2), 3);
+}
+
 fn main() {
     let conf: Config = Config::with_yaml_defaults("staging/config.yml".to_string()).unwrap();
     let rpc_task = RpcTask::new("hello", hello);

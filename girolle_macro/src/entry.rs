@@ -7,12 +7,14 @@ use syn::{parse2, FnArg, ItemFn};
 struct Task {
     args: Vec<FnArg>,
     inner_statements: Vec<syn::Stmt>,
+    return_stmt: bool,
 }
 impl Task {
     fn new() -> Self {
         Task {
             args: Vec::new(),
             inner_statements: Vec::new(),
+            return_stmt: false,
         }
     }
     fn add_input_serialize(&mut self) {
@@ -38,10 +40,28 @@ impl Task {
         stmts.extend(previous_stmts.clone());
         self.inner_statements = stmts.clone();
     }
+    fn replace_return(&mut self){
+        for stmt in &mut self.inner_statements {
+            if let syn::Stmt::Expr(expr, _) = stmt {
+                // If the statement is an expression, check if it's a return statement
+                if let syn::Expr::Return(_) = &*expr {
+                    // Replace return with let output =
+                    *stmt = parse_quote! {
+                        let output = 
+                    };
+                    self.return_stmt = true;
+                }
+            }
+        }
+    }
     fn add_output_serialize(&mut self) {
-        let last_imut = self.inner_statements.pop().clone();
-        let output_quote: syn::Stmt = parse_quote! {let output = #last_imut;};
-        self.inner_statements.push(output_quote);
+        if self.return_stmt == false {
+            let last_imut = self.inner_statements.pop().clone();
+            let output_quote: syn::Stmt = parse_quote! {let output = #last_imut;};
+            self.inner_statements.push(output_quote);
+        } else{
+            println!("return_stmt is true");
+        }
     }
     fn add_output_final(&mut self) {
         let final_line: syn::Stmt = parse_quote! {return Ok(serde_json::to_value(output)?);};
@@ -62,19 +82,6 @@ impl Fold for Task {
         folded_item.output = parse_quote! {-> NamekoResult<Value>};
         folded_item
     }
-    fn fold_expr(&mut self, e: syn::Expr) -> syn::Expr {
-        match e {
-            syn::Expr::Return(expr_return) => {
-                let expr = expr_return.expr;
-                let expr_quote = quote! {
-                    let output = #expr
-                };
-                let expr_return_quote: syn::Stmt = parse_quote! {#expr_quote;};
-                parse_quote! {#expr_return_quote}
-            }
-            _ => e,
-        }
-    }
     fn fold_stmt(&mut self, i: syn::Stmt) -> syn::Stmt {
         let folded_item = i.clone();
         // Capture the original statements
@@ -93,6 +100,7 @@ pub(crate) fn main(input: TokenStream) -> TokenStream {
     let mut task = Task::new();
     let mut new_item_fn = task.fold_item_fn(old_item_fn);
     task.add_input_serialize();
+    task.replace_return();
     task.add_output_serialize();
     task.add_output_final();
     new_item_fn.block.stmts = task.inner_statements.clone();
