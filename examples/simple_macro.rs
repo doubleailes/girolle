@@ -17,6 +17,11 @@ fn fib_warp(n: u64) -> u64 {
     fibonacci(n)
 }
 
+#[test]
+fn test_simple_operation() {
+    assert_eq!(simple_operation(1, 2), 3);
+}
+
 fn main() {
     let rpc_task = RpcTask::new("hello", hello);
     let rpc_task_fib = RpcTask::new("fibonacci", fib_warp);
