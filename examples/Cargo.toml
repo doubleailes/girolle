@@ -7,7 +7,6 @@ edition = "2021"
 [dev-dependencies]
 girolle = { path = "../girolle" }
 tokio = { version = "1.35.1", features = ["full"] }
-serde_json = "1.0.108"
 girolle_macro = { path = "../girolle_macro" }
 
 [[example]]
