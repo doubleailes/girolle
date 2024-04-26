@@ -54,8 +54,7 @@ fn fibonacci_reccursive(s: &[Value]) -> Result<Value> {
 ### Create a simple service
 
 ```rust
-use girolle::{JsonValue::Value,RpcTask, RpcService};
-use girolle_macro::girolle;
+use girolle::prelude::*;
 
 #[girolle]
 fn hello(s: String) -> String {
