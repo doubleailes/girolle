@@ -15,7 +15,6 @@ section to see limitation.
 
 [User documentation](https://doubleailes.github.io/girolle/) and [Rust documentation](https://crates.io/crates/girolle)
 
-
 ## Installation
 
 `cargo add girolle`
@@ -39,7 +38,7 @@ The core concept is to remove the pain of the queue creation and reply by
 mokcing the **Nameko** architecture, and to use an abstract type
 `serde_json::Value` to manipulate a serializable data.
 
-if you do not use the macro `#[girolle]` you need to create a function that 
+if you do not use the macro `#[girolle]` you need to create a function that
 extract the data from the a `&[Value]` like this:
 
 ```rust
@@ -154,9 +153,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 - [x] create a proxy service in rust to interact with an other service
 nameko-rpc
 - [ ] Add macro to simplify the creation of a service
-    - [x] Add basic macro
-    - [ ] fix macro to handle `return`
-    - [ ] fix macro to handle recursive function
+  - [x] Add basic macro
+  - [ ] fix macro to handle `return`
+  - [ ] fix macro to handle recursive function
 - [ ] listen to a pub/sub queue
 
 ## Limitation
