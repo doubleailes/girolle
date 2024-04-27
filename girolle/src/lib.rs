@@ -562,12 +562,12 @@ impl RpcService {
 }
 
 async fn publish(
-    response_channel: &Channel,
+    rpc_reply_channel: &Channel,
     payload: String,
     properties: BasicProperties,
     reply_to_id: String,
 ) -> lapin::Result<Confirmation> {
-    let confirm = response_channel
+    let confirm = rpc_reply_channel
         .basic_publish(
             "nameko-rpc",
             &format!("{}", &reply_to_id),
@@ -591,7 +591,7 @@ async fn execute_delivery(
     delivery: Delivery,
     id: &Uuid,
     fn_service: NamekoFunction,
-    response_channel: &Channel,
+    rpc_reply_channel: &Channel,
     rpc_queue_reply: &str,
 ) {
     let opt_routing_key = delivery.routing_key.to_string();
@@ -640,7 +640,7 @@ async fn execute_delivery(
             .to_string()
         }
     };
-    publish(&response_channel, payload, properties, reply_to_id)
+    publish(&rpc_reply_channel, payload, properties, reply_to_id)
         .await
         .expect("Error publishing");
 }
@@ -668,13 +668,13 @@ fn rpc_service(service_name: &str, f: &HashMap<String, NamekoFunction>) -> lapin
     async_global_executor::block_on(async {
         // Create a channel for the service in Nameko this part is handle by
         // the RpcConsumer class
-        let incomming_channel: Channel = create_service_queue(service_name).await?;
+        let rpc_channel: Channel = create_service_queue(service_name).await?;
         let rpc_queue_reply = format!("rpc.reply-{}-{}", service_name, &id);
         // Create a channel for the response in Nameko this part is handle by
         // the ReplyConsumer class
-        let response_channel: Channel = create_message_queue(&rpc_queue_reply, &id).await?;
+        let rpc_reply_channel: Channel = create_message_queue(&rpc_queue_reply, &id).await?;
         // Start a consumer.
-        let mut consumer = incomming_channel
+        let mut consumer = rpc_channel
             .basic_consume(
                 &rpc_queue,
                 "girolle_consumer_incomming",
@@ -699,7 +699,7 @@ fn rpc_service(service_name: &str, f: &HashMap<String, NamekoFunction>) -> lapin
                 delivery,
                 &id,
                 fn_service,
-                &response_channel,
+                &rpc_reply_channel,
                 &rpc_queue_reply,
             )
             .await;
