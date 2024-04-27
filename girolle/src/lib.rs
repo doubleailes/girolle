@@ -212,7 +212,7 @@ impl RpcClient {
         let consumer = reply_queue
             .basic_consume(
                 &rpc_queue_reply,
-                "my_consumer",
+                "girolle_consumer_reply",
                 BasicConsumeOptions::default(),
                 FieldTable::default(),
             )
@@ -666,14 +666,18 @@ fn rpc_service(service_name: &str, f: &HashMap<String, NamekoFunction>) -> lapin
     debug!("List of functions {:?}", f.keys());
 
     async_global_executor::block_on(async {
-        let rpc_queue_reply = format!("rpc.reply-{}-{}", service_name, &id);
-        let response_channel: Channel = create_message_queue(&rpc_queue_reply, &id).await?;
+        // Create a channel for the service in Nameko this part is handle by
+        // the RpcConsumer class
         let incomming_channel: Channel = create_service_queue(service_name).await?;
+        let rpc_queue_reply = format!("rpc.reply-{}-{}", service_name, &id);
+        // Create a channel for the response in Nameko this part is handle by
+        // the ReplyConsumer class
+        let response_channel: Channel = create_message_queue(&rpc_queue_reply, &id).await?;
         // Start a consumer.
         let mut consumer = incomming_channel
             .basic_consume(
                 &rpc_queue,
-                "my_consumer",
+                "girolle_consumer_incomming",
                 BasicConsumeOptions::default(),
                 FieldTable::default(),
             )
