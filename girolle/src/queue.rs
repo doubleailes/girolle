@@ -25,8 +25,12 @@ pub fn get_address() -> String {
 }
 
 async fn get_connection() -> lapin::Result<Connection> {
+    let mut connection_options = ConnectionProperties::default();
+    let mut client_properties_custom = FieldTable::default();
+    client_properties_custom.insert("heartbeat".into(), 60.into());
+    connection_options.client_properties = client_properties_custom;
     let addr = get_address();
-    Connection::connect(&addr, ConnectionProperties::default()).await
+    Connection::connect(&addr, connection_options).await
 }
 
 /// # create_service_queue
