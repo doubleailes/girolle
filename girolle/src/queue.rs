@@ -86,7 +86,11 @@ pub async fn create_message_queue(
     let mut queue_declare_options = QueueDeclareOptions::default();
     queue_declare_options.durable = true;
     response_channel
-        .queue_declare(rpc_queue_reply, queue_declare_options, response_arguments)
+        .queue_declare(
+            rpc_queue_reply,
+            queue_declare_options,
+            response_arguments.clone(),
+        )
         .await
         .map_err(|e| {
             // Handle or log the error
@@ -98,7 +102,7 @@ pub async fn create_message_queue(
             "nameko-rpc",
             &id.to_string(),
             QueueBindOptions::default(),
-            FieldTable::default(),
+            response_arguments,
         )
         .await
         .map_err(|e| {
