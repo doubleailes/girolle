@@ -20,7 +20,7 @@ weight = 10
 
 [[extra.list]]
 title = "Nameko compatible"
-content = 'Girolle is able to interact as a GRPC service with Nameko RCP services'
+content = 'Girolle is able to interact as a RPC service with Nameko RPC services'
 
 [[extra.list]]
 title = "A simple RPC framework"

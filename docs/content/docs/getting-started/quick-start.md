@@ -9,7 +9,7 @@ sort_by = "weight"
 template = "docs/page.html"
 
 [extra]
-lead = "How to start a Girolle project."
+lead = "How to start a project using girolle."
 toc = true
 top = false
 +++
