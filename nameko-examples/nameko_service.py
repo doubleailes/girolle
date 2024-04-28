@@ -1,4 +1,5 @@
 from nameko.rpc import rpc, RpcProxy
+import time
 
 
 class GreetingService:
@@ -21,3 +22,9 @@ class GreetingService:
             return n
         else:
             return self.fibonacci(n - 1) + self.fibonacci(n - 2)
+    
+    @rpc
+    def sleep(self, n):
+        time.sleep(n)
+        return "Slept for {} seconds".format(n)
+    

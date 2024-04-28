@@ -76,12 +76,20 @@ def fibonacci(n: int = 10) -> list[int]:
             data.append(rpc.video.fibonacci(i))
     return data
 
+def test_sleep(n: int = 10) -> str:
+    """
+    fibonacci send a message to the queue
+    """
+    with rpc_proxy(CONFIG) as rpc:
+        rpc.video.sleep.call_async(n)
 
 if __name__ == "__main__":
     start = datetime.now()
     response = send_simple_message("John Doe")
     print(response, datetime.now() - start)
     start = datetime.now()
+    test_sleep(20)
+    test_sleep(10)
     response = send_messages("John Doe", 10)
     print(response, datetime.now() - start)
     start = datetime.now()
@@ -91,4 +99,3 @@ if __name__ == "__main__":
         response = send_simple_message(True)
     except RemoteError as e:
         print(e)
-
