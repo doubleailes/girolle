@@ -612,7 +612,9 @@ async fn execute_delivery(
         .with_content_type("application/json".into())
         .with_reply_to(rpc_queue_reply.into())
         .with_content_encoding("utf-8".into())
-        .with_headers(headers);
+        .with_headers(headers)
+        .with_delivery_mode(2)
+        .with_priority(0);
     // Publish the response
     let payload: String = match fn_service(&args) {
         Ok(result) => json!(
