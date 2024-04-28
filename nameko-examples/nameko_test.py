@@ -81,7 +81,7 @@ def test_sleep(n: int = 10) -> str:
     fibonacci send a message to the queue
     """
     with rpc_proxy(CONFIG) as rpc:
-        rpc.video.sleep.call_async(n)
+        return rpc.video.sleep.call_async(n)
 
 if __name__ == "__main__":
     start = datetime.now()

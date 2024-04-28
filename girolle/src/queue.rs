@@ -25,7 +25,9 @@ pub fn get_address() -> String {
 }
 
 async fn get_connection() -> lapin::Result<Connection> {
-    let mut connection_options = ConnectionProperties::default();
+    let mut connection_options = ConnectionProperties::default()
+        .with_executor(tokio_executor_trait::Tokio::current())
+        .with_reactor(tokio_reactor_trait::Tokio);
     let mut client_properties_custom = FieldTable::default();
     client_properties_custom.insert("heartbeat".into(), 60.into());
     connection_options.client_properties = client_properties_custom;
