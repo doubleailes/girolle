@@ -41,7 +41,7 @@
 use crate::prelude::{json, Value};
 use futures::{executor, stream::StreamExt};
 use lapin::{
-    message::Delivery,
+    message::{Delivery, DeliveryResult},
     options::*,
     publisher_confirm::Confirmation,
     types::{AMQPValue, FieldArray, FieldTable},
@@ -657,7 +657,8 @@ async fn execute_delivery(
 ///
 /// * `service_name` - The name of the service in the Nameko microservice
 /// * `f` - The function to call
-fn rpc_service(service_name: &str, f: HashMap<String, NamekoFunction>) -> lapin::Result<()> {
+#[tokio::main]
+async fn rpc_service(service_name: &str, f: HashMap<String, NamekoFunction>) -> lapin::Result<()> {
     // Define the queue name1
     let rpc_queue = format!("rpc-{}", service_name);
     // Add tracing
@@ -667,50 +668,59 @@ fn rpc_service(service_name: &str, f: HashMap<String, NamekoFunction>) -> lapin:
     // check list of function
     debug!("List of functions {:?}", f.keys());
 
-    async_global_executor::block_on(async {
-        // Create a channel for the service in Nameko this part is handle by
-        // the RpcConsumer class
-        let rpc_channel: Channel = create_service_queue(service_name).await?;
-        let rpc_queue_reply = format!("rpc.reply-{}-{}", service_name, &id);
-        // Create a channel for the response in Nameko this part is handle by
-        // the ReplyConsumer class
-        let rpc_reply_channel: Channel = create_message_queue(&rpc_queue_reply, &id).await?;
-        // Start a consumer.
-        let mut consumer = rpc_channel
-            .basic_consume(
-                &rpc_queue,
-                "girolle_consumer_incomming",
-                BasicConsumeOptions::default(),
-                FieldTable::default(),
-            )
-            .await?;
-        async_global_executor::spawn(async move {
+    // Create a channel for the service in Nameko this part is handle by
+    // the RpcConsumer class
+    let rpc_channel: Channel = create_service_queue(service_name).await?;
+    let rpc_queue_reply = format!("rpc.reply-{}-{}", service_name, &id);
+    // Create a channel for the response in Nameko this part is handle by
+    // the ReplyConsumer class
+    let rpc_reply_channel: Channel = create_message_queue(&rpc_queue_reply, &id).await?;
+    // Start a consumer.
+    let consumer = rpc_channel
+        .basic_consume(
+            &rpc_queue,
+            "girolle_consumer_incomming",
+            BasicConsumeOptions::default(),
+            FieldTable::default(),
+        )
+        .await?;
+    consumer.set_delegate(move |delivery: DeliveryResult| {
+        let rpc_reply_channel_clone = rpc_reply_channel.clone();
+        let f_clone = f.clone();
+        let rpc_queue_reply_clone = rpc_queue_reply.clone();
+        async move {
             info!("will consume");
-            // Iterate over deliveries.
-            while let Some(delivery) = consumer.next().await {
-                let delivery = delivery.expect("error in consumer");
-                let opt_routing_key = delivery.routing_key.to_string();
-                let fn_service: NamekoFunction = match f.get(&opt_routing_key) {
-                    Some(fn_service) => *fn_service,
-                    None => {
-                        warn!("fn_service: {} not found", &opt_routing_key);
-                        continue;
-                    }
-                };
-                delivery.ack(BasicAckOptions::default()).await.expect("ack");
-                execute_delivery(
-                    delivery,
-                    &id,
-                    fn_service,
-                    &rpc_reply_channel,
-                    &rpc_queue_reply,
-                )
-                .await;
-            }
-        })
-        .detach();
-        loop {
-            thread::sleep(std::time::Duration::from_secs(1));
+            let delivery = match delivery {
+                // Carries the delivery alongside its channel
+                Ok(Some(delivery)) => delivery,
+                // The consumer got canceled
+                Ok(None) => return,
+                // Carries the error and is always followed by Ok(None)
+                Err(error) => {
+                    dbg!("Failed to consume queue message {}", error);
+                    return;
+                }
+            };
+
+            let opt_routing_key = delivery.routing_key.to_string();
+            let fn_service: NamekoFunction = match f_clone.get(&opt_routing_key) {
+                Some(fn_service) => *fn_service,
+                None => {
+                    warn!("fn_service: None");
+                    return;
+                }
+            };
+            delivery.ack(BasicAckOptions::default()).await.expect("ack");
+            execute_delivery(
+                delivery,
+                &id,
+                fn_service,
+                &rpc_reply_channel_clone,
+                &rpc_queue_reply_clone,
+            )
+            .await;
         }
-    })
+    });
+    std::future::pending::<()>().await;
+    Ok(())
 }
