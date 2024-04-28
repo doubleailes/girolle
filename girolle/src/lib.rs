@@ -48,7 +48,7 @@ use lapin::{
     BasicProperties, Channel, Consumer,
 };
 pub use serde_json as JsonValue;
-use std::collections::HashMap;
+use std::{collections::HashMap, thread};
 use tracing::{debug, error, info, warn};
 use uuid::Uuid;
 mod nameko_utils;
@@ -530,7 +530,7 @@ impl RpcService {
         if self.f.is_empty() {
             panic!("No function insert");
         }
-        rpc_service(&self.service_name, &self.f)
+        rpc_service(&self.service_name, self.f.clone())
     }
     /// # get_routing_keys
     ///
@@ -657,7 +657,7 @@ async fn execute_delivery(
 ///
 /// * `service_name` - The name of the service in the Nameko microservice
 /// * `f` - The function to call
-fn rpc_service(service_name: &str, f: &HashMap<String, NamekoFunction>) -> lapin::Result<()> {
+fn rpc_service(service_name: &str, f: HashMap<String, NamekoFunction>) -> lapin::Result<()> {
     // Define the queue name1
     let rpc_queue = format!("rpc-{}", service_name);
     // Add tracing
@@ -684,29 +684,33 @@ fn rpc_service(service_name: &str, f: &HashMap<String, NamekoFunction>) -> lapin
                 FieldTable::default(),
             )
             .await?;
-        info!("will consume");
-        // Iterate over deliveries.
-        while let Some(delivery) = consumer.next().await {
-            let delivery = delivery.expect("error in consumer");
-            let opt_routing_key = delivery.routing_key.to_string();
-            let fn_service: NamekoFunction = match f.get(&opt_routing_key) {
-                Some(fn_service) => *fn_service,
-                None => {
-                    warn!("fn_service: {} not found", &opt_routing_key);
-                    return Ok(());
-                }
-            };
-            delivery.ack(BasicAckOptions::default()).await.expect("ack");
-            execute_delivery(
-                delivery,
-                &id,
-                fn_service,
-                &rpc_reply_channel,
-                &rpc_queue_reply,
-            )
-            .await;
+        async_global_executor::spawn(async move {
+            info!("will consume");
+            // Iterate over deliveries.
+            while let Some(delivery) = consumer.next().await {
+                let delivery = delivery.expect("error in consumer");
+                let opt_routing_key = delivery.routing_key.to_string();
+                let fn_service: NamekoFunction = match f.get(&opt_routing_key) {
+                    Some(fn_service) => *fn_service,
+                    None => {
+                        warn!("fn_service: {} not found", &opt_routing_key);
+                        continue;
+                    }
+                };
+                delivery.ack(BasicAckOptions::default()).await.expect("ack");
+                execute_delivery(
+                    delivery,
+                    &id,
+                    fn_service,
+                    &rpc_reply_channel,
+                    &rpc_queue_reply,
+                )
+                .await;
+            }
+        })
+        .detach();
+        loop {
+            thread::sleep(std::time::Duration::from_secs(1));
         }
-        info!("GoodBye!");
-        Ok(())
     })
 }
