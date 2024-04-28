@@ -88,8 +88,8 @@ if __name__ == "__main__":
     response = send_simple_message("John Doe")
     print(response, datetime.now() - start)
     print("start async")
-    test_sleep(20)
-    test_sleep(10)
+    for i in range(100):
+        test_sleep(10)
     print("stop async")
     start = datetime.now()
     response = send_messages("John Doe", 10)
