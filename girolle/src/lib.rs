@@ -48,7 +48,7 @@ use lapin::{
     BasicProperties, Channel, Consumer,
 };
 pub use serde_json as JsonValue;
-use std::{collections::HashMap, thread};
+use std::collections::HashMap;
 use tracing::{debug, error, info, warn};
 use uuid::Uuid;
 mod nameko_utils;
