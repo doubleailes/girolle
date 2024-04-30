@@ -658,7 +658,7 @@ async fn execute_delivery(
 /// * `service_name` - The name of the service in the Nameko microservice
 /// * `f` - The function to call
 #[tokio::main]
-async fn rpc_service(service_name: &str, f: HashMap<String, NamekoFunction>) -> lapin::Result<()> {
+async fn rpc_service(service_name: &str, f_task: HashMap<String, NamekoFunction>) -> lapin::Result<()> {
     // Define the queue name1
     let rpc_queue = format!("rpc-{}", service_name);
     // Add tracing
@@ -666,7 +666,7 @@ async fn rpc_service(service_name: &str, f: HashMap<String, NamekoFunction>) -> 
     // Uuid of the service
     let id = Uuid::new_v4();
     // check list of function
-    debug!("List of functions {:?}", f.keys());
+    debug!("List of functions {:?}", f_task.keys());
 
     // Create a channel for the service in Nameko this part is handle by
     // the RpcConsumer class
@@ -686,7 +686,7 @@ async fn rpc_service(service_name: &str, f: HashMap<String, NamekoFunction>) -> 
         .await?;
     consumer.set_delegate(move |delivery: DeliveryResult| {
         let rpc_reply_channel_clone = rpc_reply_channel.clone();
-        let f_clone = f.clone();
+        let f_task_clone = f_task.clone();
         let rpc_queue_reply_clone = rpc_queue_reply.clone();
         async move {
             info!("will consume");
@@ -703,7 +703,7 @@ async fn rpc_service(service_name: &str, f: HashMap<String, NamekoFunction>) -> 
             };
 
             let opt_routing_key = delivery.routing_key.to_string();
-            let fn_service: NamekoFunction = match f_clone.get(&opt_routing_key) {
+            let fn_service: NamekoFunction = match f_task_clone.get(&opt_routing_key) {
                 Some(fn_service) => *fn_service,
                 None => {
                     warn!("fn_service: None");
