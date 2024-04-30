@@ -657,7 +657,7 @@ async fn execute_delivery(
 /// ## Arguments
 ///
 /// * `service_name` - The name of the service in the Nameko microservice
-/// * `f` - The function to call
+/// * `f_task` - The function to call
 #[tokio::main]
 async fn rpc_service(service_name: &str, f_task: HashMap<String, NamekoFunction>) -> lapin::Result<()> {
     // Define the queue name1
