@@ -688,9 +688,9 @@ async fn rpc_service(service_name: &str, f_task: HashMap<String, NamekoFunction>
         )
         .await?;
     consumer.set_delegate(move |delivery: DeliveryResult| {
-        let rpc_reply_channel_clone = Arc::clone(&rpc_reply_channel);
-        let f_task_clone = Arc::clone(&f_task);
-        let rpc_queue_reply_clone = Arc::clone(&rpc_queue_reply);
+        let rpc_reply_channel_clone: Arc<Channel> = Arc::clone(&rpc_reply_channel);
+        let f_task_clone: Arc<HashMap<String, fn(&[Value]) -> std::prelude::v1::Result<Value, JsonValue::Error>>> = Arc::clone(&f_task);
+        let rpc_queue_reply_clone: Arc<String> = Arc::clone(&rpc_queue_reply);
         async move {
             info!("will consume");
             let delivery = match delivery {
