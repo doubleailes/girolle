@@ -38,6 +38,7 @@
 //!    let rpc_call = RpcClient::new();
 //! }
 //! ```
+use std::sync::Arc;
 use crate::prelude::{json, Value};
 use futures::{executor, stream::StreamExt};
 use lapin::{
@@ -667,14 +668,16 @@ async fn rpc_service(service_name: &str, f_task: HashMap<String, NamekoFunction>
     let id = Uuid::new_v4();
     // check list of function
     debug!("List of functions {:?}", f_task.keys());
+    // Shadowing the f_task to be able to use it in the closure
+    let f_task = Arc::new(f_task);
 
     // Create a channel for the service in Nameko this part is handle by
     // the RpcConsumer class
     let rpc_channel: Channel = create_service_queue(service_name).await?;
-    let rpc_queue_reply = format!("rpc.reply-{}-{}", service_name, &id);
+    let rpc_queue_reply = Arc::new(format!("rpc.reply-{}-{}", service_name, &id));
     // Create a channel for the response in Nameko this part is handle by
     // the ReplyConsumer class
-    let rpc_reply_channel: Channel = create_message_queue(&rpc_queue_reply, &id).await?;
+    let rpc_reply_channel = Arc::new(create_message_queue(&rpc_queue_reply, &id).await?);
     // Start a consumer.
     let consumer = rpc_channel
         .basic_consume(
@@ -685,9 +688,9 @@ async fn rpc_service(service_name: &str, f_task: HashMap<String, NamekoFunction>
         )
         .await?;
     consumer.set_delegate(move |delivery: DeliveryResult| {
-        let rpc_reply_channel_clone = rpc_reply_channel.clone();
-        let f_task_clone = f_task.clone();
-        let rpc_queue_reply_clone = rpc_queue_reply.clone();
+        let rpc_reply_channel_clone = Arc::clone(&rpc_reply_channel);
+        let f_task_clone = Arc::clone(&f_task);
+        let rpc_queue_reply_clone = Arc::clone(&rpc_queue_reply);
         async move {
             info!("will consume");
             let delivery = match delivery {
