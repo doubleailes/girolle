@@ -38,7 +38,6 @@
 //!    let rpc_call = RpcClient::new();
 //! }
 //! ```
-use std::sync::Arc;
 use crate::prelude::{json, Value};
 use futures::{executor, stream::StreamExt};
 use lapin::{
@@ -50,6 +49,7 @@ use lapin::{
 };
 pub use serde_json as JsonValue;
 use std::collections::HashMap;
+use std::sync::Arc;
 use tracing::{debug, error, info, warn};
 use uuid::Uuid;
 mod nameko_utils;
@@ -659,7 +659,10 @@ async fn execute_delivery(
 /// * `service_name` - The name of the service in the Nameko microservice
 /// * `f_task` - The function to call
 #[tokio::main]
-async fn rpc_service(service_name: &str, f_task: HashMap<String, NamekoFunction>) -> lapin::Result<()> {
+async fn rpc_service(
+    service_name: &str,
+    f_task: HashMap<String, NamekoFunction>,
+) -> lapin::Result<()> {
     // Define the queue name1
     let rpc_queue = format!("rpc-{}", service_name);
     // Add tracing
@@ -689,7 +692,9 @@ async fn rpc_service(service_name: &str, f_task: HashMap<String, NamekoFunction>
         .await?;
     consumer.set_delegate(move |delivery: DeliveryResult| {
         let rpc_reply_channel_clone: Arc<Channel> = Arc::clone(&rpc_reply_channel);
-        let f_task_clone: Arc<HashMap<String, fn(&[Value]) -> std::prelude::v1::Result<Value, JsonValue::Error>>> = Arc::clone(&f_task);
+        let f_task_clone: Arc<
+            HashMap<String, fn(&[Value]) -> std::prelude::v1::Result<Value, JsonValue::Error>>,
+        > = Arc::clone(&f_task);
         let rpc_queue_reply_clone: Arc<String> = Arc::clone(&rpc_queue_reply);
         async move {
             info!("will consume");
