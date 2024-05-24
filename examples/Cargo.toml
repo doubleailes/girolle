@@ -6,8 +6,7 @@ edition = "2021"
 
 [dev-dependencies]
 girolle = { path = "../girolle" }
-tokio = { version = "1.35.1", features = ["full"] }
-girolle_macro = { path = "../girolle_macro" }
+tokio = { workspace = true }
 
 [[example]]
 name = "advance_senders"
