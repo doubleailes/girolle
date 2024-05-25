@@ -54,11 +54,8 @@ use lapin::{
 };
 pub use serde_json as JsonValue;
 use std::collections::HashMap;
-use std::sync::{
-    atomic::{AtomicU8, Ordering},
-    Arc,
-};
-use std::{thread, time};
+use std::sync::Arc;
+use tokio::sync::Semaphore;
 use tracing::{debug, error, info, warn};
 use uuid::Uuid;
 mod nameko_utils;
@@ -853,7 +850,7 @@ async fn rpc_service(
             FieldTable::default(),
         )
         .await?;
-    let counter = Arc::new(AtomicU8::new(0));
+    let semaphore = Arc::new(Semaphore::new(32));
     consumer.set_delegate(move |delivery: DeliveryResult| {
         let rpc_reply_channel_clone: Arc<Channel> = Arc::clone(&rpc_reply_channel);
         let f_task_clone: Arc<
@@ -861,21 +858,21 @@ async fn rpc_service(
         > = Arc::clone(&f_task);
         let rpc_queue_reply_clone: Arc<String> = Arc::clone(&rpc_queue_reply);
         let rpc_exchange_clone: Arc<String> = Arc::clone(&atomic_rpc_exchange);
+        let semaphore_clone = Arc::clone(&semaphore);
         async move {
-            counter.fetch_add(1, Ordering::SeqCst);
-            if counter.load(Ordering::SeqCst). < 10 {
-                info!("will consume");
-                let delivery = match delivery {
-                    // Carries the delivery alongside its channel
-                    Ok(Some(delivery)) => delivery,
-                    // The consumer got canceled
-                    Ok(None) => return,
-                    // Carries the error and is always followed by Ok(None)
-                    Err(error) => {
-                        dbg!("Failed to consume queue message {}", error);
-                        return;
-                    }
-                };
+            let _permit = semaphore_clone.acquire().await;
+            info!("will consume");
+            let delivery = match delivery {
+                // Carries the delivery alongside its channel
+                Ok(Some(delivery)) => delivery,
+                // The consumer got canceled
+                Ok(None) => return,
+                // Carries the error and is always followed by Ok(None)
+                Err(error) => {
+                    dbg!("Failed to consume queue message {}", error);
+                    return;
+                }
+            };
 
             let opt_routing_key = delivery.routing_key.to_string();
             let fn_service: NamekoFunction = match f_task_clone.get(&opt_routing_key) {
