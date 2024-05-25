@@ -21,3 +21,4 @@ Cargo.lock
 # Added by the author
 /docs/public
 **/*.nu
+staging/config.yml
