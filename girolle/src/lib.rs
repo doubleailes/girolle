@@ -446,7 +446,7 @@ impl RpcTask {
 ///     services.start();
 /// }
 pub struct RpcService {
-    config_path: String,
+    conf: Config,
     service_name: String,
     f: HashMap<String, NamekoFunction>,
 }
@@ -470,9 +470,9 @@ impl RpcService {
     /// fn main() {
     ///     let services: RpcService = RpcService::new("examples/config.yml".to_string(),"video");
     /// }
-    pub fn new(config_path: String, service_name: &'static str) -> Self {
+    pub fn new(conf: Config, service_name: &'static str) -> Self {
         Self {
-            config_path: config_path,
+            conf,
             service_name: service_name.to_string(),
             f: HashMap::new(),
         }
@@ -490,10 +490,10 @@ impl RpcService {
     /// ## Example
     ///
     /// ```rust
-    /// use girolle::RpcService;
+    /// use girolle::{RpcService, Config};
     ///
     /// fn main() {
-    ///    let mut services: RpcService = RpcService::new("examples/config.yml".to_string(),"video");
+    ///    let mut services: RpcService = RpcService::new(Config::default_config(),"video");
     ///    services.set_service_name("other".to_string());
     /// }
     pub fn set_service_name(&mut self, service_name: String) {
@@ -560,7 +560,7 @@ impl RpcService {
         if self.f.is_empty() {
             panic!("No function insert");
         }
-        rpc_service(&self.config_path, &self.service_name, self.f.clone())
+        rpc_service(self.conf.clone(), &self.service_name, self.f.clone())
     }
     /// # get_routing_keys
     ///
@@ -698,13 +698,11 @@ async fn execute_delivery(
 /// * `f_task` - The function to call
 #[tokio::main]
 async fn rpc_service(
-    config_path: &str,
+    conf: Config,
     service_name: &str,
     f_task: HashMap<String, NamekoFunction>,
 ) -> lapin::Result<()> {
-    // init the config
-    let conf: Config = Config::with_yaml_defaults(config_path).expect("config");
-
+    info!("Starting the service");
     // Define the queue name1
     let rpc_queue = format!("rpc-{}", service_name);
     // Add tracing
