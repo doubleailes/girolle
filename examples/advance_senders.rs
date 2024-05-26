@@ -7,20 +7,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let conf = Config::with_yaml_defaults("staging/config.yml")?;
     let video_name = "video";
     // Create the rpc call struct
-    let rpc_client = RpcClient::new();
+    let rpc_client = RpcClient::new(conf);
     // Create a future result
     let future_result = rpc_client.call_async(
         video_name,
         "hello",
         vec![Value::String("Toto".to_string())],
-        conf.clone(),
     );
     // Send a message during the previous async process
     let result = rpc_client.send(
         video_name,
         "hello",
         vec![Value::String("Girolle".to_string())],
-        conf.clone(),
     )?;
     // Print the result
     println!("{:?}", result);
@@ -46,7 +44,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             video_name,
             "hello",
             vec![Value::String(n.to_string())],
-            conf.clone(),
         ));
     }
     // wait for it
