@@ -33,8 +33,10 @@ fn fibonacci_reccursive(s: &[Value]) -> Result<Value> {
 }
 
 fn main() {
+    // Get the configuration from the staging/config.yml file
+    let conf: Config = Config::with_yaml_defaults("staging/config.yml").unwrap();
     // Create the rpc service struct
-    let mut services: RpcService = RpcService::new("video");
+    let mut services: RpcService = RpcService::new(conf, "video");
     // Add the method with the insert method
     services.insert("hello", hello);
     let rpc_task = RpcTask::new("fibonacci", fibonacci_reccursive);

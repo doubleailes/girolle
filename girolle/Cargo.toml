@@ -1,6 +1,6 @@
 [package]
 name = "girolle"
-version = "1.4.1"
+version = "1.5.0"
 edition = "2021"
 authors = ["Philippe Llerena <philippe.llerena@gmail.com>"]
 description = "A nameko like lib in rust"
@@ -21,6 +21,8 @@ girolle_macro = { path = "../girolle_macro" }
 tokio = { workspace = true }
 tokio-executor-trait = "2.1.1"
 tokio-reactor-trait = "1.1.0"
+serde_yaml = "0.9"
+regex = "1.10.4"
 
 [dependencies.tracing]
 version = "0.1.40"

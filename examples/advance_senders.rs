@@ -1,12 +1,13 @@
-use girolle::{JsonValue::Value, RpcClient};
+use girolle::prelude::*;
 use std::vec;
 use std::{thread, time};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let conf = Config::with_yaml_defaults("staging/config.yml")?;
     let video_name = "video";
     // Create the rpc call struct
-    let rpc_client = RpcClient::new();
+    let rpc_client = RpcClient::new(conf);
     // Create a future result
     let future_result =
         rpc_client.call_async(video_name, "hello", vec![Value::String("Toto".to_string())]);

@@ -2,37 +2,24 @@
 ///
 /// This module contains functions to create queues and channels for the RPC communication.
 use lapin::{
-    options::BasicQosOptions, options::QueueBindOptions, options::QueueDeclareOptions,
-    types::FieldTable, Connection, ConnectionProperties,
+    options::{BasicQosOptions, QueueBindOptions, QueueDeclareOptions},
+    types::FieldTable,
+    Connection, ConnectionProperties,
 };
-use std::env;
 use tracing::info;
 use uuid::Uuid;
 
 /// # QUEUE_TTL
 const QUEUE_TTL: u32 = 300000;
 
-/// # get_address
-///
-/// This function returns the address of the RabbitMQ server.
-///
-pub fn get_address() -> String {
-    let user = env::var("RABBITMQ_USER").unwrap_or_else(|_| "guest".into());
-    let password = env::var("RABBITMQ_PASSWORD").unwrap_or_else(|_| "guest".into());
-    let host = env::var("RABBITMQ_HOST").unwrap_or_else(|_| "127.0.0.1".into());
-    let port = env::var("RABBITMQ_PORT").unwrap_or("5672".to_string());
-    format!("amqp://{}:{}@{}:{}/%2f", user, password, host, port)
-}
-
-async fn get_connection() -> lapin::Result<Connection> {
+async fn get_connection(amqp_uri: String, heartbeat_value: u16) -> lapin::Result<Connection> {
     let mut connection_options = ConnectionProperties::default()
         .with_executor(tokio_executor_trait::Tokio::current())
         .with_reactor(tokio_reactor_trait::Tokio);
     let mut client_properties_custom = FieldTable::default();
-    client_properties_custom.insert("heartbeat".into(), 60.into());
+    client_properties_custom.insert("heartbeat".into(), heartbeat_value.into());
     connection_options.client_properties = client_properties_custom;
-    let addr = get_address();
-    Connection::connect(&addr, connection_options).await
+    Connection::connect(&amqp_uri, connection_options).await
 }
 
 /// # create_service_queue
@@ -42,10 +29,17 @@ async fn get_connection() -> lapin::Result<Connection> {
 /// ## Arguments
 ///
 /// * `service_name` - A string slice that holds the name of the service.
-pub async fn create_service_queue(service_name: &str) -> lapin::Result<lapin::Channel> {
+pub async fn create_service_queue(
+    service_name: &str,
+    amqp_uri: String,
+    heartbeat_value: u16,
+    prefetch_count: u16,
+    rpc_exchange: &str,
+) -> lapin::Result<lapin::Channel> {
+    info!("Create service queue");
     let routing_key = format!("{}.*", service_name);
-    const PREFETCH_COUNT: u16 = 10;
-    let conn = get_connection().await?;
+    let conn = get_connection(amqp_uri, heartbeat_value).await?;
+    info!("{:?}", conn.status());
     let incomming_channel = conn.create_channel().await?;
     let mut queue_declare_options = QueueDeclareOptions::default();
     queue_declare_options.durable = true;
@@ -55,12 +49,12 @@ pub async fn create_service_queue(service_name: &str) -> lapin::Result<lapin::Ch
         .await?;
     info!(?queue, "Declared queue");
     incomming_channel
-        .basic_qos(PREFETCH_COUNT, BasicQosOptions::default())
+        .basic_qos(prefetch_count, BasicQosOptions::default())
         .await?;
     let _incomming_queue = incomming_channel
         .queue_bind(
             &rpc_queue,
-            "nameko-rpc",
+            rpc_exchange,
             &routing_key,
             QueueBindOptions::default(),
             FieldTable::default(),
@@ -80,8 +74,12 @@ pub async fn create_service_queue(service_name: &str) -> lapin::Result<lapin::Ch
 pub async fn create_message_queue(
     rpc_queue_reply: &str,
     id: &Uuid,
+    amqp_uri: String,
+    heartbeat_value: u16,
+    rpc_exchange: &str,
 ) -> lapin::Result<lapin::Channel> {
-    let conn = get_connection().await?;
+    info!("Create message queue");
+    let conn = get_connection(amqp_uri, heartbeat_value).await?;
     let response_channel = conn.create_channel().await?;
     let mut response_arguments = FieldTable::default();
     response_arguments.insert("x-expires".into(), QUEUE_TTL.into());
@@ -101,7 +99,7 @@ pub async fn create_message_queue(
     response_channel
         .queue_bind(
             rpc_queue_reply,
-            "nameko-rpc",
+            rpc_exchange,
             &id.to_string(),
             QueueBindOptions::default(),
             response_arguments,

@@ -6,13 +6,15 @@
 //!
 //! **Girolle** mock Nameko architecture to send request and get response.
 //!
-//! ## Example
+//! ## Examples
 //!
 //! ### RPC Service
 //!
+//! This example is simple service that return a string with the name of the person.
+//!
 //! ```rust,no_run
 //!
-//! use girolle::{JsonValue::Value, RpcService, Result};
+//! use girolle::{JsonValue::Value, RpcService, Result, Config};
 //!
 //! fn hello(s: &[Value]) -> Result<Value> {
 //!    // Parse the incomming data
@@ -22,7 +24,8 @@
 //! }
 //!
 //! fn main() {
-//!   let mut services: RpcService = RpcService::new("video");
+//!   let conf: Config = Config::with_yaml_defaults("config.yml").unwrap();
+//!   let mut services: RpcService = RpcService::new(conf,"video");
 //!   services.insert("hello", hello);
 //!   services.start();
 //! }
@@ -30,12 +33,14 @@
 //!
 //! ### RPC Client
 //!
+//! This example is a simple client that call the hello function in the video service.
+//!
 //! ```rust
-//! use girolle::RpcClient;
+//! use girolle::{RpcClient, Config};
 //!
 //! #[tokio::main]
 //! async fn main() {
-//!    let rpc_call = RpcClient::new();
+//!    let rpc_call = RpcClient::new(Config::default_config());
 //! }
 //! ```
 use crate::prelude::{json, Value};
@@ -65,12 +70,15 @@ pub type Result<T> = std::result::Result<T, serde_json::Error>;
 ///
 /// ## Description
 ///
-/// This type is used to define the function to call in the RPC service
+/// This type is used to define the function to call in the RPC service it
+/// mainly simplify the code to manipulate a complexe type.
 pub type NamekoFunction = fn(&[Value]) -> Result<Value>;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 mod queue;
-use queue::{create_message_queue, create_service_queue, get_address};
+use queue::{create_message_queue, create_service_queue};
+mod config;
+pub use config::Config;
 
 #[derive(Debug, Serialize, Deserialize)]
 struct Payload {
@@ -95,13 +103,14 @@ impl Payload {
 /// ## Example
 ///
 /// ```rust
-/// use girolle::RpcClient;
+/// use girolle::{RpcClient, Config};
 ///
 /// #[tokio::main]
 /// async fn main() {
-///    let rpc_client = RpcClient::new();
+///    let rpc_client = RpcClient::new(Config::default_config());
 /// }
 pub struct RpcClient {
+    conf: Config,
     identifier: Uuid,
 }
 impl RpcClient {
@@ -111,17 +120,26 @@ impl RpcClient {
     ///
     /// This function create a new RpcCall struct
     ///
+    /// ## Arguments
+    ///
+    /// * `conf` - The configuration as Config
+    ///
+    /// ## Returns
+    ///
+    /// This function return a girolle::RpcCall struct
+    ///
     /// ## Example
     ///
     /// ```rust
-    /// use girolle::RpcClient;
+    /// use girolle::{RpcClient,Config};
     ///
     /// #[tokio::main]
     /// async fn main() {
-    ///   let rpc_call = RpcClient::new();
+    ///   let rpc_call = RpcClient::new(Config::default_config());
     /// }
-    pub fn new() -> Self {
+    pub fn new(conf: Config) -> Self {
         Self {
+            conf,
             identifier: Uuid::new_v4(),
         }
     }
@@ -134,11 +152,11 @@ impl RpcClient {
     /// ## Example
     ///
     /// ```rust
-    /// use girolle::RpcClient;
+    /// use girolle::prelude::*;
     ///
     /// #[tokio::main]
     /// async fn main() {
-    ///     let rpc_call = RpcClient::new();
+    ///     let rpc_call = RpcClient::new(Config::default_config());
     ///     let identifier = rpc_call.get_identifier();
     /// }
     pub fn get_identifier(&self) -> String {
@@ -162,12 +180,13 @@ impl RpcClient {
     /// See example simple_sender in the examples folder
     ///
     /// ```rust,no_run
-    /// use girolle::RpcClient;
+    /// use girolle::prelude::*;
     /// use girolle::JsonValue::Value;
     ///
     /// #[tokio::main]
     /// async fn main() {
-    ///    let rpc_call = RpcClient::new();
+    ///    let conf = Config::with_yaml_defaults("config.yml").unwrap();
+    ///    let rpc_call = RpcClient::new(conf);
     ///    let service_name = "video";
     ///    let method_name = "hello";
     ///    let args = vec![Value::String("John Doe".to_string())];
@@ -183,11 +202,18 @@ impl RpcClient {
         let payload = Payload::new(args);
         let correlation_id = Uuid::new_v4().to_string();
         let routing_key = format!("{}.{}", service_name, method_name);
-        let channel = create_service_queue(service_name).await?;
+        let channel = create_service_queue(
+            service_name,
+            self.conf.AMQP_URI(),
+            self.conf.heartbeat(),
+            self.conf.prefetch_count(),
+            &self.conf.rpc_exchange(),
+        )
+        .await?;
         let mut headers: BTreeMap<lapin::types::ShortString, AMQPValue> = BTreeMap::new();
         headers.insert(
             "nameko.AMQP_URI".into(),
-            AMQPValue::LongString(get_address().into()),
+            AMQPValue::LongString(self.conf.AMQP_URI().into()),
         );
         headers.insert(
             "nameko.call_id_stack".into(),
@@ -203,7 +229,15 @@ impl RpcClient {
             .with_headers(FieldTable::from(headers));
         let reply_name = "rpc.listener";
         let rpc_queue_reply = create_rpc_queue_reply_name(reply_name, &self.identifier.to_string());
-        let reply_queue = match create_message_queue(&rpc_queue_reply, &self.identifier).await {
+        let reply_queue = match create_message_queue(
+            &rpc_queue_reply,
+            &self.identifier,
+            self.conf.AMQP_URI(),
+            self.conf.heartbeat(),
+            &self.conf.rpc_exchange(),
+        )
+        .await
+        {
             Ok(queue) => queue,
             Err(e) => {
                 // Handle error, e.g., log it or retry
@@ -220,7 +254,7 @@ impl RpcClient {
             .await?;
         let confirm = channel
             .basic_publish(
-                "nameko-rpc",
+                &self.conf.rpc_exchange(),
                 &routing_key,
                 BasicPublishOptions::default(),
                 serde_json::to_value(payload)
@@ -252,13 +286,13 @@ impl RpcClient {
     /// See example simple_sender in the examples folder
     ///
     /// ```rust,no_run
-    /// use girolle::RpcClient;
+    /// use girolle::prelude::*;
     /// use girolle::JsonValue::Value;
     ///
     /// #[tokio::main]
-    ///
     /// async fn main() {
-    ///    let rpc_call = RpcClient::new();
+    ///    let conf = Config::with_yaml_defaults("config.yml").unwrap();
+    ///    let rpc_call = RpcClient::new(conf);
     ///    let service_name = "video";
     ///    let method_name = "hello";
     ///    let args = vec![Value::String("John".to_string())];
@@ -303,12 +337,13 @@ impl RpcClient {
     /// See example simple_sender in the examples folder
     ///
     /// ```rust,no_run
-    /// use girolle::RpcClient;
+    /// use girolle::prelude::*;
     /// use girolle::JsonValue::Value;
     ///
     /// #[tokio::main]
     /// async fn main() {
-    ///     let rpc_call = RpcClient::new();
+    ///     let conf = Config::with_yaml_defaults("config.yml").unwrap();
+    ///     let rpc_call = RpcClient::new(conf);
     ///     let service_name = "video";
     ///     let method_name = "hello";
     ///     let args = vec![Value::String("Toto".to_string())];
@@ -336,7 +371,7 @@ impl RpcClient {
 /// ## Example
 ///
 /// ```rust,no_run
-/// use girolle::{JsonValue::Value, RpcService, Result, RpcTask};
+/// use girolle::{JsonValue::Value, RpcService, Result, RpcTask, Config};
 ///
 /// fn hello(s: &[Value]) -> Result<Value> {
 ///    // Parse the incomming data
@@ -347,7 +382,7 @@ impl RpcClient {
 ///  
 ///
 /// fn main() {
-///     let mut services: RpcService = RpcService::new("video");
+///     let mut services: RpcService = RpcService::new(Config::default_config(),"video");
 ///     let rpc_task = RpcTask::new("hello", hello);
 ///     services.register(rpc_task).start();
 /// }
@@ -369,10 +404,14 @@ impl RpcTask {
     /// * `name` - The name of the function to call
     /// * `inner_function` - The function to call
     ///
+    /// ## Returns
+    ///
+    /// This function return a girolle::RpcTask struct
+    ///
     /// ## Example
     ///
     /// ```rust,no_run
-    /// use girolle::{JsonValue::Value, RpcService, Result, RpcTask};
+    /// use girolle::{JsonValue::Value, RpcService, Result, RpcTask, Config};
     ///
     /// fn hello(s: &[Value]) -> Result<Value> {
     ///    // Parse the incomming data
@@ -382,7 +421,7 @@ impl RpcTask {
     /// }
     ///
     /// fn main() {
-    ///     let mut services: RpcService = RpcService::new("video");
+    ///     let mut services: RpcService = RpcService::new(Config::default_config(),"video");
     ///     let rpc_task = RpcTask::new("hello", hello);
     ///     services.register(rpc_task).start();
     /// }
@@ -400,12 +439,12 @@ impl RpcTask {
 /// ## Description
 ///
 /// This struct is used to create a RPC service. This service will run
-/// infinitly.
+/// infinitly if started.
 ///
 /// ## Example
 ///
 /// ```rust, no_run
-/// use girolle::{JsonValue::Value, RpcService, Result};
+/// use girolle::{JsonValue::Value, RpcService, Result, Config};
 ///
 /// fn hello(s: &[Value]) -> Result<Value> {
 ///     // Parse the incomming data
@@ -415,11 +454,12 @@ impl RpcTask {
 /// }
 ///
 /// fn main() {
-///     let mut services: RpcService = RpcService::new("video");
+///     let mut services: RpcService = RpcService::new(Config::default_config(),"video");
 ///     services.insert("hello", hello);
 ///     services.start();
 /// }
 pub struct RpcService {
+    conf: Config,
     service_name: String,
     f: HashMap<String, NamekoFunction>,
 }
@@ -432,18 +472,24 @@ impl RpcService {
     ///
     /// ## Arguments
     ///
+    /// * `conf` - The configuration as Config
     /// * `service_name` - The name of the service in the Nameko microservice
+    ///
+    /// ## Returns
+    ///
+    /// This function return a girolle::RpcService struct
     ///
     /// ## Example
     ///
     /// ```rust
-    /// use girolle::RpcService;
+    /// use girolle::{RpcService, Config};
     ///
     /// fn main() {
-    ///     let services: RpcService = RpcService::new("video");
+    ///     let services: RpcService = RpcService::new(Config::default_config(),"video");
     /// }
-    pub fn new(service_name: &'static str) -> Self {
+    pub fn new(conf: Config, service_name: &'static str) -> Self {
         Self {
+            conf,
             service_name: service_name.to_string(),
             f: HashMap::new(),
         }
@@ -461,10 +507,10 @@ impl RpcService {
     /// ## Example
     ///
     /// ```rust
-    /// use girolle::RpcService;
+    /// use girolle::{RpcService, Config};
     ///
     /// fn main() {
-    ///    let mut services: RpcService = RpcService::new("video");
+    ///    let mut services: RpcService = RpcService::new(Config::default_config(),"video");
     ///    services.set_service_name("other".to_string());
     /// }
     pub fn set_service_name(&mut self, service_name: String) {
@@ -484,7 +530,7 @@ impl RpcService {
     /// ## Example
     ///
     /// ```rust
-    /// use girolle::{JsonValue::Value, RpcService, Result};
+    /// use girolle::{JsonValue::Value, RpcService, Result, Config};
     ///
     /// fn hello(s: &[Value]) -> Result<Value> {
     ///    // Parse the incomming data
@@ -494,7 +540,7 @@ impl RpcService {
     /// }
     ///
     /// fn main() {
-    ///   let mut services: RpcService = RpcService::new("video");
+    ///   let mut services: RpcService = RpcService::new(Config::default_config(),"video");
     ///   services.insert("hello", hello);
     /// }
     pub fn insert(&mut self, method_name: &'static str, f: NamekoFunction) {
@@ -514,7 +560,7 @@ impl RpcService {
     /// ## Example
     ///
     /// ```rust
-    /// use girolle::{JsonValue::Value, RpcService, Result};
+    /// use girolle::{JsonValue::Value, RpcService, Result, Config};
     ///
     /// fn hello(s: &[Value]) -> Result<Value> {
     ///     // Parse the incomming data
@@ -524,14 +570,14 @@ impl RpcService {
     /// }
     ///
     /// fn main() {
-    ///    let mut services: RpcService = RpcService::new("video");
+    ///    let mut services: RpcService = RpcService::new(Config::default_config(),"video");
     ///    services.insert("hello", hello);
     /// }
     pub fn start(&self) -> lapin::Result<()> {
         if self.f.is_empty() {
             panic!("No function insert");
         }
-        rpc_service(&self.service_name, self.f.clone())
+        rpc_service(self.conf.clone(), &self.service_name, self.f.clone())
     }
     /// # get_routing_keys
     ///
@@ -542,7 +588,7 @@ impl RpcService {
     /// ## Example
     ///
     /// ```rust
-    /// use girolle::{JsonValue::Value, RpcService, Result};
+    /// use girolle::{JsonValue::Value, RpcService, Result, Config};
     ///
     /// fn hello(s: &[Value]) -> Result<Value> {
     ///
@@ -553,7 +599,7 @@ impl RpcService {
     /// }
     ///
     /// fn main() {
-    ///    let mut services: RpcService = RpcService::new("video");
+    ///    let mut services: RpcService = RpcService::new(Config::default_config(),"video");
     ///    services.insert("hello", hello);
     ///    let routing_keys = services.get_routing_keys();
     /// }
@@ -567,10 +613,11 @@ async fn publish(
     payload: String,
     properties: BasicProperties,
     reply_to_id: String,
+    rpc_exchange: &str,
 ) -> lapin::Result<Confirmation> {
     let confirm = rpc_reply_channel
         .basic_publish(
-            "nameko-rpc",
+            rpc_exchange,
             &format!("{}", &reply_to_id),
             BasicPublishOptions::default(),
             payload.as_bytes(),
@@ -594,6 +641,7 @@ async fn execute_delivery(
     fn_service: NamekoFunction,
     rpc_reply_channel: &Channel,
     rpc_queue_reply: &str,
+    rpc_exchange: &str,
 ) {
     let opt_routing_key = delivery.routing_key.to_string();
     let incomming_data: Value = serde_json::from_slice(&delivery.data).expect("json");
@@ -643,9 +691,15 @@ async fn execute_delivery(
             .to_string()
         }
     };
-    publish(&rpc_reply_channel, payload, properties, reply_to_id)
-        .await
-        .expect("Error publishing");
+    publish(
+        &rpc_reply_channel,
+        payload,
+        properties,
+        reply_to_id,
+        rpc_exchange,
+    )
+    .await
+    .expect("Error publishing");
 }
 
 /// # rpc_service
@@ -656,13 +710,16 @@ async fn execute_delivery(
 ///
 /// ## Arguments
 ///
+/// * `conf` - The configuration as Config
 /// * `service_name` - The name of the service in the Nameko microservice
 /// * `f_task` - The function to call
 #[tokio::main]
 async fn rpc_service(
+    conf: Config,
     service_name: &str,
     f_task: HashMap<String, NamekoFunction>,
 ) -> lapin::Result<()> {
+    info!("Starting the service");
     // Define the queue name1
     let rpc_queue = format!("rpc-{}", service_name);
     // Add tracing
@@ -676,11 +733,28 @@ async fn rpc_service(
 
     // Create a channel for the service in Nameko this part is handle by
     // the RpcConsumer class
-    let rpc_channel: Channel = create_service_queue(service_name).await?;
+    let rpc_channel: Channel = create_service_queue(
+        service_name,
+        conf.AMQP_URI(),
+        conf.heartbeat(),
+        conf.prefetch_count(),
+        &conf.rpc_exchange(),
+    )
+    .await?;
     let rpc_queue_reply = Arc::new(format!("rpc.reply-{}-{}", service_name, &id));
     // Create a channel for the response in Nameko this part is handle by
     // the ReplyConsumer class
-    let rpc_reply_channel = Arc::new(create_message_queue(&rpc_queue_reply, &id).await?);
+    let rpc_reply_channel = Arc::new(
+        create_message_queue(
+            &rpc_queue_reply,
+            &id,
+            conf.AMQP_URI(),
+            conf.heartbeat(),
+            &conf.rpc_exchange(),
+        )
+        .await?,
+    );
+    let atomic_rpc_exchange = Arc::new(conf.rpc_exchange().to_string());
     // Start a consumer.
     let consumer = rpc_channel
         .basic_consume(
@@ -696,6 +770,7 @@ async fn rpc_service(
             HashMap<String, fn(&[Value]) -> std::prelude::v1::Result<Value, JsonValue::Error>>,
         > = Arc::clone(&f_task);
         let rpc_queue_reply_clone: Arc<String> = Arc::clone(&rpc_queue_reply);
+        let rpc_exchange_clone: Arc<String> = Arc::clone(&atomic_rpc_exchange);
         async move {
             info!("will consume");
             let delivery = match delivery {
@@ -725,6 +800,7 @@ async fn rpc_service(
                 fn_service,
                 &rpc_reply_channel_clone,
                 &rpc_queue_reply_clone,
+                &rpc_exchange_clone,
             )
             .await;
         }
