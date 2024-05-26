@@ -9,12 +9,12 @@
 //! ## Examples
 //!
 //! ### RPC Service
-//! 
+//!
 //! This example is simple service that return a string with the name of the person.
 //!
 //! ```rust,no_run
 //!
-//! use girolle::{JsonValue::Value, RpcService, Result};
+//! use girolle::{JsonValue::Value, RpcService, Result, Config};
 //!
 //! fn hello(s: &[Value]) -> Result<Value> {
 //!    // Parse the incomming data
@@ -24,14 +24,15 @@
 //! }
 //!
 //! fn main() {
-//!   let mut services: RpcService = RpcService::new("examples/config.yml".to_string(),"video");
+//!   let conf: Config = Config::with_yaml_defaults("config.yml").unwrap();
+//!   let mut services: RpcService = RpcService::new(conf,"video");
 //!   services.insert("hello", hello);
 //!   services.start();
 //! }
 //! ```
 //!
 //! ### RPC Client
-//! 
+//!
 //! This example is a simple client that call the hello function in the video service.
 //!
 //! ```rust
@@ -346,8 +347,8 @@ impl RpcClient {
         method_name: &'static str,
         args: Vec<Value>,
     ) -> Result<Value> {
-        let consumer = executor::block_on(self.call_async(service_name, method_name, args))
-            .expect("call");
+        let consumer =
+            executor::block_on(self.call_async(service_name, method_name, args)).expect("call");
         Ok(executor::block_on(self.result(consumer)))
     }
 }
@@ -362,7 +363,7 @@ impl RpcClient {
 /// ## Example
 ///
 /// ```rust,no_run
-/// use girolle::{JsonValue::Value, RpcService, Result, RpcTask};
+/// use girolle::{JsonValue::Value, RpcService, Result, RpcTask, Config};
 ///
 /// fn hello(s: &[Value]) -> Result<Value> {
 ///    // Parse the incomming data
@@ -373,7 +374,7 @@ impl RpcClient {
 ///  
 ///
 /// fn main() {
-///     let mut services: RpcService = RpcService::new("examples/config.yml".to_string(),"video");
+///     let mut services: RpcService = RpcService::new(Config::default_config(),"video");
 ///     let rpc_task = RpcTask::new("hello", hello);
 ///     services.register(rpc_task).start();
 /// }
@@ -398,7 +399,7 @@ impl RpcTask {
     /// ## Example
     ///
     /// ```rust,no_run
-    /// use girolle::{JsonValue::Value, RpcService, Result, RpcTask};
+    /// use girolle::{JsonValue::Value, RpcService, Result, RpcTask, Config};
     ///
     /// fn hello(s: &[Value]) -> Result<Value> {
     ///    // Parse the incomming data
@@ -408,7 +409,7 @@ impl RpcTask {
     /// }
     ///
     /// fn main() {
-    ///     let mut services: RpcService = RpcService::new("examples/config.yml".to_string(),"video");
+    ///     let mut services: RpcService = RpcService::new(Config::default_config(),"video");
     ///     let rpc_task = RpcTask::new("hello", hello);
     ///     services.register(rpc_task).start();
     /// }
@@ -431,7 +432,7 @@ impl RpcTask {
 /// ## Example
 ///
 /// ```rust, no_run
-/// use girolle::{JsonValue::Value, RpcService, Result};
+/// use girolle::{JsonValue::Value, RpcService, Result, Config};
 ///
 /// fn hello(s: &[Value]) -> Result<Value> {
 ///     // Parse the incomming data
@@ -441,7 +442,7 @@ impl RpcTask {
 /// }
 ///
 /// fn main() {
-///     let mut services: RpcService = RpcService::new("examples/config.yml".to_string(),"video");
+///     let mut services: RpcService = RpcService::new(Config::default_config(),"video");
 ///     services.insert("hello", hello);
 ///     services.start();
 /// }
@@ -465,10 +466,10 @@ impl RpcService {
     /// ## Example
     ///
     /// ```rust
-    /// use girolle::RpcService;
+    /// use girolle::{RpcService, Config};
     ///
     /// fn main() {
-    ///     let services: RpcService = RpcService::new("examples/config.yml".to_string(),"video");
+    ///     let services: RpcService = RpcService::new(Config::default_config(),"video");
     /// }
     pub fn new(conf: Config, service_name: &'static str) -> Self {
         Self {
@@ -513,7 +514,7 @@ impl RpcService {
     /// ## Example
     ///
     /// ```rust
-    /// use girolle::{JsonValue::Value, RpcService, Result};
+    /// use girolle::{JsonValue::Value, RpcService, Result, Config};
     ///
     /// fn hello(s: &[Value]) -> Result<Value> {
     ///    // Parse the incomming data
@@ -523,7 +524,7 @@ impl RpcService {
     /// }
     ///
     /// fn main() {
-    ///   let mut services: RpcService = RpcService::new("examples/config.yml".to_string(),"video");
+    ///   let mut services: RpcService = RpcService::new(Config::default_config(),"video");
     ///   services.insert("hello", hello);
     /// }
     pub fn insert(&mut self, method_name: &'static str, f: NamekoFunction) {
@@ -543,7 +544,7 @@ impl RpcService {
     /// ## Example
     ///
     /// ```rust
-    /// use girolle::{JsonValue::Value, RpcService, Result};
+    /// use girolle::{JsonValue::Value, RpcService, Result, Config};
     ///
     /// fn hello(s: &[Value]) -> Result<Value> {
     ///     // Parse the incomming data
@@ -553,7 +554,7 @@ impl RpcService {
     /// }
     ///
     /// fn main() {
-    ///    let mut services: RpcService = RpcService::new("examples/config.yml".to_string(),"video");
+    ///    let mut services: RpcService = RpcService::new(Config::default_config(),"video");
     ///    services.insert("hello", hello);
     /// }
     pub fn start(&self) -> lapin::Result<()> {
@@ -571,7 +572,7 @@ impl RpcService {
     /// ## Example
     ///
     /// ```rust
-    /// use girolle::{JsonValue::Value, RpcService, Result};
+    /// use girolle::{JsonValue::Value, RpcService, Result, Config};
     ///
     /// fn hello(s: &[Value]) -> Result<Value> {
     ///
@@ -582,7 +583,7 @@ impl RpcService {
     /// }
     ///
     /// fn main() {
-    ///    let mut services: RpcService = RpcService::new("examples/config.yml".to_string(),"video");
+    ///    let mut services: RpcService = RpcService::new(Config::default_config(),"video");
     ///    services.insert("hello", hello);
     ///    let routing_keys = services.get_routing_keys();
     /// }
@@ -693,7 +694,7 @@ async fn execute_delivery(
 ///
 /// ## Arguments
 ///
-/// * `config_path` - The path of the config file
+/// * `conf` - The configuration as Config
 /// * `service_name` - The name of the service in the Nameko microservice
 /// * `f_task` - The function to call
 #[tokio::main]

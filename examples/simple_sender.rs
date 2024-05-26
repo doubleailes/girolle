@@ -12,7 +12,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Transform the number into a JsonValue
     let t: serde_json::Value = serde_json::to_value(30).unwrap();
     // Create the payload
-    let new_payload:Vec<Value> = vec![t];
+    let new_payload: Vec<Value> = vec![t];
     // Send the payload
     let new_result = rpc_client.send(video_name, "fibonacci", new_payload)?;
     let fib_result: u64 = serde_json::from_value(new_result).unwrap();
@@ -20,11 +20,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("fibonacci :{:?}", fib_result);
     assert_eq!(fib_result, 832040);
     // Create a future result
-    let future_result = rpc_client.call_async(
-        video_name,
-        "hello",
-        vec![Value::String("Toto".to_string())],
-    );
+    let future_result =
+        rpc_client.call_async(video_name, "hello", vec![Value::String("Toto".to_string())]);
     // Send a message during the previous async process
     let result = rpc_client.send(
         video_name,

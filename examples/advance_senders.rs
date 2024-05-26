@@ -9,11 +9,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Create the rpc call struct
     let rpc_client = RpcClient::new(conf);
     // Create a future result
-    let future_result = rpc_client.call_async(
-        video_name,
-        "hello",
-        vec![Value::String("Toto".to_string())],
-    );
+    let future_result =
+        rpc_client.call_async(video_name, "hello", vec![Value::String("Toto".to_string())]);
     // Send a message during the previous async process
     let result = rpc_client.send(
         video_name,
