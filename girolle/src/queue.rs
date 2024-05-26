@@ -19,7 +19,6 @@ async fn get_connection(amqp_uri: String, heartbeat_value: u16) -> lapin::Result
     let mut client_properties_custom = FieldTable::default();
     client_properties_custom.insert("heartbeat".into(), heartbeat_value.into());
     connection_options.client_properties = client_properties_custom;
-    info!("Try Connection to {}", &amqp_uri);
     Connection::connect(&amqp_uri, connection_options).await
 }
 
@@ -79,6 +78,7 @@ pub async fn create_message_queue(
     heartbeat_value: u16,
     rpc_exchange: &str,
 ) -> lapin::Result<lapin::Channel> {
+    info!("Create message queue");
     let conn = get_connection(amqp_uri, heartbeat_value).await?;
     let response_channel = conn.create_channel().await?;
     let mut response_arguments = FieldTable::default();
