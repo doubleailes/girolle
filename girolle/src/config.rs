@@ -1,6 +1,10 @@
+use regex::Captures;
+use regex::Regex;
 use serde::Deserialize;
 use serde_yaml;
+use std::borrow::Cow;
 use std::collections::HashMap;
+use std::env;
 use std::fs::File;
 use std::io::Read;
 
@@ -97,7 +101,7 @@ impl Config {
         let mut file = File::open(file_path)?;
         let mut contents = String::new();
         file.read_to_string(&mut contents)?;
-
+        contents = expand_var(&contents).to_string();
         let overrides: Config = serde_yaml::from_str(&contents)?;
         Ok(default_config.merge(overrides))
     }
@@ -169,6 +173,22 @@ impl Config {
         new_config.rpc_exchange = Some(rpc_exchange.to_string());
         new_config
     }
+}
+
+fn expand_var(raw_config: &str) -> Cow<str> {
+    let re = Regex::new(r"\$\{([a-zA-Z_][0-9a-zA-Z_]*)\}").unwrap();
+    re.replace_all(&raw_config, |caps: &Captures| match env::var(&caps[1]) {
+        Ok(val) => val,
+        Err(_) => (&caps[0]).to_string(),
+    })
+}
+
+#[test]
+fn test_expand_var() {
+    env::set_var("HOME", "/home/user");
+    assert_eq!(expand_var("${HOME}/.config/"), "/home/user/.config/");
+    env::remove_var("HOME");
+    assert_eq!(expand_var("${HOME}/.config"), "${HOME}/.config");
 }
 
 #[test]
