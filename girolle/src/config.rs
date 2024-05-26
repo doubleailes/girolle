@@ -3,6 +3,7 @@ use serde_yaml;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::Read;
+use std::path::Path;
 
 /// # Config
 ///
@@ -149,10 +150,11 @@ fn test_config_default() {
     assert_eq!(config.AMQP_URI(), "amqp://guest:guest@localhost/");
     assert_eq!(config.prefetch_count(), 10);
 }
+use std::env;
 
 #[test]
 fn test_config_with_yaml_defaults() {
-    let config = Config::with_yaml_defaults("./examples/config.yml").unwrap();
+    let config = Config::with_yaml_defaults("../examples/config.yml").unwrap();
     assert_eq!(config.AMQP_URI(), "amqp://toto:super@$172.16.1.1/");
     assert_eq!(config.prefetch_count(), 10);
     assert_eq!(config.heartbeat(), 60);
