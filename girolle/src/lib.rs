@@ -119,13 +119,13 @@ impl RpcClient {
     /// ## Description
     ///
     /// This function create a new RpcCall struct
-    /// 
+    ///
     /// ## Arguments
-    /// 
+    ///
     /// * `conf` - The configuration as Config
-    /// 
+    ///
     /// ## Returns
-    /// 
+    ///
     /// This function return a girolle::RpcCall struct
     ///
     /// ## Example
@@ -403,9 +403,9 @@ impl RpcTask {
     ///
     /// * `name` - The name of the function to call
     /// * `inner_function` - The function to call
-    /// 
+    ///
     /// ## Returns
-    /// 
+    ///
     /// This function return a girolle::RpcTask struct
     ///
     /// ## Example
@@ -474,9 +474,9 @@ impl RpcService {
     ///
     /// * `conf` - The configuration as Config
     /// * `service_name` - The name of the service in the Nameko microservice
-    /// 
+    ///
     /// ## Returns
-    /// 
+    ///
     /// This function return a girolle::RpcService struct
     ///
     /// ## Example
