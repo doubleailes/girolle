@@ -37,8 +37,10 @@ pub async fn create_service_queue(
     prefetch_count: u16,
     rpc_exchange: &str,
 ) -> lapin::Result<lapin::Channel> {
+    info!("Create service queue");
     let routing_key = format!("{}.*", service_name);
     let conn = get_connection(amqp_uri, heartbeat_value).await?;
+    info!("{:?}", conn.status());
     let incomming_channel = conn.create_channel().await?;
     let mut queue_declare_options = QueueDeclareOptions::default();
     queue_declare_options.durable = true;
