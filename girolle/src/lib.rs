@@ -22,7 +22,7 @@
 //! }
 //!
 //! fn main() {
-//!   let mut services: RpcService = RpcService::new("video");
+//!   let mut services: RpcService = RpcService::new("examples/config.yml".to_string(),"video");
 //!   services.insert("hello", hello);
 //!   services.start();
 //! }
@@ -369,7 +369,7 @@ impl RpcClient {
 ///  
 ///
 /// fn main() {
-///     let mut services: RpcService = RpcService::new("video");
+///     let mut services: RpcService = RpcService::new("examples/config.yml".to_string(),"video");
 ///     let rpc_task = RpcTask::new("hello", hello);
 ///     services.register(rpc_task).start();
 /// }
@@ -404,7 +404,7 @@ impl RpcTask {
     /// }
     ///
     /// fn main() {
-    ///     let mut services: RpcService = RpcService::new("video");
+    ///     let mut services: RpcService = RpcService::new("examples/config.yml".to_string(),"video");
     ///     let rpc_task = RpcTask::new("hello", hello);
     ///     services.register(rpc_task).start();
     /// }
@@ -437,11 +437,12 @@ impl RpcTask {
 /// }
 ///
 /// fn main() {
-///     let mut services: RpcService = RpcService::new("video");
+///     let mut services: RpcService = RpcService::new("examples/config.yml".to_string(),"video");
 ///     services.insert("hello", hello);
 ///     services.start();
 /// }
 pub struct RpcService {
+    config_path: String,
     service_name: String,
     f: HashMap<String, NamekoFunction>,
 }
@@ -462,10 +463,11 @@ impl RpcService {
     /// use girolle::RpcService;
     ///
     /// fn main() {
-    ///     let services: RpcService = RpcService::new("video");
+    ///     let services: RpcService = RpcService::new("examples/config.yml".to_string(),"video");
     /// }
-    pub fn new(service_name: &'static str) -> Self {
+    pub fn new(config_path: String, service_name: &'static str) -> Self {
         Self {
+            config_path: config_path,
             service_name: service_name.to_string(),
             f: HashMap::new(),
         }
@@ -486,7 +488,7 @@ impl RpcService {
     /// use girolle::RpcService;
     ///
     /// fn main() {
-    ///    let mut services: RpcService = RpcService::new("video");
+    ///    let mut services: RpcService = RpcService::new("examples/config.yml".to_string(),"video");
     ///    services.set_service_name("other".to_string());
     /// }
     pub fn set_service_name(&mut self, service_name: String) {
@@ -516,7 +518,7 @@ impl RpcService {
     /// }
     ///
     /// fn main() {
-    ///   let mut services: RpcService = RpcService::new("video");
+    ///   let mut services: RpcService = RpcService::new("examples/config.yml".to_string(),"video");
     ///   services.insert("hello", hello);
     /// }
     pub fn insert(&mut self, method_name: &'static str, f: NamekoFunction) {
@@ -546,14 +548,14 @@ impl RpcService {
     /// }
     ///
     /// fn main() {
-    ///    let mut services: RpcService = RpcService::new("video");
+    ///    let mut services: RpcService = RpcService::new("examples/config.yml".to_string(),"video");
     ///    services.insert("hello", hello);
     /// }
     pub fn start(&self) -> lapin::Result<()> {
         if self.f.is_empty() {
             panic!("No function insert");
         }
-        rpc_service(&self.service_name, self.f.clone())
+        rpc_service(&self.config_path, &self.service_name, self.f.clone())
     }
     /// # get_routing_keys
     ///
@@ -575,7 +577,7 @@ impl RpcService {
     /// }
     ///
     /// fn main() {
-    ///    let mut services: RpcService = RpcService::new("video");
+    ///    let mut services: RpcService = RpcService::new("examples/config.yml".to_string(),"video");
     ///    services.insert("hello", hello);
     ///    let routing_keys = services.get_routing_keys();
     /// }
@@ -690,11 +692,12 @@ async fn execute_delivery(
 /// * `f_task` - The function to call
 #[tokio::main]
 async fn rpc_service(
+    config_path: &str,
     service_name: &str,
     f_task: HashMap<String, NamekoFunction>,
 ) -> lapin::Result<()> {
     // init the config
-    let conf: Config = Config::with_yaml_defaults("staging/config.yml").expect("config");
+    let conf: Config = Config::with_yaml_defaults(config_path).expect("config");
 
     // Define the queue name1
     let rpc_queue = format!("rpc-{}", service_name);

@@ -28,7 +28,7 @@ fn main() {
     let rpc_task = RpcTask::new("hello", hello);
     let rpc_task_fib = RpcTask::new("fibonacci", fib_warp);
     let rpc_task_sleep = RpcTask::new("sleep", temporary_sleep);
-    let _ = RpcService::new("video")
+    let _ = RpcService::new("staging/config.yml".to_string(), "video")
         .register(rpc_task)
         .register(rpc_task_fib)
         .register(rpc_task_sleep)
