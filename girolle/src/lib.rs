@@ -71,6 +71,8 @@ use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 mod queue;
 use queue::{create_message_queue, create_service_queue, get_address};
+pub mod config;
+use config::Config;
 
 #[derive(Debug, Serialize, Deserialize)]
 struct Payload {
@@ -162,16 +164,17 @@ impl RpcClient {
     /// See example simple_sender in the examples folder
     ///
     /// ```rust,no_run
-    /// use girolle::RpcClient;
+    /// use girolle::prelude::*;
     /// use girolle::JsonValue::Value;
     ///
     /// #[tokio::main]
     /// async fn main() {
+    ///    let conf = Config::with_yaml_defaults("config.yml").unwrap();
     ///    let rpc_call = RpcClient::new();
     ///    let service_name = "video";
     ///    let method_name = "hello";
     ///    let args = vec![Value::String("John Doe".to_string())];
-    ///    let consumer = rpc_call.call_async(service_name, method_name, args).await.expect("call");
+    ///    let consumer = rpc_call.call_async(service_name, method_name, args, conf).await.expect("call");
     /// }
     ///
     pub async fn call_async(
@@ -179,11 +182,19 @@ impl RpcClient {
         service_name: &str,
         method_name: &str,
         args: Vec<Value>,
+        conf: Config,
     ) -> lapin::Result<Consumer> {
         let payload = Payload::new(args);
         let correlation_id = Uuid::new_v4().to_string();
         let routing_key = format!("{}.{}", service_name, method_name);
-        let channel = create_service_queue(service_name).await?;
+        let channel = create_service_queue(
+            service_name,
+            conf.AMQP_URI(),
+            conf.heartbeat(),
+            conf.prefetch_count(),
+            &conf.rpc_exchange(),
+        )
+        .await?;
         let mut headers: BTreeMap<lapin::types::ShortString, AMQPValue> = BTreeMap::new();
         headers.insert(
             "nameko.AMQP_URI".into(),
@@ -203,7 +214,15 @@ impl RpcClient {
             .with_headers(FieldTable::from(headers));
         let reply_name = "rpc.listener";
         let rpc_queue_reply = create_rpc_queue_reply_name(reply_name, &self.identifier.to_string());
-        let reply_queue = match create_message_queue(&rpc_queue_reply, &self.identifier).await {
+        let reply_queue = match create_message_queue(
+            &rpc_queue_reply,
+            &self.identifier,
+            conf.AMQP_URI(),
+            conf.heartbeat(),
+            &conf.rpc_exchange(),
+        )
+        .await
+        {
             Ok(queue) => queue,
             Err(e) => {
                 // Handle error, e.g., log it or retry
@@ -220,7 +239,7 @@ impl RpcClient {
             .await?;
         let confirm = channel
             .basic_publish(
-                "nameko-rpc",
+                &conf.rpc_exchange(),
                 &routing_key,
                 BasicPublishOptions::default(),
                 serde_json::to_value(payload)
@@ -252,17 +271,18 @@ impl RpcClient {
     /// See example simple_sender in the examples folder
     ///
     /// ```rust,no_run
-    /// use girolle::RpcClient;
+    /// use girolle::prelude::*;
     /// use girolle::JsonValue::Value;
     ///
     /// #[tokio::main]
     ///
     /// async fn main() {
+    ///    let conf = Config::with_yaml_defaults("config.yml").unwrap();
     ///    let rpc_call = RpcClient::new();
     ///    let service_name = "video";
     ///    let method_name = "hello";
     ///    let args = vec![Value::String("John".to_string())];
-    ///    let consumer = rpc_call.call_async(service_name, method_name, args).await.expect("call");
+    ///    let consumer = rpc_call.call_async(service_name, method_name, args,conf).await.expect("call");
     ///    let result = rpc_call.result(consumer).await;
     /// }
     pub async fn result(&self, ref_consumer: Consumer) -> Value {
@@ -303,25 +323,27 @@ impl RpcClient {
     /// See example simple_sender in the examples folder
     ///
     /// ```rust,no_run
-    /// use girolle::RpcClient;
+    /// use girolle::prelude::*;
     /// use girolle::JsonValue::Value;
     ///
     /// #[tokio::main]
     /// async fn main() {
+    ///     let conf = Config::with_yaml_defaults("config.yml").unwrap();
     ///     let rpc_call = RpcClient::new();
     ///     let service_name = "video";
     ///     let method_name = "hello";
     ///     let args = vec![Value::String("Toto".to_string())];
-    ///     let result = rpc_call.send(service_name, method_name, args).expect("call");
+    ///     let result = rpc_call.send(service_name, method_name, args, conf).expect("call");
     /// }
     pub fn send(
         &self,
         service_name: &'static str,
         method_name: &'static str,
         args: Vec<Value>,
+        conf: Config,
     ) -> Result<Value> {
-        let consumer =
-            executor::block_on(self.call_async(service_name, method_name, args)).expect("call");
+        let consumer = executor::block_on(self.call_async(service_name, method_name, args, conf))
+            .expect("call");
         Ok(executor::block_on(self.result(consumer)))
     }
 }
@@ -567,10 +589,11 @@ async fn publish(
     payload: String,
     properties: BasicProperties,
     reply_to_id: String,
+    rpc_exchange: &str,
 ) -> lapin::Result<Confirmation> {
     let confirm = rpc_reply_channel
         .basic_publish(
-            "nameko-rpc",
+            rpc_exchange,
             &format!("{}", &reply_to_id),
             BasicPublishOptions::default(),
             payload.as_bytes(),
@@ -594,6 +617,7 @@ async fn execute_delivery(
     fn_service: NamekoFunction,
     rpc_reply_channel: &Channel,
     rpc_queue_reply: &str,
+    rpc_exchange: &str,
 ) {
     let opt_routing_key = delivery.routing_key.to_string();
     let incomming_data: Value = serde_json::from_slice(&delivery.data).expect("json");
@@ -643,9 +667,15 @@ async fn execute_delivery(
             .to_string()
         }
     };
-    publish(&rpc_reply_channel, payload, properties, reply_to_id)
-        .await
-        .expect("Error publishing");
+    publish(
+        &rpc_reply_channel,
+        payload,
+        properties,
+        reply_to_id,
+        rpc_exchange,
+    )
+    .await
+    .expect("Error publishing");
 }
 
 /// # rpc_service
@@ -663,6 +693,9 @@ async fn rpc_service(
     service_name: &str,
     f_task: HashMap<String, NamekoFunction>,
 ) -> lapin::Result<()> {
+    // init the config
+    let conf: Config = Config::with_yaml_defaults("staging/config.yml").expect("config");
+
     // Define the queue name1
     let rpc_queue = format!("rpc-{}", service_name);
     // Add tracing
@@ -676,11 +709,28 @@ async fn rpc_service(
 
     // Create a channel for the service in Nameko this part is handle by
     // the RpcConsumer class
-    let rpc_channel: Channel = create_service_queue(service_name).await?;
+    let rpc_channel: Channel = create_service_queue(
+        service_name,
+        conf.AMQP_URI(),
+        conf.heartbeat(),
+        conf.prefetch_count(),
+        &conf.rpc_exchange(),
+    )
+    .await?;
     let rpc_queue_reply = Arc::new(format!("rpc.reply-{}-{}", service_name, &id));
     // Create a channel for the response in Nameko this part is handle by
     // the ReplyConsumer class
-    let rpc_reply_channel = Arc::new(create_message_queue(&rpc_queue_reply, &id).await?);
+    let rpc_reply_channel = Arc::new(
+        create_message_queue(
+            &rpc_queue_reply,
+            &id,
+            conf.AMQP_URI(),
+            conf.heartbeat(),
+            &conf.rpc_exchange(),
+        )
+        .await?,
+    );
+    let atomic_rpc_exchange = Arc::new(conf.rpc_exchange().to_string());
     // Start a consumer.
     let consumer = rpc_channel
         .basic_consume(
@@ -696,6 +746,7 @@ async fn rpc_service(
             HashMap<String, fn(&[Value]) -> std::prelude::v1::Result<Value, JsonValue::Error>>,
         > = Arc::clone(&f_task);
         let rpc_queue_reply_clone: Arc<String> = Arc::clone(&rpc_queue_reply);
+        let rpc_exchange_clone: Arc<String> = Arc::clone(&atomic_rpc_exchange);
         async move {
             info!("will consume");
             let delivery = match delivery {
@@ -725,6 +776,7 @@ async fn rpc_service(
                 fn_service,
                 &rpc_reply_channel_clone,
                 &rpc_queue_reply_clone,
+                &rpc_exchange_clone,
             )
             .await;
         }

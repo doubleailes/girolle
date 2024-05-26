@@ -1,11 +1,11 @@
 use girolle::prelude::*;
-use girolle::RpcClient;
 use serde_json;
 use std::vec;
 use std::{thread, time};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let conf = Config::with_yaml_defaults("staging/config.yml")?;
     let video_name = "video";
     // Create the rpc call struct
     let rpc_client = RpcClient::new();
@@ -14,19 +14,24 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Create the payload
     let new_payload = vec![t.into()];
     // Send the payload
-    let new_result = rpc_client.send(video_name, "fibonacci", new_payload)?;
+    let new_result = rpc_client.send(video_name, "fibonacci", new_payload, conf.clone())?;
     let fib_result: u64 = serde_json::from_value(new_result).unwrap();
     // Print the result
     println!("fibonacci :{:?}", fib_result);
     assert_eq!(fib_result, 832040);
     // Create a future result
-    let future_result =
-        rpc_client.call_async(video_name, "hello", vec![Value::String("Toto".to_string())]);
+    let future_result = rpc_client.call_async(
+        video_name,
+        "hello",
+        vec![Value::String("Toto".to_string())],
+        conf.clone(),
+    );
     // Send a message during the previous async process
     let result = rpc_client.send(
         video_name,
         "hello",
         vec![Value::String("Girolle".to_string())],
+        conf.clone(),
     )?;
     // Print the result
     println!("{:?}", result);
@@ -52,6 +57,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             video_name,
             "hello",
             vec![Value::String(n.to_string())],
+            conf.clone(),
         ));
     }
     // wait for it
