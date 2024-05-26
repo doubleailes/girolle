@@ -152,10 +152,7 @@ fn test_config_default() {
 
 #[test]
 fn test_config_with_yaml_defaults() {
-    let config = Config::with_yaml_defaults(
-        "/home/philippe.llerena/workspace/github.com/doubleailes/girolle/examples/config.yml",
-    )
-    .unwrap();
+    let config = Config::with_yaml_defaults("./examples/config.yml").unwrap();
     assert_eq!(config.AMQP_URI(), "amqp://toto:super@$172.16.1.1/");
     assert_eq!(config.prefetch_count(), 10);
     assert_eq!(config.heartbeat(), 60);
