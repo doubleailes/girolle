@@ -3,7 +3,6 @@ use serde_yaml;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::Read;
-use std::path::Path;
 
 /// # Config
 ///
@@ -150,7 +149,6 @@ fn test_config_default() {
     assert_eq!(config.AMQP_URI(), "amqp://guest:guest@localhost/");
     assert_eq!(config.prefetch_count(), 10);
 }
-use std::env;
 
 #[test]
 fn test_config_with_yaml_defaults() {
