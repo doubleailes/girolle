@@ -128,6 +128,7 @@ impl Config {
             persistent: other.persistent.or(self.persistent),
         }
     }
+    #[allow(non_snake_case)]
     pub fn AMQP_URI(&self) -> String {
         self.AMQP_URI.clone().unwrap()
     }
