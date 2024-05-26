@@ -6,24 +6,11 @@ use lapin::{
     types::FieldTable,
     Connection, ConnectionProperties,
 };
-use std::env;
 use tracing::info;
 use uuid::Uuid;
 
 /// # QUEUE_TTL
 const QUEUE_TTL: u32 = 300000;
-
-/// # get_address
-///
-/// This function returns the address of the RabbitMQ server.
-///
-pub fn get_address() -> String {
-    let user = env::var("RABBITMQ_USER").unwrap_or_else(|_| "guest".into());
-    let password = env::var("RABBITMQ_PASSWORD").unwrap_or_else(|_| "guest".into());
-    let host = env::var("RABBITMQ_HOST").unwrap_or_else(|_| "127.0.0.1".into());
-    let port = env::var("RABBITMQ_PORT").unwrap_or("5672".to_string());
-    format!("amqp://{}:{}@{}:{}/%2f", user, password, host, port)
-}
 
 async fn get_connection(amqp_uri: String, heartbeat_value: u16) -> lapin::Result<Connection> {
     let mut connection_options = ConnectionProperties::default()
@@ -32,6 +19,7 @@ async fn get_connection(amqp_uri: String, heartbeat_value: u16) -> lapin::Result
     let mut client_properties_custom = FieldTable::default();
     client_properties_custom.insert("heartbeat".into(), heartbeat_value.into());
     connection_options.client_properties = client_properties_custom;
+    info!("Try Connection to {}", &amqp_uri);
     Connection::connect(&amqp_uri, connection_options).await
 }
 

@@ -76,7 +76,7 @@ pub type NamekoFunction = fn(&[Value]) -> Result<Value>;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 mod queue;
-use queue::{create_message_queue, create_service_queue, get_address};
+use queue::{create_message_queue, create_service_queue};
 mod config;
 pub use config::Config;
 
@@ -205,7 +205,7 @@ impl RpcClient {
         let mut headers: BTreeMap<lapin::types::ShortString, AMQPValue> = BTreeMap::new();
         headers.insert(
             "nameko.AMQP_URI".into(),
-            AMQPValue::LongString(get_address().into()),
+            AMQPValue::LongString(self.conf.AMQP_URI().into()),
         );
         headers.insert(
             "nameko.call_id_stack".into(),
