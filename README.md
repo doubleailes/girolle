@@ -75,9 +75,14 @@ fn fib_wrap(n: u64) -> u64 {
 }
 
 fn main() {
+    // Create the configuration
+    let conf = Config::default_config();
+    // Create the rpc task
     let rpc_task = RpcTask::new("hello", hello);
+    // Create another rpc task
     let rpc_task_fib = RpcTask::new("fibonacci", fib_wrap);
-    let _ = RpcService::new("video")
+    // Create and start the service
+    let _ = RpcService::new(conf,"video")
         .register(rpc_task)
         .register(rpc_task_fib)
         .start();
@@ -87,41 +92,26 @@ fn main() {
 ### Create multiple calls to service of methods, sync and async
 
 ```rust
+use girolle::prelude::*;
 use std::vec;
 use std::{thread, time};
-use girolle::{JsonValue::Value, RpcClient};
-use serde_json;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // Source the configuration from a yaml file and generate configuration
+    let conf = Config::with_yaml_defaults("staging/config.yml")?;
+    let video_name = "video";
     // Create the rpc call struct
-    let rpc_client = RpcClient::new();
-    // Transform the number into a JsonValue
-    let t: serde_json::Number = serde_json::from_str("30").unwrap();
-    // Create the payload
-    let new_payload = vec![t.into()];
-    // Send the payload
-    let new_result = rpc_client
-        .send("video".to_string(), "fibonacci".to_string(), new_payload)
-        .await?;
-    let fib_result: u64 = serde_json::from_value(new_result).unwrap();
-    // Print the result
-    println!("fibonacci :{:?}", fib_result);
-    assert_eq!(fib_result, 832040);
+    let rpc_client = RpcClient::new(conf);
     // Create a future result
-    let future_result = rpc_client.call_async(
-        "video".to_string(),
-        "hello".to_string(),
-        vec![Value::String("Toto".to_string())],
-    );
-    // Send a message
-    let result = rpc_client
-        .send(
-            "video".to_string(),
-            "hello".to_string(),
-            vec![Value::String("Girolle".to_string())],
-        )
-        .await?;
+    let future_result =
+        rpc_client.call_async(video_name, "hello", vec![Value::String("Toto".to_string())]);
+    // Send a message during the previous async process
+    let result = rpc_client.send(
+        video_name,
+        "hello",
+        vec![Value::String("Girolle".to_string())],
+    )?;
     // Print the result
     println!("{:?}", result);
     assert_eq!(
@@ -129,18 +119,31 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Value::String("Hello, Girolle!, by nameko".to_string())
     );
     // Wait for the future result
-    let mut consumer = future_result.await?;
+    let consumer = future_result.await?;
     // wait for it
-
-    let two_sec = time::Duration::from_secs(20);
+    let two_sec = time::Duration::from_secs(2);
     thread::sleep(two_sec);
     // Print the result
-    let async_result = rpc_client.result(&mut consumer).await;
+    let async_result = rpc_client.result(consumer).await;
     println!("{:?}", async_result);
     assert_eq!(
         async_result,
         Value::String("Hello, Toto!, by nameko".to_string())
     );
+    let mut consummers: Vec<_> = Vec::new();
+    for n in 1..101 {
+        consummers.push(rpc_client.call_async(
+            video_name,
+            "hello",
+            vec![Value::String(n.to_string())],
+        ));
+    }
+    // wait for it
+    thread::sleep(two_sec);
+    for con in consummers {
+        let async_result = rpc_client.result(con.await?).await;
+        println!("{}", async_result.as_str().unwrap());
+    }
     Ok(())
 }
 ```

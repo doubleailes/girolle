@@ -35,7 +35,7 @@ mokcing the **Nameko** architecture, and to use an abstract type
 
 ### macro procedural
 
-The lib can use the macro `#[girolle]` to create a service like this:
+The lib a procedural macro `#[girolle]` to create a service like this:
 
 ```rust
 use girolle::prelude::*;
@@ -52,7 +52,7 @@ The macro will replace the signature of the function by a `fn` that take a
 ### hand made deserialization and serialization
 
 if you do not use the macro `#[girolle]` you need to create a function that
-extract the data from the a `&[Value]` like this an return a `Result<Value>`:
+extract the data from the a `&[Value]` like this and return a `Result<Value>`:
 
 ```rust
 fn fibonacci_reccursive(s: &[Value]) -> Result<Value> {
