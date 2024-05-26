@@ -56,7 +56,7 @@ pub struct Config {
 }
 
 impl Config {
-    // Function to create a default config
+    // Create a default config
     pub fn default_config() -> Self {
         Self {
             AMQP_URI: Some("amqp://guest:guest@localhost/".to_string()),
@@ -128,18 +128,46 @@ impl Config {
             persistent: other.persistent.or(self.persistent),
         }
     }
+    // Get the AMQP URI
     #[allow(non_snake_case)]
     pub fn AMQP_URI(&self) -> String {
         self.AMQP_URI.clone().unwrap()
     }
+    // Get the prefetch count
     pub fn prefetch_count(&self) -> u16 {
         self.prefetch_count.unwrap()
     }
+    // Get the heartbeat
     pub fn heartbeat(&self) -> u16 {
         self.heartbeat.unwrap()
     }
+    // Get the RPC exchange
     pub fn rpc_exchange(&self) -> &str {
         self.rpc_exchange.as_ref().unwrap()
+    }
+    // Set the AMQP URI
+    pub fn with_amqp_uri(&self, amqp_uri: &str) -> Config {
+        let mut new_config = self.clone();
+        new_config.AMQP_URI = Some(amqp_uri.to_string());
+        new_config
+    }
+    // Set the prefetch count
+    pub fn with_prefetch_count(&self, prefetch_count: u16) -> Config {
+        let mut new_config = self.clone();
+        new_config.prefetch_count = Some(prefetch_count);
+        new_config
+    }
+    // Set the heartbeat
+    pub fn with_heartbeat(&self, heartbeat: u16) -> Config {
+        let mut new_config = self.clone();
+        new_config.heartbeat = Some(heartbeat);
+        new_config
+    }
+    // Set the RPC exchange
+    pub fn with_rpc_exchange(&self, rpc_exchange: &str) -> Config {
+        let mut new_config = self.clone();
+        new_config.rpc_exchange = Some(rpc_exchange.to_string());
+        new_config
     }
 }
 
