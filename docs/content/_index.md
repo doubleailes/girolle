@@ -24,10 +24,11 @@ content = 'Girolle is able to interact as a RPC service with Nameko RPC services
 
 [[extra.list]]
 title = "A simple RPC framework"
-content = 'Girolle use a simple RPC framework'
+content = 'Girolle uses a simple RPC framework'
 
 [[extra.list]]
 title = "Fast"
-content = '<b>Girolle</b> is made to be really fast. Using Rust speed and concurrency'
+content = "<b>Girolle</b> is made to be really fast, leveraging Rust\'s speed and concurrency"
+ 
 
 +++
