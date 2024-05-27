@@ -1,6 +1,8 @@
 # girolle
 
-![girolle](./images/girolle.png)
+
+<div align="center">
+<img src="girolle.png"></img>
 
 ## Description
 
