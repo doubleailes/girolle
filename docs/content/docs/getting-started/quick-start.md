@@ -36,7 +36,7 @@ conf.with_amqp_uri("amqp://toto:super@localhost:5672/")
 
 ### Create a configuration from a yaml file
 
-The configuration is done by a yaml file. It should compliant with a Nameko one.
+The configuration is done by a yaml file. It should be compliant with a Nameko one.
 The file should look like this:
 
 ```yaml

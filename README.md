@@ -38,8 +38,8 @@ You need to set this environement variables.
 ## How to use it
 
 The core concept is to remove the pain of the queue creation and reply by
-mokcing the **Nameko** architecture, and to use an abstract type
-`serde_json::Value` to manipulate a serializable data.
+mokcing the **Nameko** architecture with a `RpcService` or `RpcClient`, and to
+use an abstract type `serde_json::Value` to manipulate a serializable data.
 
 if you do not use the macro `#[girolle]` you need to create a function that
 extract the data from the a `&[Value]` like this:
