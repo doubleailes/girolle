@@ -3,6 +3,7 @@
 
 <div align="center">
 <img src="girolle.png"></img>
+</div>
 
 ## Description
 
