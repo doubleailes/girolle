@@ -86,7 +86,7 @@ impl Config {
                 map
             }),
             login_method: Some("".to_string()),
-            max_workers: Some(10),
+            max_workers: Some(256),
             prefetch_count: Some(10),
             parent_calls_tracked: Some(10),
             call_id_stack: Some("call_id_stack".to_string()),
@@ -207,6 +207,18 @@ impl Config {
     pub fn rpc_exchange(&self) -> &str {
         self.rpc_exchange.as_ref().unwrap()
     }
+    /// # max_workers
+    /// 
+    /// ## Description
+    /// 
+    /// Function to get the max workers.
+    /// 
+    /// ## Returns
+    /// 
+    /// A u32 that holds the max workers.
+    pub fn max_workers(&self) -> u32 {
+        self.max_workers.unwrap()
+    }
     /// # with_amqp_uri
     /// 
     /// ## Description
@@ -220,6 +232,7 @@ impl Config {
     /// ## Returns
     /// 
     /// A Config that holds the new configuration.
+    // Get the max workers
     pub fn with_amqp_uri(&self, amqp_uri: &str) -> Config {
         let mut new_config = self.clone();
         new_config.AMQP_URI = Some(amqp_uri.to_string());
@@ -277,6 +290,24 @@ impl Config {
     pub fn with_rpc_exchange(&self, rpc_exchange: &str) -> Config {
         let mut new_config = self.clone();
         new_config.rpc_exchange = Some(rpc_exchange.to_string());
+        new_config
+    }
+    /// # with_max_workers
+    /// 
+    /// ## Description
+    /// 
+    /// Function to set the max workers.
+    /// 
+    /// ## Arguments
+    /// 
+    /// * `max_workers` - A u32 that holds the max workers.
+    /// 
+    /// ## Returns
+    /// 
+    /// A Config that holds the new configuration.
+    pub fn with_max_workers(&self, max_workers: u32) -> Config {
+        let mut new_config = self.clone();
+        new_config.max_workers = Some(max_workers);
         new_config
     }
 }

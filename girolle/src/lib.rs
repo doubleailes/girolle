@@ -850,7 +850,7 @@ async fn rpc_service(
             FieldTable::default(),
         )
         .await?;
-    let semaphore = Arc::new(Semaphore::new(32));
+    let semaphore = Arc::new(Semaphore::new(conf.max_workers() as usize));
     consumer.set_delegate(move |delivery: DeliveryResult| {
         let rpc_reply_channel_clone: Arc<Channel> = Arc::clone(&rpc_reply_channel);
         let f_task_clone: Arc<
