@@ -788,6 +788,14 @@ async fn execute_delivery(
     .expect("Error publishing");
 }
 
+struct SharedData {
+    rpc_reply_channel: Channel,
+    f_task: HashMap<String, NamekoFunction>,
+    rpc_queue_reply: String,
+    rpc_exchange: String,
+    semaphore: Semaphore,
+}
+
 /// # rpc_service
 ///
 /// ## Description
@@ -814,8 +822,6 @@ async fn rpc_service(
     let id = Uuid::new_v4();
     // check list of function
     debug!("List of functions {:?}", f_task.keys());
-    // Shadowing the f_task to be able to use it in the closure
-    let f_task = Arc::new(f_task);
 
     // Create a channel for the service in Nameko this part is handle by
     // the RpcConsumer class
@@ -827,20 +833,7 @@ async fn rpc_service(
         &conf.rpc_exchange(),
     )
     .await?;
-    let rpc_queue_reply = Arc::new(format!("rpc.reply-{}-{}", service_name, &id));
-    // Create a channel for the response in Nameko this part is handle by
-    // the ReplyConsumer class
-    let rpc_reply_channel = Arc::new(
-        create_message_queue(
-            &rpc_queue_reply,
-            &id,
-            conf.AMQP_URI(),
-            conf.heartbeat(),
-            &conf.rpc_exchange(),
-        )
-        .await?,
-    );
-    let atomic_rpc_exchange = Arc::new(conf.rpc_exchange().to_string());
+    let rpc_queue_reply = format!("rpc.reply-{}-{}", service_name, &id);
     // Start a consumer.
     let consumer = rpc_channel
         .basic_consume(
@@ -850,17 +843,24 @@ async fn rpc_service(
             FieldTable::default(),
         )
         .await?;
-    let semaphore = Arc::new(Semaphore::new(conf.max_workers() as usize));
+    let shared_data: Arc<SharedData> = Arc::new(SharedData {
+        rpc_reply_channel: create_message_queue(
+            &rpc_queue_reply,
+            &id,
+            conf.AMQP_URI(),
+            conf.heartbeat(),
+            &conf.rpc_exchange(),
+        )
+        .await?,
+        f_task,
+        rpc_queue_reply: format!("rpc.reply-{}-{}", service_name, &id),
+        rpc_exchange: conf.rpc_exchange().to_string(),
+        semaphore: Semaphore::new(conf.max_workers() as usize),
+    });
     consumer.set_delegate(move |delivery: DeliveryResult| {
-        let rpc_reply_channel_clone: Arc<Channel> = Arc::clone(&rpc_reply_channel);
-        let f_task_clone: Arc<
-            HashMap<String, fn(&[Value]) -> std::prelude::v1::Result<Value, JsonValue::Error>>,
-        > = Arc::clone(&f_task);
-        let rpc_queue_reply_clone: Arc<String> = Arc::clone(&rpc_queue_reply);
-        let rpc_exchange_clone: Arc<String> = Arc::clone(&atomic_rpc_exchange);
-        let semaphore_clone = Arc::clone(&semaphore);
+        let shared_data_clone = Arc::clone(&shared_data);
         async move {
-            let _permit = semaphore_clone.acquire().await;
+            let _permit = shared_data_clone.semaphore.acquire().await;
             info!("will consume");
             let delivery = match delivery {
                 // Carries the delivery alongside its channel
@@ -875,7 +875,7 @@ async fn rpc_service(
             };
 
             let opt_routing_key = delivery.routing_key.to_string();
-            let fn_service: NamekoFunction = match f_task_clone.get(&opt_routing_key) {
+            let fn_service: NamekoFunction = match shared_data_clone.f_task.get(&opt_routing_key) {
                 Some(fn_service) => *fn_service,
                 None => {
                     warn!("fn_service: None");
@@ -887,9 +887,9 @@ async fn rpc_service(
                 delivery,
                 &id,
                 fn_service,
-                &rpc_reply_channel_clone,
-                &rpc_queue_reply_clone,
-                &rpc_exchange_clone,
+                &shared_data_clone.rpc_reply_channel,
+                &shared_data_clone.rpc_queue_reply,
+                &shared_data_clone.rpc_exchange,
             )
             .await;
         }
