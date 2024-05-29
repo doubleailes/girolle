@@ -222,6 +222,6 @@ pub trait ConfigHandler {
     /// ## Arguments
     ///
     /// This method doesn't take any argument.
-    fn get_config(&self) -> Config;
-    fn set_config(&mut self, config: Config);
+    fn get_config(&self) -> &Config;
+    fn set_config(&mut self, config: Config) -> std::result::Result<(), std::string::String>;
 }

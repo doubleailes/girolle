@@ -377,8 +377,8 @@ impl ConfigHandler for RpcClient {
     ///    let rpc_call = RpcClient::new(Config::default_config());
     ///    let conf = rpc_call.get_config();
     /// }
-    fn get_config(&self) -> Config {
-        self.conf.clone()
+    fn get_config(&self) -> &Config {
+        &self.conf
     }
     /// # set_config
     ///
@@ -400,8 +400,9 @@ impl ConfigHandler for RpcClient {
     ///    let conf = Config::default_config();
     ///    rpc_call.set_config(conf);
     /// }
-    fn set_config(&mut self, config: Config) {
+    fn set_config(&mut self, config: Config) -> std::result::Result<(), std::string::String> {
         self.conf = config;
+        Ok(())
     }
 }
 
@@ -667,9 +668,10 @@ impl ConfigHandler for RpcService {
     /// fn main() {
     ///    let services: RpcService = RpcService::new(Config::default_config(),"video");
     ///    let conf = services.get_config();
+    ///    println!("{}", conf.AMQP_URI());
     /// }
-    fn get_config(&self) -> Config {
-        self.conf.clone()
+    fn get_config(&self) -> &Config {
+        &self.conf
     }
     /// # set_config
     ///
@@ -691,8 +693,9 @@ impl ConfigHandler for RpcService {
     ///    let conf = Config::default_config();
     ///    services.set_config(conf);
     /// }
-    fn set_config(&mut self, config: Config) {
+    fn set_config(&mut self, config: Config) -> std::result::Result<(), std::string::String> {
         self.conf = config;
+        Ok(())
     }
 }
 
