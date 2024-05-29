@@ -206,3 +206,8 @@ fn test_config_with_yaml_defaults() {
     assert_eq!(config.heartbeat(), 60);
     assert_eq!(config.rpc_exchange(), "nameko-rpc");
 }
+
+pub trait ConfigHandler {
+    fn get_config(&self) -> Config;
+    fn set_config(&mut self, config: Config);
+}

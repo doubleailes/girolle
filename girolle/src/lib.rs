@@ -78,7 +78,7 @@ use std::collections::BTreeMap;
 mod queue;
 use queue::{create_message_queue, create_service_queue};
 mod config;
-pub use config::Config;
+pub use config::{Config, ConfigHandler};
 
 #[derive(Debug, Serialize, Deserialize)]
 struct Payload {
@@ -361,6 +361,15 @@ impl RpcClient {
     }
 }
 
+impl ConfigHandler for RpcClient {
+    fn get_config(&self) -> Config {
+        self.conf.clone()
+    }
+    fn set_config(&mut self, config: Config) {
+        self.conf = config;
+    }
+}
+
 /// # RpcTask
 ///
 /// ## Description
@@ -605,6 +614,15 @@ impl RpcService {
     /// }
     pub fn get_routing_keys(&self) -> Vec<String> {
         self.f.keys().map(|x| x.to_string()).collect()
+    }
+}
+
+impl ConfigHandler for RpcService {
+    fn get_config(&self) -> Config {
+        self.conf.clone()
+    }
+    fn set_config(&mut self, config: Config) {
+        self.conf = config;
     }
 }
 
