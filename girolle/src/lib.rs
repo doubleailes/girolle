@@ -362,9 +362,44 @@ impl RpcClient {
 }
 
 impl ConfigHandler for RpcClient {
+    /// # get_config
+    ///
+    /// ## Description
+    ///
+    /// This function return the configuration of the RpcClient struct
+    ///
+    /// ## Example
+    ///
+    /// ```rust
+    /// use girolle::{RpcClient, Config, ConfigHandler};
+    ///
+    /// fn main() {
+    ///    let rpc_call = RpcClient::new(Config::default_config());
+    ///    let conf = rpc_call.get_config();
+    /// }
     fn get_config(&self) -> Config {
         self.conf.clone()
     }
+    /// # set_config
+    ///
+    /// ## Description
+    ///
+    /// This function set the configuration of the RpcClient struct
+    ///
+    /// ## Arguments
+    ///
+    /// * `config` - The configuration as Config
+    ///
+    /// ## Example
+    ///
+    /// ```rust
+    /// use girolle::{RpcClient, Config, ConfigHandler};
+    ///
+    /// fn main() {
+    ///    let mut rpc_call = RpcClient::new(Config::default_config());
+    ///    let conf = Config::default_config();
+    ///    rpc_call.set_config(conf);
+    /// }
     fn set_config(&mut self, config: Config) {
         self.conf = config;
     }
@@ -618,9 +653,44 @@ impl RpcService {
 }
 
 impl ConfigHandler for RpcService {
+    /// # get_config
+    ///
+    /// ## Description
+    ///
+    /// This function return the configuration of the RpcService struct
+    ///
+    /// ## Example
+    ///
+    /// ```rust
+    /// use girolle::{RpcService, Config, ConfigHandler};
+    ///
+    /// fn main() {
+    ///    let services: RpcService = RpcService::new(Config::default_config(),"video");
+    ///    let conf = services.get_config();
+    /// }
     fn get_config(&self) -> Config {
         self.conf.clone()
     }
+    /// # set_config
+    ///
+    /// ## Description
+    ///
+    /// This function set the configuration of the RpcService struct
+    ///
+    /// ## Arguments
+    ///
+    /// * `config` - The configuration as Config
+    ///
+    /// ## Example
+    ///
+    /// ```rust
+    /// use girolle::{RpcService, Config, ConfigHandler};
+    ///
+    /// fn main() {
+    ///    let mut services: RpcService = RpcService::new(Config::default_config(),"video");
+    ///    let conf = Config::default_config();
+    ///    services.set_config(conf);
+    /// }
     fn set_config(&mut self, config: Config) {
         self.conf = config;
     }
