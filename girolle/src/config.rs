@@ -206,3 +206,22 @@ fn test_config_with_yaml_defaults() {
     assert_eq!(config.heartbeat(), 60);
     assert_eq!(config.rpc_exchange(), "nameko-rpc");
 }
+
+/// # ConfigHandler
+///
+/// ## Description
+///
+/// This trait is used to define the methods to get and set the configuration.
+pub trait ConfigHandler {
+    /// # Get the configuration
+    ///
+    /// ## Description
+    ///
+    /// This method is used to get the configuration.
+    ///
+    /// ## Arguments
+    ///
+    /// This method doesn't take any argument.
+    fn get_config(&self) -> &Config;
+    fn set_config(&mut self, config: Config) -> std::result::Result<(), std::string::String>;
+}

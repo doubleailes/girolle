@@ -1,4 +1,4 @@
-pub use crate::config::Config;
+pub use crate::config::{Config, ConfigHandler};
 pub use crate::{RpcClient, RpcService, RpcTask};
 ///! This module contains the most commonly used types, functions and macros.
 pub use girolle_macro::girolle;
