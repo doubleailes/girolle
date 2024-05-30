@@ -833,7 +833,7 @@ async fn rpc_service(
         &conf.rpc_exchange(),
     )
     .await?;
-    let rpc_queue_reply = format!("rpc.reply-{}-{}", service_name, &id);
+    let rpc_queue_reply: String = format!("rpc.reply-{}-{}", service_name, &id);
     // Start a consumer.
     let consumer = rpc_channel
         .basic_consume(
