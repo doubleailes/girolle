@@ -853,7 +853,7 @@ async fn rpc_service(
         )
         .await?,
         f_task,
-        rpc_queue_reply: format!("rpc.reply-{}-{}", service_name, &id),
+        rpc_queue_reply: rpc_queue_reply,
         rpc_exchange: conf.rpc_exchange().to_string(),
         semaphore: Semaphore::new(conf.max_workers() as usize),
     });
