@@ -28,7 +28,7 @@ content = 'Girolle uses a simple RPC framework'
 
 [[extra.list]]
 title = "Fast"
-content = "<b>Girolle</b> is made to be really fast, leveraging Rust\'s speed and concurrency"
+content = "<b>Girolle</b> is made to be really fast, leveraging Rust's speed and concurrency"
  
 
 +++
