@@ -78,7 +78,7 @@ use std::collections::BTreeMap;
 mod queue;
 use queue::{create_message_queue, create_service_queue};
 mod config;
-pub use config::{Config, ConfigHandler};
+pub use config::Config;
 
 #[derive(Debug, Serialize, Deserialize)]
 struct Payload {
@@ -359,9 +359,6 @@ impl RpcClient {
             executor::block_on(self.call_async(service_name, method_name, args)).expect("call");
         Ok(executor::block_on(self.result(consumer)))
     }
-}
-
-impl ConfigHandler for RpcClient {
     /// # get_config
     ///
     /// ## Description
@@ -371,13 +368,13 @@ impl ConfigHandler for RpcClient {
     /// ## Example
     ///
     /// ```rust
-    /// use girolle::{RpcClient, Config, ConfigHandler};
+    /// use girolle::prelude::*;
     ///
     /// fn main() {
     ///    let rpc_call = RpcClient::new(Config::default_config());
     ///    let conf = rpc_call.get_config();
     /// }
-    fn get_config(&self) -> &Config {
+    pub fn get_config(&self) -> &Config {
         &self.conf
     }
     /// # set_config
@@ -393,14 +390,14 @@ impl ConfigHandler for RpcClient {
     /// ## Example
     ///
     /// ```rust
-    /// use girolle::{RpcClient, Config, ConfigHandler};
+    /// use girolle::{RpcClient, Config};
     ///
     /// fn main() {
     ///    let mut rpc_call = RpcClient::new(Config::default_config());
     ///    let conf = Config::default_config();
     ///    rpc_call.set_config(conf);
     /// }
-    fn set_config(&mut self, config: Config) -> std::result::Result<(), std::string::String> {
+    pub fn set_config(&mut self, config: Config) -> std::result::Result<(), std::string::String> {
         self.conf = config;
         Ok(())
     }
@@ -651,10 +648,7 @@ impl RpcService {
     pub fn get_routing_keys(&self) -> Vec<String> {
         self.f.keys().map(|x| x.to_string()).collect()
     }
-}
-
-impl ConfigHandler for RpcService {
-    /// # get_config
+        /// # get_config
     ///
     /// ## Description
     ///
@@ -663,14 +657,14 @@ impl ConfigHandler for RpcService {
     /// ## Example
     ///
     /// ```rust
-    /// use girolle::{RpcService, Config, ConfigHandler};
+    /// use girolle::{RpcService, Config};
     ///
     /// fn main() {
     ///    let services: RpcService = RpcService::new(Config::default_config(),"video");
     ///    let conf = services.get_config();
     ///    println!("{}", conf.AMQP_URI());
     /// }
-    fn get_config(&self) -> &Config {
+    pub fn get_config(&self) -> &Config {
         &self.conf
     }
     /// # set_config
@@ -686,14 +680,14 @@ impl ConfigHandler for RpcService {
     /// ## Example
     ///
     /// ```rust
-    /// use girolle::{RpcService, Config, ConfigHandler};
+    /// use girolle::{RpcService, Config};
     ///
     /// fn main() {
     ///    let mut services: RpcService = RpcService::new(Config::default_config(),"video");
     ///    let conf = Config::default_config();
     ///    services.set_config(conf);
     /// }
-    fn set_config(&mut self, config: Config) -> std::result::Result<(), std::string::String> {
+    pub fn set_config(&mut self, config: Config) -> std::result::Result<(), std::string::String> {
         self.conf = config;
         Ok(())
     }
