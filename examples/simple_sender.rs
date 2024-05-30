@@ -5,7 +5,7 @@ use std::{thread, time};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let conf = Config::with_yaml_defaults("staging/config.yml")?;
+    let conf = Config::with_yaml_defaults("staging/config.yml".to_string())?;
     let video_name = "video";
     // Create the rpc call struct
     let rpc_client = RpcClient::new(conf);

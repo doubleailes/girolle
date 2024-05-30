@@ -60,7 +60,13 @@ pub struct Config {
 }
 
 impl Config {
-    // Create a default config
+    /// # Create a default config
+    /// 
+    /// This function creates a default configuration.
+    /// 
+    /// ## Returns
+    /// 
+    /// A Config that holds the default configuration.
     pub fn default_config() -> Self {
         Self {
             AMQP_URI: Some("amqp://guest:guest@localhost/".to_string()),
@@ -94,8 +100,16 @@ impl Config {
         }
     }
 
-    // Function to load from a YAML file and merge with default config
-    pub fn with_yaml_defaults(file_path: &str) -> Result<Self, Box<dyn std::error::Error>> {
+    /// # with_yaml_defaults
+    /// 
+    /// ## Description
+    /// 
+    /// Function to load from a YAML file and merge with default config.
+    /// 
+    /// ## Arguments
+    /// 
+    /// * `file_path` - A String that holds the path of the file.
+    pub fn with_yaml_defaults(file_path: String) -> Result<Self, Box<dyn std::error::Error>> {
         let default_config = Config::default_config();
 
         let mut file = File::open(file_path)?;
@@ -106,7 +120,19 @@ impl Config {
         Ok(default_config.merge(overrides))
     }
 
-    // Function to merge two configs
+    /// # merge
+    /// 
+    /// ## Description
+    /// 
+    /// Function to merge two configurations.
+    /// 
+    /// ## Arguments
+    ///
+    /// * `other` - A Config that holds the second configuration.
+    /// 
+    /// ## Returns
+    /// 
+    /// A Config that holds the merged configuration.
     fn merge(self, other: Config) -> Config {
         Config {
             AMQP_URI: other.AMQP_URI.or(self.AMQP_URI),
@@ -132,42 +158,122 @@ impl Config {
             persistent: other.persistent.or(self.persistent),
         }
     }
-    // Get the AMQP URI
+    /// #AMQP
+    /// 
+    /// ## Description
+    /// 
+    /// Function to get the AMQP URI.
+    /// 
+    /// ## Returns
+    /// 
+    /// A String that holds the AMQP URI.
     #[allow(non_snake_case)]
     pub fn AMQP_URI(&self) -> String {
         self.AMQP_URI.clone().unwrap()
     }
-    // Get the prefetch count
+    /// # prefetch_count
+    /// 
+    /// ## Description
+    /// 
+    /// Function to get the prefetch count.
+    /// 
+    /// ## Returns
+    /// 
+    /// A u16 that holds the prefetch count.
     pub fn prefetch_count(&self) -> u16 {
         self.prefetch_count.unwrap()
     }
-    // Get the heartbeat
+    /// # heartbeat
+    /// 
+    /// ## Description
+    /// 
+    /// Function to get the heartbeat.
+    /// 
+    /// ## Returns
+    /// 
+    /// A u16 that holds the heartbeat.
     pub fn heartbeat(&self) -> u16 {
         self.heartbeat.unwrap()
     }
-    // Get the RPC exchange
+    /// # rpc_exchange
+    /// 
+    /// ## Description
+    /// 
+    /// Function to get the RPC exchange.
+    /// 
+    /// ## Returns
+    /// 
+    /// A String that holds the RPC exchange.
     pub fn rpc_exchange(&self) -> &str {
         self.rpc_exchange.as_ref().unwrap()
     }
-    // Set the AMQP URI
+    /// # with_amqp_uri
+    /// 
+    /// ## Description
+    /// 
+    /// Function to set the AMQP URI.
+    /// 
+    /// ## Arguments
+    /// 
+    /// * `amqp_uri` - A string slice that holds the URI of the AMQP server.
+    /// 
+    /// ## Returns
+    /// 
+    /// A Config that holds the new configuration.
     pub fn with_amqp_uri(&self, amqp_uri: &str) -> Config {
         let mut new_config = self.clone();
         new_config.AMQP_URI = Some(amqp_uri.to_string());
         new_config
     }
-    // Set the prefetch count
+    /// # with_prefetch_count
+    /// 
+    /// ## Description
+    /// 
+    /// Function to set the prefetch count.
+    /// 
+    /// ## Arguments
+    /// 
+    /// * `prefetch_count` - A u16 that holds the prefetch count.
+    /// 
+    /// ## Returns
+    /// 
+    /// A Config that holds the new configuration.
     pub fn with_prefetch_count(&self, prefetch_count: u16) -> Config {
         let mut new_config = self.clone();
         new_config.prefetch_count = Some(prefetch_count);
         new_config
     }
-    // Set the heartbeat
+    /// # with_heartbeat
+    /// 
+    /// ## Description
+    /// 
+    /// Function to set the heartbeat.
+    /// 
+    /// ## Arguments
+    /// 
+    /// * `heartbeat` - A u16 that holds the heartbeat value.
+    /// 
+    /// ## Returns
+    /// 
+    /// A Config that holds the new configuration.
     pub fn with_heartbeat(&self, heartbeat: u16) -> Config {
         let mut new_config = self.clone();
         new_config.heartbeat = Some(heartbeat);
         new_config
     }
-    // Set the RPC exchange
+    /// # with_rpc_exchange
+    /// 
+    /// ## Description
+    /// 
+    /// Function to set the RPC exchange.
+    /// 
+    /// ## Arguments
+    /// 
+    /// * `rpc_exchange` - A string slice that holds the name of the exchange.
+    /// 
+    /// ## Returns
+    /// 
+    /// A Config that holds the new configuration.
     pub fn with_rpc_exchange(&self, rpc_exchange: &str) -> Config {
         let mut new_config = self.clone();
         new_config.rpc_exchange = Some(rpc_exchange.to_string());
@@ -175,6 +281,7 @@ impl Config {
     }
 }
 
+// quick function to expand var in slice string
 fn expand_var(raw_config: &str) -> Cow<str> {
     let re = Regex::new(r"\$\{([a-zA-Z_][0-9a-zA-Z_]*)\}").unwrap();
     re.replace_all(&raw_config, |caps: &Captures| match env::var(&caps[1]) {
@@ -200,7 +307,7 @@ fn test_config_default() {
 
 #[test]
 fn test_config_with_yaml_defaults() {
-    let config = Config::with_yaml_defaults("../examples/config.yml").unwrap();
+    let config = Config::with_yaml_defaults("../examples/config.yml".to_string()).unwrap();
     assert_eq!(config.AMQP_URI(), "amqp://toto:super@$172.16.1.1/");
     assert_eq!(config.prefetch_count(), 10);
     assert_eq!(config.heartbeat(), 60);

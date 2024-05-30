@@ -24,7 +24,7 @@
 //! }
 //!
 //! fn main() {
-//!   let conf: Config = Config::with_yaml_defaults("config.yml").unwrap();
+//!   let conf: Config = Config::with_yaml_defaults("config.yml".to_string()).unwrap();
 //!   let mut services: RpcService = RpcService::new(conf,"video");
 //!   services.insert("hello", hello);
 //!   services.start();
@@ -185,7 +185,7 @@ impl RpcClient {
     ///
     /// #[tokio::main]
     /// async fn main() {
-    ///    let conf = Config::with_yaml_defaults("config.yml").unwrap();
+    ///    let conf = Config::with_yaml_defaults("config.yml".to_string()).unwrap();
     ///    let rpc_call = RpcClient::new(conf);
     ///    let service_name = "video";
     ///    let method_name = "hello";
@@ -291,7 +291,7 @@ impl RpcClient {
     ///
     /// #[tokio::main]
     /// async fn main() {
-    ///    let conf = Config::with_yaml_defaults("config.yml").unwrap();
+    ///    let conf = Config::with_yaml_defaults("config.yml".to_string()).unwrap();
     ///    let rpc_call = RpcClient::new(conf);
     ///    let service_name = "video";
     ///    let method_name = "hello";
@@ -342,7 +342,7 @@ impl RpcClient {
     ///
     /// #[tokio::main]
     /// async fn main() {
-    ///     let conf = Config::with_yaml_defaults("config.yml").unwrap();
+    ///     let conf = Config::with_yaml_defaults("config.yml".to_string()).unwrap();
     ///     let rpc_call = RpcClient::new(conf);
     ///     let service_name = "video";
     ///     let method_name = "hello";
@@ -444,7 +444,7 @@ impl RpcTask {
     /// ## Arguments
     ///
     /// * `name` - The name of the function to call
-    /// * `inner_function` - The function to call
+    /// * `inner_function` - The function to call as NamekoFunction
     ///
     /// ## Returns
     ///
