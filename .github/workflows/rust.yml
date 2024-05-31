@@ -15,6 +15,18 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
+  build-doc-draft:
+    runs-on: ubuntu-latest
+    if: github.ref != 'refs/heads/main'
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+      - name: Build only 
+        uses: shalzz/zola-deploy-action@v0.18.0
+        env:
+          BUILD_DIR: docs
+          BUILD_ONLY: true
+          BUILD_FLAGS: --drafts
   build_test:
     runs-on: ubuntu-latest
     steps:
