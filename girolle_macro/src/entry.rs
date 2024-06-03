@@ -65,7 +65,7 @@ impl Fold for Task {
             data: &[Value]
         };
         // Replace the return type by the NamekoFunction return type
-        folded_item.output = parse_quote! {-> girolle::Result<Value>};
+        folded_item.output = parse_quote! {-> NamekoResult<Value>};
         folded_item
     }
     fn fold_stmt(&mut self, i: syn::Stmt) -> syn::Stmt {
