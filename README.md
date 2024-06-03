@@ -28,7 +28,9 @@ Girolle use [lapin](https://github.com/amqp-rs/lapin) as an AMQP client/server l
 
 ## Configuration
 
-There is two way to create a configuration. The first one is to use the `Config::with_yaml_defaults` function that will create a configuration from a yaml file. The second one is to create a configuration by hand.
+There are two ways to create a configuration. The first one is to use the
+`Config::with_yaml_defaults` function that will create a configuration from
+a YAML file. The second one is to create a configuration by hand.
 
 ### Create a configuration by hand
 
@@ -42,7 +44,7 @@ conf.with_amqp_uri("amqp://toto:super@localhost:5672/")
 
 ### Create a configuration from a yaml file
 
-The configuration is done by a yaml file. It should be compliant with a Nameko one.
+The configuration is specified in a YAML file. It should be compliant with a Nameko one.
 The file should look like this:
 
 ```yaml
@@ -60,7 +62,7 @@ In this example:
 
 #### Environment variables
 
-The configuration support the expension of the environment variables with the
+The configuration supports the expansion of the environment variables with the
 following syntax `${VAR_NAME}`. Like in this example:
 
 ```yaml
