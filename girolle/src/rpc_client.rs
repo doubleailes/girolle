@@ -190,7 +190,6 @@ impl RpcClient {
             .await?
             .await?;
         assert_eq!(confirm, Confirmation::NotRequested);
-        //Ok(self.result(&mut consumer).await)
         Ok(consumer)
     }
     /// # result

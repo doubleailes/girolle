@@ -18,9 +18,9 @@
 //!
 //! fn hello(s: &[Value]) -> NamekoResult<Value> {
 //!    // Parse the incomming data
-//!   let n: String = serde_json::from_value(s[0].clone())?;
-//!  let hello_str: Value = format!("Hello, {}!, by Girolle", n).into();
-//!  Ok(hello_str)
+//!    let n: String = serde_json::from_value(s[0].clone())?;
+//!    let hello_str: Value = format!("Hello, {}!, by Girolle", n).into();
+//!    Ok(hello_str)
 //! }
 //!
 //! fn main() {

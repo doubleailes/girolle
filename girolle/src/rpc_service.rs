@@ -277,7 +277,13 @@ async fn execute_delivery(
     let correlation_id = get_id(delivery.properties.correlation_id(), "correlation_id");
     let reply_to_id = get_id(delivery.properties.reply_to(), "reply_to_id");
     let opt_headers = delivery.properties.headers().clone(); //need to clone to modify the headers
-    let headers = insert_new_id_to_call_id(opt_headers.unwrap(), &opt_routing_key, &id.to_string());
+    let headers = match opt_headers {
+        Some(h) => insert_new_id_to_call_id(h, &opt_routing_key, &id.to_string()),
+        None => {
+            error!("No headers found in delivery properties");
+            return;
+        }
+    };
     let properties = BasicProperties::default()
         .with_correlation_id(correlation_id.into())
         .with_content_type("application/json".into())
@@ -430,7 +436,9 @@ async fn rpc_service(
             .await;
         }
     });
-    tokio::signal::ctrl_c().await.expect("Failed to listen for ctrl_c signal");
+    tokio::signal::ctrl_c()
+        .await
+        .expect("Failed to listen for ctrl_c signal");
     info!("Shutting down gracefully");
     Ok(())
 }
