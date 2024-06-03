@@ -26,14 +26,51 @@ section to see limitation.
 
 Girolle use [lapin](https://github.com/amqp-rs/lapin) as an AMQP client/server library.
 
-## Setup
+## Configuration
 
-You need to set this environement variables.
+There are two ways to create a configuration. The first one is to use the
+`Config::with_yaml_defaults` function that will create a configuration from
+a YAML file. The second one is to create a configuration by hand.
 
-- **RABBITMQ_USER**: The RabbitMQ user
-- **RABBITMQ_PASSWORD**: The RabbitMQ password
-- **RABBITMQ_HOST**: THe rabbitMQ host adress
-- Optional: **RABBITMQ_PORT**: The RabbitMQ port (default: 5672)
+### Create a configuration by hand
+
+```rust
+let conf = Config::default_config();
+conf.with_amqp_uri("amqp://toto:super@localhost:5672/")
+    .with_rpc_exchange("nameko-rpc")
+    .with_max_workers(10)
+    .with_parent_calls_tracked(10);
+```
+
+### Create a configuration from a yaml file
+
+The configuration is specified in a YAML file. It should be compliant with a Nameko one.
+The file should look like this:
+
+```yaml
+AMQP_URI: 'amqp://toto:super@$172.16.1.1:5672//'
+rpc_exchange: 'nameko-rpc'
+max_workers: 10
+parent_calls_tracked: 10
+```
+
+In this example:
+* The `AMQP_URI` is the connection string to the RabbitMQ server.
+* The `rpc_exchange` is the exchange name for the rpc calls.
+* The `max_workers` is the number of workers that will be created to handle the rpc calls.
+* The `parent_calls_tracked` is the number of parent calls that will be tracked by the service.
+
+#### Environment variables
+
+The configuration supports the expansion of the environment variables with the
+following syntax `${VAR_NAME}`. Like in this example:
+
+```yaml
+AMQP_URI: 'amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@${RABBITMQ_HOST}:${RABBITMQ_PORT}/%2f'
+rpc_exchange: 'nameko-rpc'
+max_workers: 10
+parent_calls_tracked: 10
+```
 
 ## How to use it
 
