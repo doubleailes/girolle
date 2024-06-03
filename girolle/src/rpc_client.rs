@@ -1,19 +1,18 @@
-mod payload;
-use payload::Payload;
 use crate::config::Config;
+use crate::payload::Payload;
 use crate::queue::{create_message_queue, create_service_queue};
 use crate::types::NamekoResult;
-use uuid::Uuid;
-use serde_json::Value;
-use std::collections::BTreeMap;
 use futures::{executor, stream::StreamExt};
 use lapin::{
     options::*,
     publisher_confirm::Confirmation,
     types::{AMQPValue, FieldArray, FieldTable},
-    BasicProperties,Consumer,
+    BasicProperties, Consumer,
 };
+use serde_json::Value;
+use std::collections::BTreeMap;
 use tracing::error;
+use uuid::Uuid;
 
 fn create_rpc_queue_reply_name(base_name: &str, identifier: &str) -> String {
     format!("{}-{}", base_name, identifier)
@@ -107,7 +106,7 @@ impl RpcClient {
     ///
     /// ```rust,no_run
     /// use girolle::prelude::*;
-    /// 
+    ///
     /// #[tokio::main]
     /// async fn main() {
     ///    let conf = Config::with_yaml_defaults("config.yml".to_string()).unwrap();

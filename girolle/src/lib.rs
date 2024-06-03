@@ -46,10 +46,13 @@
 mod queue;
 pub mod types;
 pub use serde_json as JsonValue;
+mod config;
 mod nameko_utils;
 pub mod prelude;
-mod config;
 pub mod rpc_client;
 pub use rpc_client::RpcClient;
 mod rpc_service;
-pub use rpc_service::{RpcService, RpcTask};
+pub use rpc_service::RpcService;
+mod rpc_task;
+pub use rpc_task::RpcTask;
+mod payload;

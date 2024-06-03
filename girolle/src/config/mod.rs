@@ -61,11 +61,11 @@ pub struct Config {
 
 impl Config {
     /// # Create a default config
-    /// 
+    ///
     /// This function creates a default configuration.
-    /// 
+    ///
     /// ## Returns
-    /// 
+    ///
     /// A Config that holds the default configuration.
     pub fn default_config() -> Self {
         Self {
@@ -101,13 +101,13 @@ impl Config {
     }
 
     /// # with_yaml_defaults
-    /// 
+    ///
     /// ## Description
-    /// 
+    ///
     /// Function to load from a YAML file and merge with default config.
-    /// 
+    ///
     /// ## Arguments
-    /// 
+    ///
     /// * `file_path` - A String that holds the path of the file.
     pub fn with_yaml_defaults(file_path: String) -> Result<Self, Box<dyn std::error::Error>> {
         let default_config = Config::default_config();
@@ -121,17 +121,17 @@ impl Config {
     }
 
     /// # merge
-    /// 
+    ///
     /// ## Description
-    /// 
+    ///
     /// Function to merge two configurations.
-    /// 
+    ///
     /// ## Arguments
     ///
     /// * `other` - A Config that holds the second configuration.
-    /// 
+    ///
     /// ## Returns
-    /// 
+    ///
     /// A Config that holds the merged configuration.
     fn merge(self, other: Config) -> Config {
         Config {
@@ -159,78 +159,78 @@ impl Config {
         }
     }
     /// #AMQP
-    /// 
+    ///
     /// ## Description
-    /// 
+    ///
     /// Function to get the AMQP URI.
-    /// 
+    ///
     /// ## Returns
-    /// 
+    ///
     /// A String that holds the AMQP URI.
     #[allow(non_snake_case)]
     pub fn AMQP_URI(&self) -> String {
         self.AMQP_URI.clone().unwrap()
     }
     /// # prefetch_count
-    /// 
+    ///
     /// ## Description
-    /// 
+    ///
     /// Function to get the prefetch count.
-    /// 
+    ///
     /// ## Returns
-    /// 
+    ///
     /// A u16 that holds the prefetch count.
     pub fn prefetch_count(&self) -> u16 {
         self.prefetch_count.unwrap()
     }
     /// # heartbeat
-    /// 
+    ///
     /// ## Description
-    /// 
+    ///
     /// Function to get the heartbeat.
-    /// 
+    ///
     /// ## Returns
-    /// 
+    ///
     /// A u16 that holds the heartbeat.
     pub fn heartbeat(&self) -> u16 {
         self.heartbeat.unwrap()
     }
     /// # rpc_exchange
-    /// 
+    ///
     /// ## Description
-    /// 
+    ///
     /// Function to get the RPC exchange.
-    /// 
+    ///
     /// ## Returns
-    /// 
+    ///
     /// A String that holds the RPC exchange.
     pub fn rpc_exchange(&self) -> &str {
         self.rpc_exchange.as_ref().unwrap()
     }
     /// # max_workers
-    /// 
+    ///
     /// ## Description
-    /// 
+    ///
     /// Function to get the max workers.
-    /// 
+    ///
     /// ## Returns
-    /// 
+    ///
     /// A u32 that holds the max workers.
     pub fn max_workers(&self) -> u32 {
         self.max_workers.unwrap()
     }
     /// # with_amqp_uri
-    /// 
+    ///
     /// ## Description
-    /// 
+    ///
     /// Function to set the AMQP URI.
-    /// 
+    ///
     /// ## Arguments
-    /// 
+    ///
     /// * `amqp_uri` - A string slice that holds the URI of the AMQP server.
-    /// 
+    ///
     /// ## Returns
-    /// 
+    ///
     /// A Config that holds the new configuration.
     // Get the max workers
     pub fn with_amqp_uri(&self, amqp_uri: &str) -> Config {
@@ -239,17 +239,17 @@ impl Config {
         new_config
     }
     /// # with_prefetch_count
-    /// 
+    ///
     /// ## Description
-    /// 
+    ///
     /// Function to set the prefetch count.
-    /// 
+    ///
     /// ## Arguments
-    /// 
+    ///
     /// * `prefetch_count` - A u16 that holds the prefetch count.
-    /// 
+    ///
     /// ## Returns
-    /// 
+    ///
     /// A Config that holds the new configuration.
     pub fn with_prefetch_count(&self, prefetch_count: u16) -> Config {
         let mut new_config = self.clone();
@@ -257,17 +257,17 @@ impl Config {
         new_config
     }
     /// # with_heartbeat
-    /// 
+    ///
     /// ## Description
-    /// 
+    ///
     /// Function to set the heartbeat.
-    /// 
+    ///
     /// ## Arguments
-    /// 
+    ///
     /// * `heartbeat` - A u16 that holds the heartbeat value.
-    /// 
+    ///
     /// ## Returns
-    /// 
+    ///
     /// A Config that holds the new configuration.
     pub fn with_heartbeat(&self, heartbeat: u16) -> Config {
         let mut new_config = self.clone();
@@ -275,17 +275,17 @@ impl Config {
         new_config
     }
     /// # with_rpc_exchange
-    /// 
+    ///
     /// ## Description
-    /// 
+    ///
     /// Function to set the RPC exchange.
-    /// 
+    ///
     /// ## Arguments
-    /// 
+    ///
     /// * `rpc_exchange` - A string slice that holds the name of the exchange.
-    /// 
+    ///
     /// ## Returns
-    /// 
+    ///
     /// A Config that holds the new configuration.
     pub fn with_rpc_exchange(&self, rpc_exchange: &str) -> Config {
         let mut new_config = self.clone();
@@ -293,17 +293,17 @@ impl Config {
         new_config
     }
     /// # with_max_workers
-    /// 
+    ///
     /// ## Description
-    /// 
+    ///
     /// Function to set the max workers.
-    /// 
+    ///
     /// ## Arguments
-    /// 
+    ///
     /// * `max_workers` - A u32 that holds the max workers.
-    /// 
+    ///
     /// ## Returns
-    /// 
+    ///
     /// A Config that holds the new configuration.
     pub fn with_max_workers(&self, max_workers: u32) -> Config {
         let mut new_config = self.clone();

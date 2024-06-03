@@ -33,9 +33,9 @@ async fn get_connection(amqp_uri: String, heartbeat_value: u16) -> lapin::Result
 /// * `heartbeat_value` - A u16 that holds the heartbeat value.
 /// * `prefetch_count` - A u16 that holds the prefetch count.
 /// * `rpc_exchange` - A string slice that holds the name of the exchange.
-/// 
+///
 /// ## Returns
-/// 
+///
 /// A lapin::Result<lapin::Channel> that holds the channel.
 pub async fn create_service_queue(
     service_name: &str,
@@ -82,9 +82,9 @@ pub async fn create_service_queue(
 /// * `amqp_uri` - A string that holds the URI of the AMQP server.
 /// * `heartbeat_value` - A u16 that holds the heartbeat value.
 /// * `rpc_exchange` - A string slice that holds the name of the exchange.
-/// 
+///
 /// ## Returns
-/// 
+///
 /// A lapin::Result<lapin::Channel> that holds the channel.
 pub async fn create_message_queue(
     rpc_queue_reply: &str,

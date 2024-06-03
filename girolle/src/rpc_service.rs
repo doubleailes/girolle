@@ -1,93 +1,21 @@
-use crate::types::NamekoFunction;
 use crate::config::Config;
-use crate::queue::{create_message_queue, create_service_queue};
 use crate::nameko_utils::{get_id, insert_new_id_to_call_id};
+use crate::queue::{create_message_queue, create_service_queue};
+use crate::rpc_task::RpcTask;
+use crate::types::NamekoFunction;
+use lapin::{
+    message::{Delivery, DeliveryResult},
+    options::*,
+    publisher_confirm::Confirmation,
+    types::FieldTable,
+    BasicProperties, Channel,
+};
+use serde_json::{json, Value};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::Semaphore;
 use tracing::{debug, error, info, warn};
 use uuid::Uuid;
-use serde_json::{json, Value};
-use lapin::{
-    options::*,
-    message::{DeliveryResult,Delivery},
-    publisher_confirm::Confirmation,
-    types::FieldTable,
-    BasicProperties,Channel,
-};
-
-/// # RpcTask
-///
-/// ## Description
-///
-/// This struct is used to create a RPC task. This task will be used to register
-/// a function in the RpcService struct.
-///
-/// ## Example
-///
-/// ```rust,no_run
-/// use girolle::prelude::*;
-///
-/// fn hello(s: &[Value]) -> NamekoResult<Value> {
-///    // Parse the incomming data
-///    let n: String = serde_json::from_value(s[0].clone())?;
-///    let hello_str: Value = format!("Hello, {}!, by Girolle", n).into();
-///    Ok(hello_str)
-/// }
-///  
-///
-/// fn main() {
-///     let mut services: RpcService = RpcService::new(Config::default_config(),"video");
-///     let rpc_task = RpcTask::new("hello", hello);
-///     services.register(rpc_task).start();
-/// }
-///
-#[derive(Clone)]
-pub struct RpcTask {
-    name: &'static str,
-    inner_function: NamekoFunction,
-}
-impl RpcTask {
-    /// # new
-    ///
-    /// ## Description
-    ///
-    /// This function create a new RpcTask struct
-    ///
-    /// ## Arguments
-    ///
-    /// * `name` - The name of the function to call
-    /// * `inner_function` - The function to call as NamekoFunction
-    ///
-    /// ## Returns
-    ///
-    /// This function return a girolle::RpcTask struct
-    ///
-    /// ## Example
-    ///
-    /// ```rust,no_run
-    /// use girolle::prelude::*;
-    ///
-    /// fn hello(s: &[Value]) -> NamekoResult<Value> {
-    ///    // Parse the incomming data
-    ///    let n: String = serde_json::from_value(s[0].clone())?;
-    ///    let hello_str: Value = format!("Hello, {}!, by Girolle", n).into();
-    ///    Ok(hello_str)
-    /// }
-    ///
-    /// fn main() {
-    ///     let mut services: RpcService = RpcService::new(Config::default_config(),"video");
-    ///     let rpc_task = RpcTask::new("hello", hello);
-    ///     services.register(rpc_task).start();
-    /// }
-    ///
-    pub fn new(name: &'static str, inner_function: NamekoFunction) -> Self {
-        Self {
-            name,
-            inner_function,
-        }
-    }
-}
 
 /// # RpcService
 ///
@@ -261,7 +189,7 @@ impl RpcService {
     pub fn get_routing_keys(&self) -> Vec<String> {
         self.f.keys().map(|x| x.to_string()).collect()
     }
-        /// # get_config
+    /// # get_config
     ///
     /// ## Description
     ///
@@ -502,6 +430,7 @@ async fn rpc_service(
             .await;
         }
     });
-    std::future::pending::<()>().await;
+    tokio::signal::ctrl_c().await.expect("Failed to listen for ctrl_c signal");
+    info!("Shutting down gracefully");
     Ok(())
 }
