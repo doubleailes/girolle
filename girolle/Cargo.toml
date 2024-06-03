@@ -17,7 +17,7 @@ lapin = "2.3.4"
 serde_json = { workspace = true }
 serde = { version = "1.0.202", features = ["derive"] }
 futures = "0.3.30"
-girolle_macro = { path = "../girolle_macro" }
+girolle_macro = { path = "../girolle_macro", version = "1.5"}
 tokio = { workspace = true }
 tokio-executor-trait = "2.1.1"
 tokio-reactor-trait = "1.1.0"
