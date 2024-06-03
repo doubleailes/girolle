@@ -20,7 +20,7 @@ weight = 10
 
 [[extra.list]]
 title = "Nameko compatible"
-content = 'Girolle is able to interact as a RPC service with Nameko RPC services'
+content = '<b>Girolle</b> is able to interact as a RPC service with Nameko RPC services'
 
 [[extra.list]]
 title = "A simple RPC framework"
@@ -29,6 +29,10 @@ content = 'Girolle uses a simple RPC framework'
 [[extra.list]]
 title = "Fast"
 content = "<b>Girolle</b> is made to be really fast, leveraging Rust's speed and concurrency"
+
+[[extra.list]]
+title = "Nameko Config"
+content = "<b>Girolle</b> is able to read Nameko configuration files"
  
 
 +++

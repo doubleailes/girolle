@@ -43,7 +43,7 @@ impl RpcClient {
     ///
     /// ## Description
     ///
-    /// This function create a new RpcCall struct
+    /// This function create a new RpcClientstruct
     ///
     /// ## Arguments
     ///
@@ -51,7 +51,7 @@ impl RpcClient {
     ///
     /// ## Returns
     ///
-    /// This function return a girolle::RpcCall struct
+    /// This function return a girolle::RpcClientstruct
     ///
     /// ## Example
     ///
@@ -72,7 +72,7 @@ impl RpcClient {
     ///
     /// ## Description
     ///
-    /// This function return the identifier of the RpcCall struct
+    /// This function return the identifier of the RpcClientstruct
     ///
     /// ## Example
     ///
@@ -91,7 +91,7 @@ impl RpcClient {
     ///
     /// ## Description
     ///
-    /// This function call the Nameko microservice, using the service name and
+    /// This function call the Nameko-like microservice, using the service name and
     /// the function to target. This function return an async consumer.
     ///
     /// ## Arguments
