@@ -45,8 +45,8 @@
 //! ```
 mod queue;
 pub mod types;
-pub use serde_json as JsonValue;
 mod config;
+pub use config::Config;
 mod nameko_utils;
 pub mod prelude;
 pub mod rpc_client;

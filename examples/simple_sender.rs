@@ -1,5 +1,5 @@
-use girolle::prelude::*;
-use serde_json;
+use girolle::{RpcClient, Config};
+use serde_json::Value;
 use std::vec;
 use std::{thread, time};
 
