@@ -5,4 +5,5 @@ pub use crate::rpc_service::RpcService;
 pub use crate::rpc_task::RpcTask;
 pub use crate::types::{NamekoFunction, NamekoResult};
 pub use girolle_macro::girolle;
+pub use serde_json;
 pub use serde_json::{json, Value};
