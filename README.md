@@ -28,23 +28,12 @@ Girolle use [lapin](https://github.com/amqp-rs/lapin) as an AMQP client/server l
 
 ## Configuration
 
-There are two ways to create a configuration. The first one is to use the
-`Config::with_yaml_defaults` function that will create a configuration from
-a YAML file. The second one is to create a configuration by hand.
-
-### Create a configuration by hand
-
-```rust
-let conf = Config::default_config();
-conf.with_amqp_uri("amqp://toto:super@localhost:5672/")
-    .with_rpc_exchange("nameko-rpc")
-    .with_max_workers(10)
-    .with_parent_calls_tracked(10);
-```
+There is two way to create a configuration. The first one is to use the `Config::with_yaml_defaults` function that will read a configuration from
+a YAML file, [see example](https://github.com/doubleailes/girolle/blob/main/examples/config.yml). The second one is to create a configuration by hand.
 
 ### Create a configuration from a yaml file
 
-The configuration is specified in a YAML file. It should be compliant with a Nameko one.
+The configuration is done by a yaml file. It should be compliant with a Nameko one.
 The file should look like this:
 
 ```yaml
@@ -59,6 +48,16 @@ In this example:
 * The `rpc_exchange` is the exchange name for the rpc calls.
 * The `max_workers` is the number of workers that will be created to handle the rpc calls.
 * The `parent_calls_tracked` is the number of parent calls that will be tracked by the service.
+
+### Create a configuration by hand
+
+```rust
+let conf = Config::default_config();
+conf.with_amqp_uri("amqp://toto:super@localhost:5672/")
+    .with_rpc_exchange("nameko-rpc")
+    .with_max_workers(10)
+    .with_parent_calls_tracked(10);
+```
 
 #### Environment variables
 
