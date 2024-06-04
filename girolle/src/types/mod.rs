@@ -3,7 +3,7 @@ use serde_json::Value;
 ///
 /// ## Description
 ///
-/// This type is used to return a Result<Value> in the RPC call
+/// This type is used to return a `Result<Value>` in the RPC call
 pub type NamekoResult<T> = std::result::Result<T, serde_json::Error>;
 /// # NamekoFunction
 ///
