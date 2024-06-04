@@ -7,7 +7,6 @@ edition = "2021"
 [dev-dependencies]
 girolle = { path = "../girolle" }
 tokio = { workspace = true }
-serde_json = { workspace = true }
 
 [[example]]
 name = "advance_senders"
