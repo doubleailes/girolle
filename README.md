@@ -46,7 +46,7 @@ parent_calls_tracked: 10
 In this example:
 * The `AMQP_URI` is the connection string to the RabbitMQ server.
 * The `rpc_exchange` is the exchange name for the rpc calls.
-* The `max_workers` is the number of workers that will be created to handle the rpc calls.
+* The `max_workers` is the max number of workers that will be created to handle the rpc calls.
 * The `parent_calls_tracked` is the number of parent calls that will be tracked by the service.
 
 ### Create a configuration by hand
