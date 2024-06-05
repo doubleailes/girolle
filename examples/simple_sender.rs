@@ -1,4 +1,4 @@
-use girolle::{RpcClient, Config, Value,serde_json};
+use girolle::{serde_json, Config, RpcClient, Value};
 use std::vec;
 use std::{thread, time};
 

@@ -1,10 +1,11 @@
 //! ## Description
 //!
 //! This crate is a Rust implementation of the Nameko RPC protocol.
-//! It allows to create a RPC service or Rpc Call in Rust that can be called
+//! It allows to create a RPC service or Rpc client in Rust that can be called
 //! from or to a Nameko microservice.
 //!
-//! **Girolle** mock Nameko architecture to send request and get response.
+//! **Girolle** mock Nameko architecture to send request and get response,
+//! with a message-listener queue system
 //!
 //! ## Examples
 //!
@@ -43,13 +44,13 @@
 //!    let rpc_call = RpcClient::new(Config::default_config());
 //! }
 //! ```
+mod config;
 mod queue;
 pub mod types;
-mod config;
 pub use config::Config;
 mod nameko_utils;
 pub mod prelude;
-pub mod rpc_client;
+mod rpc_client;
 pub use rpc_client::RpcClient;
 mod rpc_service;
 pub use rpc_service::RpcService;
@@ -57,4 +58,4 @@ mod rpc_task;
 pub use rpc_task::RpcTask;
 mod payload;
 pub use serde_json;
-pub use serde_json::{Value, json};
+pub use serde_json::{json, Value};
