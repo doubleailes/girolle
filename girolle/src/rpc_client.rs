@@ -198,7 +198,7 @@ impl RpcClient {
     ///
     /// This function return the result of the call to the Nameko microservice.
     /// This function is async.
-    /// It return a Result<Value> as Value is serde_json::Value
+    /// It return a `NamekoResult<Value>` as Value is `serde_json::Value`
     ///
     /// ## Arguments
     ///
@@ -246,7 +246,7 @@ impl RpcClient {
     ///
     /// This function send the payload to the Nameko microservice, using the
     /// service name and the function to target. This function is sync.
-    /// It return a Result<Value> as Value is serde_json::Value
+    /// It return a `NamekoResult<Value>` as Value is `serde_json::Value`
     ///
     /// ## Arguments
     ///

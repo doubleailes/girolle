@@ -45,8 +45,8 @@
 //! ```
 mod queue;
 pub mod types;
-pub use serde_json as JsonValue;
 mod config;
+pub use config::Config;
 mod nameko_utils;
 pub mod prelude;
 pub mod rpc_client;
@@ -56,3 +56,5 @@ pub use rpc_service::RpcService;
 mod rpc_task;
 pub use rpc_task::RpcTask;
 mod payload;
+pub use serde_json;
+pub use serde_json::{Value, json};
