@@ -14,10 +14,6 @@ use std::collections::BTreeMap;
 use tracing::error;
 use uuid::Uuid;
 
-fn create_rpc_queue_reply_name(base_name: &str, identifier: &str) -> String {
-    format!("{}-{}", base_name, identifier)
-}
-
 /// # RpcClient
 ///
 /// ## Description
@@ -145,15 +141,15 @@ impl RpcClient {
                 self.identifier.to_string().into(),
             )])),
         );
-        let properties = BasicProperties::default()
+        let properties: lapin::protocol::basic::AMQPProperties = BasicProperties::default()
             .with_reply_to(self.identifier.to_string().into())
             .with_correlation_id(correlation_id.into())
             .with_content_type("application/json".into())
             .with_content_encoding("utf-8".into())
             .with_headers(FieldTable::from(headers));
-        let reply_name = "rpc.listener";
-        let rpc_queue_reply = create_rpc_queue_reply_name(reply_name, &self.identifier.to_string());
-        let reply_queue = match create_message_queue(
+        let reply_name: &str = "rpc.listener";
+        let rpc_queue_reply: String = format!("{}-{}", reply_name, &self.identifier.to_string());
+        let reply_queue: lapin::Channel = match create_message_queue(
             &rpc_queue_reply,
             &self.identifier,
             self.conf.AMQP_URI(),

@@ -14,7 +14,8 @@ use std::io::Read;
 ///
 /// This struct is used to store the configuration of the AMQP configuration.
 /// It is used to store the configuration of the AMQP connection
-/// - the web server address, the RPC exchange
+/// - the web server address
+/// - the RPC exchange
 /// - the serializer
 /// - the serializers
 /// - the accept
@@ -77,14 +78,12 @@ impl Config {
             accept: Some("".to_string()),
             heartbeat: Some(60),
             amqp_ssl: Some("".to_string()),
-            transport_options: Some({
-                let mut map = HashMap::new();
-                map.insert("max_retries".to_string(), 3);
-                map.insert("interval_start".to_string(), 2);
-                map.insert("interval_step".to_string(), 1);
-                map.insert("interval_max".to_string(), 5);
-                map
-            }),
+            transport_options: Some(HashMap::from([
+                ("max_retries".to_string(), 3),
+                ("interval_start".to_string(), 2),
+                ("interval_step".to_string(), 1),
+                ("interval_max".to_string(), 5),
+            ])),
             login_method: Some("".to_string()),
             max_workers: Some(256),
             prefetch_count: Some(10),
