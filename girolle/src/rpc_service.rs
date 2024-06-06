@@ -1,6 +1,6 @@
 use crate::config::Config;
 use crate::nameko_utils::{get_id, insert_new_id_to_call_id};
-use crate::queue::{create_message_queue, create_service_queue};
+use crate::queue::{create_message_channel, create_service_channel};
 use crate::rpc_task::RpcTask;
 use crate::types::NamekoFunction;
 use lapin::{
@@ -367,7 +367,7 @@ async fn rpc_service(
 
     // Create a channel for the service in Nameko this part is handle by
     // the RpcConsumer class
-    let rpc_channel: Channel = create_service_queue(
+    let rpc_channel: Channel = create_service_channel(
         service_name,
         conf.AMQP_URI(),
         conf.heartbeat(),
@@ -386,7 +386,7 @@ async fn rpc_service(
         )
         .await?;
     let shared_data: Arc<SharedData> = Arc::new(SharedData {
-        rpc_reply_channel: create_message_queue(
+        rpc_reply_channel: create_message_channel(
             &rpc_queue_reply,
             &id,
             conf.AMQP_URI(),

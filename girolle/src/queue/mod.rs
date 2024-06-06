@@ -22,7 +22,7 @@ async fn get_connection(amqp_uri: String, heartbeat_value: u16) -> lapin::Result
     Connection::connect(&amqp_uri, connection_options).await
 }
 
-/// # create_service_queue
+/// # create_service_channel
 ///
 /// This function creates a queue for a service.
 ///
@@ -37,7 +37,7 @@ async fn get_connection(amqp_uri: String, heartbeat_value: u16) -> lapin::Result
 /// ## Returns
 ///
 /// A lapin::Result<lapin::Channel> that holds the channel.
-pub async fn create_service_queue(
+pub async fn create_service_channel(
     service_name: &str,
     amqp_uri: String,
     heartbeat_value: u16,
@@ -71,7 +71,7 @@ pub async fn create_service_queue(
     Ok(incomming_channel)
 }
 
-/// # create_message_queue
+/// # create_message_channel
 ///
 /// This function creates a queue for a message.
 ///
@@ -86,7 +86,7 @@ pub async fn create_service_queue(
 /// ## Returns
 ///
 /// A lapin::Result<lapin::Channel> that holds the channel.
-pub async fn create_message_queue(
+pub async fn create_message_channel(
     rpc_queue_reply: &str,
     id: &Uuid,
     amqp_uri: String,

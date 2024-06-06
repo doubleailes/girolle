@@ -1,6 +1,6 @@
 use crate::config::Config;
 use crate::payload::Payload;
-use crate::queue::{create_message_queue, create_service_queue};
+use crate::queue::{create_message_channel, create_service_channel};
 use crate::types::NamekoResult;
 use futures::{executor, stream::StreamExt};
 use lapin::{
@@ -122,7 +122,7 @@ impl RpcClient {
         let payload = Payload::new(args);
         let correlation_id = Uuid::new_v4().to_string();
         let routing_key = format!("{}.{}", service_name, method_name);
-        let channel = create_service_queue(
+        let channel = create_service_channel(
             service_name,
             self.conf.AMQP_URI(),
             self.conf.heartbeat(),
@@ -149,7 +149,7 @@ impl RpcClient {
             .with_headers(FieldTable::from(headers));
         let reply_name: &str = "rpc.listener";
         let rpc_queue_reply: String = format!("{}-{}", reply_name, &self.identifier.to_string());
-        let reply_queue: lapin::Channel = match create_message_queue(
+        let reply_queue: lapin::Channel = match create_message_channel(
             &rpc_queue_reply,
             &self.identifier,
             self.conf.AMQP_URI(),
