@@ -4,7 +4,7 @@
 use lapin::{
     options::{BasicQosOptions, QueueBindOptions, QueueDeclareOptions},types::FieldTable, Connection, ConnectionProperties
 };
-use tracing::info;
+use tracing::{info,error};
 use uuid::Uuid;
 
 /// # QUEUE_TTL
@@ -17,7 +17,16 @@ pub async fn get_connection(amqp_uri: String, heartbeat_value: u16) -> Result<la
     let mut client_properties_custom = FieldTable::default();
     client_properties_custom.insert("heartbeat".into(), heartbeat_value.into());
     connection_options.client_properties = client_properties_custom;
-    Ok(Connection::connect(&amqp_uri, connection_options).await?)
+    match Connection::connect(&amqp_uri, connection_options).await {
+        Ok(connection) => {
+            info!("Connected to RabbitMQ");
+            return Ok(connection);
+        }
+        Err(e) => {
+            error!("Failed to connect to RabbitMQ with error:{}",e);
+            return Err(e);
+        }
+    }
 }
 
 /// # create_service_channel
