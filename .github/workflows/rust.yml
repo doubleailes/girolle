@@ -30,7 +30,7 @@ jobs:
   build_test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - name: 🔨 Build
         run: cargo build
@@ -39,14 +39,14 @@ jobs:
   bench:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - name: ⏲️ Bench
         run: cargo bench
   dry_publish:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - uses: actions-rs/toolchain@v1
       with:
           toolchain: stable
@@ -59,7 +59,7 @@ jobs:
     needs: [dry_publish,bench,build_test,build-doc-draft]
     if: github.event_name == 'release' && github.event.action == 'created'
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - uses: actions-rs/toolchain@v1
       with:
           toolchain: stable
