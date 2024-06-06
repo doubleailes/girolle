@@ -2,9 +2,7 @@
 ///
 /// This module contains functions to create queues and channels for the RPC communication.
 use lapin::{
-    options::{BasicQosOptions, QueueBindOptions, QueueDeclareOptions},
-    types::FieldTable,
-    Connection, ConnectionProperties,
+    options::{BasicQosOptions, QueueBindOptions, QueueDeclareOptions},types::FieldTable, Connection, ConnectionProperties
 };
 use tracing::info;
 use uuid::Uuid;
@@ -12,14 +10,14 @@ use uuid::Uuid;
 /// # QUEUE_TTL
 const QUEUE_TTL: u32 = 300000;
 
-async fn get_connection(amqp_uri: String, heartbeat_value: u16) -> lapin::Result<Connection> {
+pub async fn get_connection(amqp_uri: String, heartbeat_value: u16) -> Result<lapin::Connection, lapin::Error> {
     let mut connection_options = ConnectionProperties::default()
         .with_executor(tokio_executor_trait::Tokio::current())
         .with_reactor(tokio_reactor_trait::Tokio);
     let mut client_properties_custom = FieldTable::default();
     client_properties_custom.insert("heartbeat".into(), heartbeat_value.into());
     connection_options.client_properties = client_properties_custom;
-    Connection::connect(&amqp_uri, connection_options).await
+    Ok(Connection::connect(&amqp_uri, connection_options).await?)
 }
 
 /// # create_service_channel
@@ -38,15 +36,13 @@ async fn get_connection(amqp_uri: String, heartbeat_value: u16) -> lapin::Result
 ///
 /// A lapin::Result<lapin::Channel> that holds the channel.
 pub async fn create_service_channel(
+    conn: &Connection,
     service_name: &str,
-    amqp_uri: String,
-    heartbeat_value: u16,
     prefetch_count: u16,
     rpc_exchange: &str,
 ) -> lapin::Result<lapin::Channel> {
     info!("Create service queue");
     let routing_key = format!("{}.*", service_name);
-    let conn = get_connection(amqp_uri, heartbeat_value).await?;
     info!("{:?}", conn.status());
     let incomming_channel = conn.create_channel().await?;
     let mut queue_declare_options = QueueDeclareOptions::default();
@@ -87,14 +83,12 @@ pub async fn create_service_channel(
 ///
 /// A lapin::Result<lapin::Channel> that holds the channel.
 pub async fn create_message_channel(
+    conn: &Connection,
     rpc_queue_reply: &str,
     id: &Uuid,
-    amqp_uri: String,
-    heartbeat_value: u16,
     rpc_exchange: &str,
 ) -> lapin::Result<lapin::Channel> {
     info!("Create message queue");
-    let conn = get_connection(amqp_uri, heartbeat_value).await?;
     let response_channel = conn.create_channel().await?;
     let mut response_arguments = FieldTable::default();
     response_arguments.insert("x-expires".into(), QUEUE_TTL.into());
@@ -119,10 +113,6 @@ pub async fn create_message_channel(
             QueueBindOptions::default(),
             response_arguments,
         )
-        .await
-        .map_err(|e| {
-            // Handle or log the error
-            e
-        })?;
+        .await?;
     Ok(response_channel)
 }
