@@ -223,7 +223,7 @@ impl RpcClient {
             .await
             .expect("error in consumer")
             .expect("error in consumer");
-        let incomming_data: Value = serde_json::from_slice(&delivery.data).expect("json");
+        let mut incomming_data: Value = serde_json::from_slice(&delivery.data).expect("json");
         delivery.ack(BasicAckOptions::default()).await.expect("ack");
         match incomming_data["error"].as_object() {
             Some(error) => {
@@ -233,7 +233,7 @@ impl RpcClient {
             }
             None => {}
         }
-        incomming_data["result"].clone()
+        incomming_data["result"].take()
     }
     /// # send
     ///
