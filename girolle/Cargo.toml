@@ -1,6 +1,6 @@
 [package]
 name = "girolle"
-version = "1.6.2"
+version = "1.6.3"
 edition = "2021"
 authors = ["Philippe Llerena <philippe.llerena@gmail.com>"]
 description = "A nameko like lib in rust"
@@ -17,7 +17,7 @@ lapin = "2.3.4"
 serde_json = { workspace = true }
 serde = { version = "1.0.202", features = ["derive"] }
 futures = "0.3.30"
-girolle_macro = { path = "../girolle_macro", version = "1.6"}
+girolle_macro = { path = "../girolle_macro", version = "1.6" }
 tokio = { workspace = true }
 tokio-executor-trait = "2.1.1"
 tokio-reactor-trait = "1.1.0"
