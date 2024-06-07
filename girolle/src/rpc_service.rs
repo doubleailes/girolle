@@ -1,6 +1,6 @@
 use crate::config::Config;
 use crate::nameko_utils::{get_id, insert_new_id_to_call_id};
-use crate::queue::{create_message_queue, create_service_queue};
+use crate::queue::{create_service_channel, get_connection};
 use crate::rpc_task::RpcTask;
 use crate::types::NamekoFunction;
 use lapin::{
@@ -235,13 +235,13 @@ impl RpcService {
 }
 
 async fn publish(
-    rpc_reply_channel: &Channel,
+    rpc_channel: &Channel,
     payload: String,
     properties: BasicProperties,
     reply_to_id: String,
     rpc_exchange: &str,
 ) -> lapin::Result<Confirmation> {
-    let confirm = rpc_reply_channel
+    let confirm = rpc_channel
         .basic_publish(
             rpc_exchange,
             &format!("{}", &reply_to_id),
@@ -261,8 +261,8 @@ async fn execute_delivery(
     delivery: Delivery,
     id: &Uuid,
     fn_service: NamekoFunction,
-    rpc_reply_channel: &Channel,
-    rpc_queue_reply: &str,
+    rpc_channel: &Channel,
+    rpc_queue: &str,
     rpc_exchange: &str,
 ) {
     let opt_routing_key = delivery.routing_key.to_string();
@@ -287,7 +287,7 @@ async fn execute_delivery(
     let properties = BasicProperties::default()
         .with_correlation_id(correlation_id.into())
         .with_content_type("application/json".into())
-        .with_reply_to(rpc_queue_reply.into())
+        .with_reply_to(rpc_queue.into())
         .with_content_encoding("utf-8".into())
         .with_headers(headers)
         .with_delivery_mode(2)
@@ -319,21 +319,15 @@ async fn execute_delivery(
             .to_string()
         }
     };
-    publish(
-        &rpc_reply_channel,
-        payload,
-        properties,
-        reply_to_id,
-        rpc_exchange,
-    )
-    .await
-    .expect("Error publishing");
+    publish(&rpc_channel, payload, properties, reply_to_id, rpc_exchange)
+        .await
+        .expect("Error publishing");
 }
 
 struct SharedData {
-    rpc_reply_channel: Channel,
+    rpc_channel: Channel,
     f_task: HashMap<String, NamekoFunction>,
-    rpc_queue_reply: String,
+    rpc_queue: String,
     rpc_exchange: String,
     semaphore: Semaphore,
 }
@@ -364,18 +358,16 @@ async fn rpc_service(
     let id = Uuid::new_v4();
     // check list of function
     debug!("List of functions {:?}", f_task.keys());
-
+    let conn = get_connection(conf.AMQP_URI(), conf.heartbeat()).await?;
     // Create a channel for the service in Nameko this part is handle by
     // the RpcConsumer class
-    let rpc_channel: Channel = create_service_queue(
+    let rpc_channel: Channel = create_service_channel(
+        &conn,
         service_name,
-        conf.AMQP_URI(),
-        conf.heartbeat(),
         conf.prefetch_count(),
         &conf.rpc_exchange(),
     )
     .await?;
-    let rpc_queue_reply: String = format!("rpc.reply-{}-{}", service_name, &id);
     // Start a consumer.
     let consumer = rpc_channel
         .basic_consume(
@@ -386,16 +378,9 @@ async fn rpc_service(
         )
         .await?;
     let shared_data: Arc<SharedData> = Arc::new(SharedData {
-        rpc_reply_channel: create_message_queue(
-            &rpc_queue_reply,
-            &id,
-            conf.AMQP_URI(),
-            conf.heartbeat(),
-            &conf.rpc_exchange(),
-        )
-        .await?,
+        rpc_channel,
         f_task,
-        rpc_queue_reply: rpc_queue_reply,
+        rpc_queue,
         rpc_exchange: conf.rpc_exchange().to_string(),
         semaphore: Semaphore::new(conf.max_workers() as usize),
     });
@@ -429,8 +414,8 @@ async fn rpc_service(
                 delivery,
                 &id,
                 fn_service,
-                &shared_data_clone.rpc_reply_channel,
-                &shared_data_clone.rpc_queue_reply,
+                &shared_data_clone.rpc_channel,
+                &shared_data_clone.rpc_queue,
                 &shared_data_clone.rpc_exchange,
             )
             .await;

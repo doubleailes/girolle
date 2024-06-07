@@ -7,7 +7,7 @@ title = "A nameko like lib in rust"
 lead = 'A nameko like lib in rust'
 url = "/docs/getting-started/introduction/"
 url_button = "Get started"
-repo_version = "GitHub v1.6.1"
+repo_version = "GitHub v1.6.2"
 repo_license = "Open-source MIT License."
 repo_url = "https://github.com/doubleailes/girolle"
 
