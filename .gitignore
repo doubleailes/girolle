@@ -22,3 +22,4 @@ Cargo.lock
 /docs/public
 **/*.nu
 staging/config.yml
+nameko-examples/nameko_simple_test.py
