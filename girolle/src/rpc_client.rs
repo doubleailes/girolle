@@ -110,7 +110,7 @@ impl RpcClient {
     ///    let rpc_call = RpcClient::new(conf);
     ///    let service_name = "video";
     ///    let method_name = "hello";
-    ///    let args = vec![Value::String("John Doe".to_string())];
+    ///    let args = vec!["John Doe"];
     ///    let consumer = rpc_call.call_async(service_name, method_name, args).await.expect("call");
     /// }
     ///
@@ -214,9 +214,9 @@ impl RpcClient {
     ///    let rpc_call = RpcClient::new(conf);
     ///    let service_name = "video";
     ///    let method_name = "hello";
-    ///    let args = vec![Value::String("John".to_string())];
-    ///    let consumer = rpc_call.call_async(service_name, method_name, args).await.expect("call");
-    ///    let result = rpc_call.result(consumer).await;
+    ///    let args = vec!["John"];
+    ///    let consumer = rpc_call.call_async(service_name, method_name, args).await.expect("call").await;
+    ///    let result = rpc_call.result(consumer);
     /// }
     pub async fn result(&self, ref_consumer: Consumer) -> Value {
         let mut consumer = ref_consumer;
