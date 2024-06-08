@@ -148,10 +148,10 @@ impl RpcClient {
             .with_content_encoding("utf-8".into())
             .with_headers(FieldTable::from(headers));
         let reply_name: &str = "rpc.listener";
-        let rpc_queue_reply: String = format!("{}-{}", reply_name, &self.identifier.to_string());
+        let rpc_queue_reply: &str = &format!("{}-{}", reply_name, &self.identifier.to_string());
         let reply_queue: lapin::Channel = match create_message_channel(
             &conn,
-            &rpc_queue_reply,
+            rpc_queue_reply,
             &self.identifier,
             &self.conf.rpc_exchange(),
         )
@@ -160,6 +160,7 @@ impl RpcClient {
             Ok(queue) => queue,
             Err(e) => {
                 // Handle error, e.g., log it or retry
+                error!("Error: {:?}", e);
                 return Err(e);
             }
         };
@@ -223,7 +224,7 @@ impl RpcClient {
             .await
             .expect("error in consumer")
             .expect("error in consumer");
-        let incomming_data: Value = serde_json::from_slice(&delivery.data).expect("json");
+        let mut incomming_data: Value = serde_json::from_slice(&delivery.data).expect("json");
         delivery.ack(BasicAckOptions::default()).await.expect("ack");
         match incomming_data["error"].as_object() {
             Some(error) => {
@@ -233,7 +234,7 @@ impl RpcClient {
             }
             None => {}
         }
-        incomming_data["result"].clone()
+        incomming_data["result"].take()
     }
     /// # send
     ///
