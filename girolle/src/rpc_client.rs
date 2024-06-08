@@ -3,6 +3,7 @@ use crate::payload::Payload;
 use crate::queue::{create_message_channel, create_service_channel, get_connection};
 use crate::types::NamekoResult;
 use futures::{executor, stream::StreamExt};
+use lapin::Connection;
 use lapin::{
     options::*,
     publisher_confirm::Confirmation,
@@ -34,6 +35,7 @@ use uuid::Uuid;
 pub struct RpcClient {
     conf: Config,
     identifier: Uuid,
+    conn: Connection,
 }
 impl RpcClient {
     /// # new
@@ -60,9 +62,12 @@ impl RpcClient {
     ///   let rpc_call = RpcClient::new(Config::default_config());
     /// }
     pub fn new(conf: Config) -> Self {
+        let conn = executor::block_on(get_connection(conf.AMQP_URI(), conf.heartbeat()))
+            .expect("Can't init connection");
         Self {
             conf,
             identifier: Uuid::new_v4(),
+            conn,
         }
     }
     /// # get_identifier
@@ -95,7 +100,7 @@ impl RpcClient {
     ///
     /// * `service_name` - The name of the service in the Nameko microservice
     /// * `method_name` - The name of the function to call
-    /// * `args` - The arguments of the function
+    /// * `args` - The arguments of the function as Vec<T>
     ///
     /// ## Example
     ///
@@ -120,12 +125,11 @@ impl RpcClient {
         method_name: &str,
         args: Vec<T>,
     ) -> lapin::Result<Consumer> {
-        let conn = get_connection(self.conf.AMQP_URI(), self.conf.heartbeat()).await?;
         let payload = Payload::new(json!(args));
         let correlation_id = Uuid::new_v4().to_string();
         let routing_key = format!("{}.{}", service_name, method_name);
         let channel = create_service_channel(
-            &conn,
+            &self.conn,
             service_name,
             self.conf.prefetch_count(),
             &self.conf.rpc_exchange(),
@@ -151,7 +155,7 @@ impl RpcClient {
         let reply_name: &str = "rpc.listener";
         let rpc_queue_reply: &str = &format!("{}-{}", reply_name, &self.identifier.to_string());
         let reply_queue: lapin::Channel = match create_message_channel(
-            &conn,
+            &self.conn,
             rpc_queue_reply,
             &self.identifier,
             &self.conf.rpc_exchange(),
@@ -173,20 +177,30 @@ impl RpcClient {
                 FieldTable::default(),
             )
             .await?;
-        let confirm = channel
-            .basic_publish(
-                &self.conf.rpc_exchange(),
-                &routing_key,
-                BasicPublishOptions::default(),
-                serde_json::to_value(payload)
-                    .expect("json")
-                    .to_string()
-                    .as_bytes(),
-                properties,
-            )
-            .await?
-            .await?;
-        assert_eq!(confirm, Confirmation::NotRequested);
+        let channel_clone = channel.clone();
+        let routing_key_clone = routing_key.clone();
+        let payload_clone = payload.clone();
+        let properties_clone = properties.clone();
+        let rpc_exchange_clone = self.conf.rpc_exchange().to_string();
+
+        tokio::spawn(async move {
+            let confirm = channel_clone
+                .basic_publish(
+                    &rpc_exchange_clone,
+                    &routing_key_clone,
+                    BasicPublishOptions::default(),
+                    serde_json::to_value(payload_clone)
+                        .expect("json")
+                        .to_string()
+                        .as_bytes(),
+                    properties_clone,
+                )
+                .await
+                .expect("Failed to publish")
+                .await
+                .expect("Failed to confirm");
+            assert_eq!(confirm, Confirmation::NotRequested);
+        });
         Ok(consumer)
     }
     /// # result

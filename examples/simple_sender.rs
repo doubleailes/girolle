@@ -24,7 +24,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Wait for the future result
     let consumer = future_result.await?;
     // wait for it
-    let two_sec = time::Duration::from_secs(10);
+    let two_sec = time::Duration::from_secs(2);
     thread::sleep(two_sec);
     // Print the result
     let async_result = rpc_client.result(consumer).await;
