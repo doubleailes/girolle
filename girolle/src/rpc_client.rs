@@ -9,7 +9,8 @@ use lapin::{
     types::{AMQPValue, FieldArray, FieldTable},
     BasicProperties, Consumer,
 };
-use serde_json::Value;
+use serde::Serialize;
+use serde_json::{json, Value};
 use std::collections::BTreeMap;
 use tracing::error;
 use uuid::Uuid;
@@ -109,18 +110,18 @@ impl RpcClient {
     ///    let rpc_call = RpcClient::new(conf);
     ///    let service_name = "video";
     ///    let method_name = "hello";
-    ///    let args = vec![Value::String("John Doe".to_string())];
+    ///    let args = vec!["John Doe"];
     ///    let consumer = rpc_call.call_async(service_name, method_name, args).await.expect("call");
     /// }
     ///
-    pub async fn call_async(
+    pub async fn call_async<T: Serialize>(
         &self,
         service_name: &str,
         method_name: &str,
-        args: Vec<Value>,
+        args: Vec<T>,
     ) -> lapin::Result<Consumer> {
         let conn = get_connection(self.conf.AMQP_URI(), self.conf.heartbeat()).await?;
-        let payload = Payload::new(args);
+        let payload = Payload::new(json!(args));
         let correlation_id = Uuid::new_v4().to_string();
         let routing_key = format!("{}.{}", service_name, method_name);
         let channel = create_service_channel(
@@ -213,9 +214,9 @@ impl RpcClient {
     ///    let rpc_call = RpcClient::new(conf);
     ///    let service_name = "video";
     ///    let method_name = "hello";
-    ///    let args = vec![Value::String("John".to_string())];
+    ///    let args = vec!["John"];
     ///    let consumer = rpc_call.call_async(service_name, method_name, args).await.expect("call");
-    ///    let result = rpc_call.result(consumer).await;
+    ///    let result = rpc_call.result(consumer);
     /// }
     pub async fn result(&self, ref_consumer: Consumer) -> Value {
         let mut consumer = ref_consumer;
@@ -266,11 +267,11 @@ impl RpcClient {
     ///     let args = vec![Value::String("Toto".to_string())];
     ///     let result = rpc_call.send(service_name, method_name, args).expect("call");
     /// }
-    pub fn send(
+    pub fn send<T: Serialize>(
         &self,
         service_name: &'static str,
         method_name: &'static str,
-        args: Vec<Value>,
+        args: Vec<T>,
     ) -> NamekoResult<Value> {
         let consumer =
             executor::block_on(self.call_async(service_name, method_name, args)).expect("call");

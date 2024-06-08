@@ -40,7 +40,8 @@ def send_messages(name: str, count: int = 1) -> list:
             data.append(rpc.video.hello(f"{name}{i_str}"))
     return data
 
-def send_message_async(name: str, count: int = 1) -> list:
+
+def send_message_async(name: str, count: int = 1, sleep_time: int = 1) -> list:
     """
     send_simple_message send a message to the queue
 
@@ -51,9 +52,10 @@ def send_message_async(name: str, count: int = 1) -> list:
     with rpc_proxy(CONFIG) as rpc:
         for i in range(count):
             i_str = str(i).zfill(4)
-            data.append(rpc.video.hello.call_async(f"{name}{i_str}"))
-        time.sleep(1)
-        return [d.result() for d in data]
+            data.append((i, rpc.video.hello.call_async(f"{name}{i_str}")))
+        time.sleep(sleep_time)
+        return [[d[0], d[1].result()] for d in data]
+
 
 def send_simple_message(name: str) -> str:
     """
@@ -76,21 +78,24 @@ def fibonacci(n: int = 10) -> list[int]:
             data.append(rpc.video.fibonacci(i))
     return data
 
-def test_sleep(n: int = 10) -> str:
+
+def test_sleep(n: int = 10, r: int = 100) -> str:
     """
     fibonacci send a message to the queue
     """
     with rpc_proxy(CONFIG) as rpc:
-        return rpc.video.sleep.call_async(n)
+        for i in range(r):
+            return rpc.video.sleep.call_async(n)
+
 
 if __name__ == "__main__":
     start = datetime.now()
     response = send_simple_message("John Doe")
     print(response, datetime.now() - start)
     print("start async")
-    for i in range(100):
-        test_sleep(10)
+    test_sleep(10, 100)
     print("stop async")
+    print(send_message_async("John Doe", 100))
     start = datetime.now()
     response = send_messages("John Doe", 10)
     print(response, datetime.now() - start)
