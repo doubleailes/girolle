@@ -215,7 +215,7 @@ impl RpcClient {
     ///    let service_name = "video";
     ///    let method_name = "hello";
     ///    let args = vec!["John"];
-    ///    let consumer = rpc_call.call_async(service_name, method_name, args).await.expect("call").await;
+    ///    let consumer = rpc_call.call_async(service_name, method_name, args).await.expect("call");
     ///    let result = rpc_call.result(consumer);
     /// }
     pub async fn result(&self, ref_consumer: Consumer) -> Value {
