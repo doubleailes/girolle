@@ -9,8 +9,8 @@ class GreetingService:
 
     @rpc
     def hello(self, name):
-        return "Hello, {}!, by nameko".format(name)
-    
+        return "Hello, {}!".format(name)
+
     @rpc
     def double_hello(self, name):
         n_name = self.video_proxy.hello(name)
@@ -22,9 +22,8 @@ class GreetingService:
             return n
         else:
             return self.fibonacci(n - 1) + self.fibonacci(n - 2)
-    
+
     @rpc
     def sleep(self, n):
         time.sleep(n)
         return "Slept for {} seconds".format(n)
-    
