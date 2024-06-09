@@ -1,7 +1,7 @@
 from nameko.standalone.rpc import ClusterRpcClient, config
 from nameko.exceptions import RemoteError
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 import time
 
 CONFIG = {
@@ -95,12 +95,15 @@ if __name__ == "__main__":
     print("start async")
     test_sleep(10, 100)
     print("stop async")
-    print(send_message_async("John Doe", 100))
+    start = datetime.now()
+    sleep_time = 2
+    send_message_async("John Doe", 1000, sleep_time)
+    print(datetime.now() - start - timedelta(seconds=sleep_time))
     start = datetime.now()
     response = send_messages("John Doe", 10)
     print(response, datetime.now() - start)
     start = datetime.now()
-    response = fibonacci(10)
+    response = fibonacci(30)
     print(response, datetime.now() - start)
     try:
         response = send_simple_message(True)

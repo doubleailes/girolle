@@ -36,7 +36,7 @@
 //!
 //! This example is a simple client that call the hello function in the video service.
 //!
-//! ```rust
+//! ```rust,no_run
 //! use girolle::prelude::*;
 //!
 //! #[tokio::main]
@@ -51,7 +51,7 @@ pub use config::Config;
 mod nameko_utils;
 pub mod prelude;
 mod rpc_client;
-pub use rpc_client::RpcClient;
+pub use rpc_client::{RpcCall, RpcClient};
 mod rpc_service;
 pub use rpc_service::RpcService;
 mod rpc_task;

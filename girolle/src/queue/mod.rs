@@ -2,15 +2,20 @@
 ///
 /// This module contains functions to create queues and channels for the RPC communication.
 use lapin::{
-    options::{BasicQosOptions, QueueBindOptions, QueueDeclareOptions},types::FieldTable, Connection, ConnectionProperties
+    options::{BasicQosOptions, QueueBindOptions, QueueDeclareOptions},
+    types::FieldTable,
+    Connection, ConnectionProperties,
 };
-use tracing::{info,error};
+use tracing::{error, info};
 use uuid::Uuid;
 
 /// # QUEUE_TTL
 const QUEUE_TTL: u32 = 300000;
 
-pub async fn get_connection(amqp_uri: String, heartbeat_value: u16) -> Result<lapin::Connection, lapin::Error> {
+pub async fn get_connection(
+    amqp_uri: String,
+    heartbeat_value: u16,
+) -> Result<lapin::Connection, lapin::Error> {
     let mut connection_options = ConnectionProperties::default()
         .with_executor(tokio_executor_trait::Tokio::current())
         .with_reactor(tokio_reactor_trait::Tokio);
@@ -23,7 +28,7 @@ pub async fn get_connection(amqp_uri: String, heartbeat_value: u16) -> Result<la
             return Ok(connection);
         }
         Err(e) => {
-            error!("Failed to connect to RabbitMQ with error:{}",e);
+            error!("Failed to connect to RabbitMQ with error:{}", e);
             return Err(e);
         }
     }
@@ -31,7 +36,7 @@ pub async fn get_connection(amqp_uri: String, heartbeat_value: u16) -> Result<la
 
 /// # create_service_channel
 ///
-/// This function creates a queue for a service.
+/// This function creates a channel for a service.
 ///
 /// ## Arguments
 ///
@@ -78,7 +83,7 @@ pub async fn create_service_channel(
 
 /// # create_message_channel
 ///
-/// This function creates a queue for a message.
+/// This function creates a channel for a message.
 ///
 /// ## Arguments
 ///

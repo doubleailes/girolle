@@ -27,3 +27,7 @@ class GreetingService:
     def sleep(self, n):
         time.sleep(n)
         return "Slept for {} seconds".format(n)
+
+    @rpc
+    def sub(self, a, b):
+        return a - b

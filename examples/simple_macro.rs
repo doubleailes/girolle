@@ -6,6 +6,11 @@ fn hello(s: String) -> String {
     format!("Hello, {}!", s)
 }
 
+#[girolle]
+fn substraction(a: i64, b: i64) -> i64 {
+    a - b
+}
+
 fn fibonacci(n: u64) -> u64 {
     if n <= 1 {
         return n;
@@ -33,5 +38,6 @@ fn main() {
         .register(rpc_task)
         .register(rpc_task_fib)
         .register(rpc_task_sleep)
+        .register(RpcTask::new("sub", substraction))
         .start();
 }
