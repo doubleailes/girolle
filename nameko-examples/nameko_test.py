@@ -51,9 +51,9 @@ if __name__ == "__main__":
         print(response)
         assert "Hello, Girolle!" == response
         time.sleep(tempo)
-        r = async_response.result()
-        print(r)
-        assert "Hello, Toto!" == r
+        response_async = async_response.result()
+        print(response_async)
+        assert "Hello, Toto!" == response_async
         start = datetime.now()
         data: list = [[i, client.video.hello.call_async(str(i))] for i in range(1000)]
         time.sleep(tempo)
