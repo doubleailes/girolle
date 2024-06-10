@@ -6,7 +6,6 @@ use crate::types::NamekoFunction;
 use lapin::{
     message::{Delivery, DeliveryResult},
     options::*,
-    publisher_confirm::Confirmation,
     types::FieldTable,
     BasicProperties, Channel,
 };

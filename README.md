@@ -220,7 +220,7 @@ repository.
 |                    | nameko_test.py  | simple_sender.rs |
 |--------------------|-----------------|------------------|
 | nameko_service.py  |    15.587 s     |    11.532 s      |
-| simple_macro.rs    |    15.654 s     |    10.620 s      |
+| simple_macro.rs    |    15.654 s     |    9.995 s       |
 
 ### Client benchmark
 
@@ -229,10 +229,10 @@ Using hyperfine to test the client benchmark.
 Girolle client ( with Girolle service )
 
 ```bash
-hyperfine -N --warmup 3 'target/release/examples/simple_sender'
-Benchmark 1: target/release/examples/simple_sender
-  Time (mean ± σ):     10.620 s ±  0.083 s    [User: 0.208 s, System: 0.214 s]
-  Range (min … max):   10.520 s … 10.757 s    10 runs
+hyperfine -N './target/release/examples/simple_sender'
+Benchmark 1: ./target/release/examples/simple_sender
+  Time (mean ± σ):      9.995 s ±  0.116 s    [User: 0.163 s, System: 0.197 s]
+  Range (min … max):    9.778 s … 10.176 s    10 runs
 ```	
 
 Nameko client ( with Girolle service )
@@ -248,10 +248,10 @@ Benchmark 1: python nameko_test.py
 Girolle service ( with Girolle client )
 
 ```bash
-hyperfine -N --warmup 3 'target/release/examples/simple_sender'
-Benchmark 1: target/release/examples/simple_sender
-  Time (mean ± σ):     10.620 s ±  0.083 s    [User: 0.208 s, System: 0.214 s]
-  Range (min … max):   10.520 s … 10.757 s    10 runs
+hyperfine -N './target/release/examples/simple_sender'
+Benchmark 1: ./target/release/examples/simple_sender
+  Time (mean ± σ):      9.995 s ±  0.116 s    [User: 0.163 s, System: 0.197 s]
+  Range (min … max):    9.778 s … 10.176 s    10 runs
 ```
 
 Nameko service running python 3.9.15 ( with Girolle client )
