@@ -26,37 +26,6 @@ def rpc_proxy(CONFIG) -> ClusterRpcClient:
     return ClusterRpcClient(CONFIG)
 
 
-def send_messages(name: str, count: int = 1) -> list:
-    """
-    send_simple_message send a message to the queue
-
-    :param name: name of the person
-    :type name: str
-    """
-    data = list()
-    with rpc_proxy(CONFIG) as rpc:
-        for i in range(count):
-            i_str = str(i).zfill(4)
-            data.append(rpc.video.hello(f"{name}{i_str}"))
-    return data
-
-
-def send_message_async(name: str, count: int = 1, sleep_time: int = 1) -> list:
-    """
-    send_simple_message send a message to the queue
-
-    :param name: name of the person
-    :type name: str
-    """
-    data = list()
-    with rpc_proxy(CONFIG) as rpc:
-        for i in range(count):
-            i_str = str(i).zfill(4)
-            data.append((i, rpc.video.hello.call_async(f"{name}{i_str}")))
-        time.sleep(sleep_time)
-        return [[d[0], d[1].result()] for d in data]
-
-
 def send_simple_message(name: str) -> str:
     """
     send_simple_message send a message to the queue
@@ -64,48 +33,29 @@ def send_simple_message(name: str) -> str:
     :param name: name of the person
     :type name: str
     """
-    with rpc_proxy(CONFIG) as rpc:
-        return rpc.video.hello(name)
-
-
-def fibonacci(n: int = 10) -> list[int]:
-    """
-    fibonacci send a message to the queue
-    """
-    data = list()
-    with rpc_proxy(CONFIG) as rpc:
-        for i in range(n):
-            data.append(rpc.video.fibonacci(i))
+    with rpc_proxy(CONFIG) as client:
+        return client.video.hello(name)
     return data
 
 
-def test_sleep(n: int = 10, r: int = 100) -> str:
-    """
-    fibonacci send a message to the queue
-    """
-    with rpc_proxy(CONFIG) as rpc:
-        for i in range(r):
-            return rpc.video.sleep.call_async(n)
-
-
 if __name__ == "__main__":
-    start = datetime.now()
-    response = send_simple_message("John Doe")
-    print(response, datetime.now() - start)
-    print("start async")
-    test_sleep(10, 100)
-    print("stop async")
-    start = datetime.now()
-    sleep_time = 2
-    send_message_async("John Doe", 1000, sleep_time)
-    print(datetime.now() - start - timedelta(seconds=sleep_time))
-    start = datetime.now()
-    response = send_messages("John Doe", 10)
-    print(response, datetime.now() - start)
-    start = datetime.now()
-    response = fibonacci(30)
-    print(response, datetime.now() - start)
-    try:
-        response = send_simple_message(True)
-    except RemoteError as e:
-        print(e)
+    tempo = 4
+    with rpc_proxy(CONFIG) as client:
+        response = client.video.fibonacci(30)
+        print(response)
+        assert 832040 == response
+        response = client.video.sub(10, 5)
+        assert 5 == response
+        async_response = client.video.hello.call_async("Toto")
+        response = client.video.hello("Girolle")
+        print(response)
+        assert "Hello, Girolle!" == response
+        time.sleep(tempo)
+        r = async_response.result()
+        print(r)
+        assert "Hello, Toto!" == r
+        start = datetime.now()
+        data: list = [[i, client.video.hello.call_async(str(i))] for i in range(1000)]
+        time.sleep(tempo)
+        results = [[d[0], d[1].result()] for d in data]
+        print(datetime.now() - start - timedelta(seconds=tempo))

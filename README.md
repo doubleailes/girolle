@@ -210,13 +210,70 @@ nameko-pubsub
 The current code as been tested with the nameko and girolle examples in this
 repository.
 
-|                 | nameko_test.py  | simple_senders    |
-|-----------------|-----------------|-------------------|
-| simple_service  |       x         |         x         |
-| nameko_service  |       x         |         x         |
-| simple_macro    |       x         |         x         |
+|                    | nameko_test.py  | simple_sender.rs  |
+|--------------------|-----------------|-------------------|
+| simple_service     |       x         |         x         |
+| nameko_service.py  |       x         |         x         |
+| simple_macro       |       x         |         x         |
 
 ## Benchmark
+
+|                    | nameko_test.py  | simple_sender.rs |
+|--------------------|-----------------|------------------|
+| nameko_service.py  |    15.587 s     |    11.532 s      |
+| simple_macro.rs    |    15.654 s     |    10.620 s      |
+
+### Client benchmark
+
+Using hyperfine to test the client benchmark.
+
+Girolle client ( with Girolle service )
+
+```bash
+hyperfine -N --warmup 3 'target/release/examples/simple_sender'
+Benchmark 1: target/release/examples/simple_sender
+  Time (mean ± σ):     10.620 s ±  0.083 s    [User: 0.208 s, System: 0.214 s]
+  Range (min … max):   10.520 s … 10.757 s    10 runs
+```	
+
+Nameko client ( with Girolle service )
+
+```bash
+hyperfine -N --warmup 3 'python nameko_test.py'
+Benchmark 1: python nameko_test.py
+  Time (mean ± σ):     15.654 s ±  0.257 s    [User: 1.455 s, System: 0.407 s]
+  Range (min … max):   15.202 s … 15.939 s    10 runs
+```
+### Service benchmark
+
+Girolle service ( with Girolle client )
+
+```bash
+hyperfine -N --warmup 3 'target/release/examples/simple_sender'
+Benchmark 1: target/release/examples/simple_sender
+  Time (mean ± σ):     10.620 s ±  0.083 s    [User: 0.208 s, System: 0.214 s]
+  Range (min … max):   10.520 s … 10.757 s    10 runs
+```
+
+Nameko service running python 3.9.15 ( with Girolle client )
+
+```bash
+hyperfine -N --warmup 3 'target/release/examples/simple_sender'
+Benchmark 1: target/release/examples/simple_sender
+  Time (mean ± σ):     11.532 s ±  0.091 s    [User: 0.199 s, System: 0.213 s]
+  Range (min … max):   11.396 s … 11.670 s    10 runs
+```
+
+Nameko service running python 3.9.15 ( with Nameko client )
+
+```bash
+hyperfine -N --warmup 3 'python nameko_test.py'
+Benchmark 1: python nameko_test.py
+  Time (mean ± σ):     15.587 s ±  0.325 s    [User: 1.443 s, System: 0.420 s]
+  Range (min … max):   15.181 s … 16.034 s    10 runs
+```
+
+### Macro-overhead benchmark
 
 The benchmark is done to test the overhead of the macro.
 
