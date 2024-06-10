@@ -212,7 +212,6 @@ repository.
 
 |                    | nameko_test.py  | simple_sender.rs  |
 |--------------------|-----------------|-------------------|
-| simple_service     |       x         |         x         |
 | nameko_service.py  |       x         |         x         |
 | simple_macro       |       x         |         x         |
 
