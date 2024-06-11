@@ -25,19 +25,6 @@ def rpc_proxy(CONFIG) -> ClusterRpcClient:
     config.setup(CONFIG)
     return ClusterRpcClient(CONFIG)
 
-
-def send_simple_message(name: str) -> str:
-    """
-    send_simple_message send a message to the queue
-
-    :param name: name of the person
-    :type name: str
-    """
-    with rpc_proxy(CONFIG) as client:
-        return client.video.hello(name)
-    return data
-
-
 if __name__ == "__main__":
     tempo = 4
     with rpc_proxy(CONFIG) as client:
@@ -54,6 +41,7 @@ if __name__ == "__main__":
         response_async = async_response.result()
         print(response_async)
         assert "Hello, Toto!" == response_async
+        assert client.video.sub(10, 5) == 5
         start = datetime.now()
         data: list = [[i, client.video.hello.call_async(str(i))] for i in range(1000)]
         time.sleep(tempo)
