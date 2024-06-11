@@ -131,7 +131,7 @@ fn main() {
 ### Create multiple calls to service of methods, sync and async
 
 ```rust
-use girolle::{serde_json, Config, RpcCall, RpcClient, Value};
+use girolle::{serde_json, Config, TargetService, RpcClient, Value};
 use std::time::Instant;
 use std::vec;
 use std::{thread, time};
@@ -142,19 +142,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let video_name = "video";
     // Create the rpc call struct
     let rpc_client = RpcClient::new(conf);
-    let rpc_call_video: RpcCall = rpc_client.create_rpc_call(video_name.to_string()).await?;
+    let target_service_video: TargetService = rpc_client.create_target_service(video_name.to_string()).await?;
     // Send the payload
-    let new_result = rpc_client.send(&rpc_call_video, "fibonacci", vec![30])?;
+    let new_result = rpc_client.send(&target_service_video, "fibonacci", vec![30])?;
     let fib_result: u64 = serde_json::from_value(new_result)?;
     // Print the result
     println!("fibonacci :{:?}", fib_result);
     assert_eq!(fib_result, 832040);
-    let sub_result = rpc_client.send(&rpc_call_video, "sub", vec![10, 5])?;
+    let sub_result = rpc_client.send(&target_service_video, "sub", vec![10, 5])?;
     assert_eq!(sub_result, Value::Number(serde_json::Number::from(5)));
     // Create a future result
-    let future_result = rpc_client.call_async(&rpc_call_video, "hello", vec!["Toto"]);
+    let future_result = rpc_client.call_async(&target_service_video, "hello", vec!["Toto"]);
     // Send a message during the previous async process
-    let result = rpc_client.send(&rpc_call_video, "hello", vec!["Girolle"])?;
+    let result = rpc_client.send(&target_service_video, "hello", vec!["Girolle"])?;
     // Print the result
     println!("{:?}", result);
     assert_eq!(result, Value::String("Hello, Girolle!".to_string()));
@@ -173,7 +173,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     for n in 1..1001 {
         consummers.push((
             n,
-            rpc_client.call_async(&rpc_call_video, "hello", vec![n.to_string()]),
+            rpc_client.call_async(&target_service_video, "hello", vec![n.to_string()]),
         ));
     }
     // wait for it

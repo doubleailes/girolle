@@ -10,6 +10,7 @@ use lapin::{
 };
 use serde::Serialize;
 use serde_json::{json, Value};
+use std::collections::HashMap;
 use std::{
     collections::BTreeMap,
     sync::{Arc, Mutex},
@@ -39,6 +40,7 @@ pub struct RpcClient {
     conn: Connection,
     reply_channel: lapin::Channel,
     consumer: Arc<Mutex<lapin::Consumer>>,
+    services: HashMap<String, TargetService>,
 }
 impl RpcClient {
     /// # new
@@ -62,7 +64,7 @@ impl RpcClient {
     ///
     /// #[tokio::main]
     /// async fn main() {
-    ///   let rpc_call = RpcClient::new(Config::default_config());
+    ///   let target_service = RpcClient::new(Config::default_config());
     /// }
     pub fn new(conf: Config) -> Self {
         let identifier =  Uuid::new_v4();
@@ -90,6 +92,7 @@ impl RpcClient {
             conn,
             reply_channel,
             consumer: Arc::new(Mutex::new(consumer_arc)),
+            services: HashMap::new(),
         }
     }
     /// # get_identifier
@@ -134,21 +137,24 @@ impl RpcClient {
     /// #[tokio::main]
     /// async fn main() {
     ///    let conf = Config::with_yaml_defaults("config.yml".to_string()).unwrap();
-    ///    let rpc_client = RpcClient::new(conf);
-    ///    let rpc_call = rpc_client.create_rpc_call("video".to_string()).await.expect("call");
+    ///    let mut rpc_client = RpcClient::new(conf);
+    ///    rpc_client.register_service("video").await.expect("call");
     ///    let method_name = "hello";
     ///    let args = vec!["John Doe"];
-    ///    let consumer = rpc_client.call_async(&rpc_call, method_name, args);
+    ///    let consumer = rpc_client.call_async("video", method_name, args);
     /// }
     ///
     pub async fn call_async<T: Serialize>(
         &self,
-        rpc_call: &RpcCall,
+        target_service: &str,
         method_name: &str,
         args: Vec<T>,
     ) -> lapin::Result<String> {
+        if self.service_exist(target_service) == false {
+            panic!("Service {} not found", target_service);
+        }
         let payload: Payload = Payload::new(json!(args));
-        let routing_key = format!("{}.{}", rpc_call.service_name, method_name);
+        let routing_key = format!("{}.{}", target_service, method_name);
         let correlation_id = Uuid::new_v4().to_string();
         let mut headers: BTreeMap<lapin::types::ShortString, AMQPValue> = BTreeMap::new();
         headers.insert(
@@ -170,7 +176,7 @@ impl RpcClient {
             .with_priority(0);
 
         let exchange_clone = self.conf.rpc_exchange().to_string();
-        let channel_clone = rpc_call.channel.clone();
+        let channel_clone = self.services.get(target_service).unwrap().channel.clone();
 
         tokio::spawn(async move {
             channel_clone
@@ -217,11 +223,11 @@ impl RpcClient {
     /// #[tokio::main]
     /// async fn main() {
     ///    let conf = Config::with_yaml_defaults("config.yml".to_string()).unwrap();
-    ///    let rpc_client = RpcClient::new(conf);
-    ///    let rpc_call = rpc_client.create_rpc_call("video".to_string()).await.expect("call");
+    ///    let mut rpc_client = RpcClient::new(conf);
+    ///    rpc_client.register_service("video").await.expect("call");
     ///    let method_name = "hello";
     ///    let args = vec!["John Doe"];
-    ///    let id = rpc_client.call_async(&rpc_call, method_name, args);
+    ///    let id = rpc_client.call_async("video", method_name, args);
     ///    let result = rpc_client.result(id.await.expect("call")).await.expect("call");
     /// }
     pub async fn result(&self, correlation_id: String) -> lapin::Result<Value> {
@@ -286,20 +292,23 @@ impl RpcClient {
     /// #[tokio::main]
     /// async fn main() {
     ///    let conf = Config::with_yaml_defaults("config.yml".to_string()).unwrap();
-    ///    let rpc_client = RpcClient::new(conf);
-    ///    let rpc_call = rpc_client.create_rpc_call("video".to_string()).await.expect("call");
+    ///    let mut rpc_client = RpcClient::new(conf);
+    ///    rpc_client.register_service("video").await.expect("call");
     ///    let method_name = "hello";
     ///    let args = vec!["John Doe"];
-    ///     let result = rpc_client.send(&rpc_call, method_name, args).expect("call");
+    ///     let result = rpc_client.send("video", method_name, args).expect("call");
     /// }
     pub fn send<T: Serialize>(
         &self,
-        rpc_call: &RpcCall,
+        target_service: &str,
         method_name: &str,
         args: Vec<T>,
     ) -> NamekoResult<Value> {
-        let id = executor::block_on(self.call_async(rpc_call, method_name, args)).expect("call");
+        let id = executor::block_on(self.call_async(target_service, method_name, args)).expect("call");
         Ok(executor::block_on(self.result( id)).expect("call"))
+    }
+    fn service_exist(&self, service_name: &str) -> bool {
+        self.services.contains_key(service_name)
     }
     /// # get_config
     ///
@@ -343,11 +352,11 @@ impl RpcClient {
         self.conf = config;
         Ok(())
     }
-    /// # create_rpc_call
+    /// # register_service
     ///
     /// ## Description
     ///
-    /// This function create a new RpcCall struct
+    /// This function create a new TargetService struct
     ///
     /// ## Arguments
     ///
@@ -355,7 +364,7 @@ impl RpcClient {
     ///
     /// ## Returns
     ///
-    /// This function return a girolle::RpcCall struct
+    /// This function return a girolle::TargetService struct
     ///
     /// ## Example
     ///
@@ -364,10 +373,10 @@ impl RpcClient {
     ///
     /// #[tokio::main]
     /// async fn main() {
-    ///    let rpc_client = RpcClient::new(Config::default_config());
-    ///    let rpc_call = rpc_client.create_rpc_call("video".to_string()).await.expect("call");
+    ///    let mut rpc_client = RpcClient::new(Config::default_config());
+    ///    rpc_client.register_service("video").await.expect("call");
     /// }
-    pub async fn create_rpc_call(&self, service_name: String) -> Result<RpcCall, lapin::Error> {
+    pub async fn register_service(&mut self, service_name: &str) -> Result<(), lapin::Error> {
         let channel = create_service_channel(
             &self.conn,
             &service_name,
@@ -375,10 +384,39 @@ impl RpcClient {
             &self.conf.rpc_exchange(),
         )
         .await?;
-        Ok(RpcCall::new(
-            service_name,
-            channel,
-        ))
+        self.services.insert(service_name.to_string(), TargetService::new(channel));
+        Ok(())
+    }
+    /// # unregister_service
+    /// 
+    /// ## Description
+    /// 
+    /// This function remove a service from the RpcClient struct
+    /// 
+    /// ## Arguments
+    /// 
+    /// * `service_name` - The name of the service in the Nameko microservice
+    /// 
+    /// ## Returns
+    /// 
+    /// This function return a Result<(), lapin::Error>
+    /// 
+    /// ## Example
+    /// 
+    /// ```rust,no_run
+    /// use girolle::prelude::*;
+    /// 
+    /// #[tokio::main]
+    /// async fn main() {
+    ///    let mut rpc_client = RpcClient::new(Config::default_config());
+    ///    rpc_client.register_service("video").await.expect("call");
+    ///    rpc_client.unregister_service("video").expect("call");
+    /// }
+    pub fn unregister_service(&mut self, service_name: &str) -> Result<(), lapin::Error> {
+        let target_service = self.services.get(service_name).unwrap();
+        target_service.close()?;
+        self.services.remove(service_name);
+        Ok(())
     }
     /// # close
     /// 
@@ -403,7 +441,7 @@ impl RpcClient {
     }
 }
 
-/// # RpcCall
+/// # TargetService
 /// 
 /// ## Description
 /// 
@@ -417,49 +455,27 @@ impl RpcClient {
 /// 
 /// #[tokio::main]
 /// async fn main() {
-///      let rpc_client = RpcClient::new(Config::default_config());
-///      let rpc_call = rpc_client.create_rpc_call("video".to_string()).await.expect("call");
+///      let mut rpc_client = RpcClient::new(Config::default_config());
+///      rpc_client.register_service("video").await.expect("call");
 /// }
-pub struct RpcCall {
-    service_name: String,
+struct TargetService {
     channel: lapin::Channel,
 }
-impl RpcCall {
+impl TargetService {
     fn new(
-        service_name: String,
         channel: lapin::Channel,
     ) -> Self {
         Self {
-            service_name,
             channel,
         }
     }
-    /// # close
-    /// 
-    /// ## Description
-    /// 
-    /// This function close the channel of the RpcCall struct
-    /// 
-    /// ## Example
-    /// 
-    /// ```rust,no_run
-    /// use girolle::prelude::*;
-    /// use lapin;
-    /// 
-    /// #[tokio::main]
-    /// async fn main() {
-    ///    let rpc_client = RpcClient::new(Config::default_config());
-    ///    let rpc_call = rpc_client.create_rpc_call("video".to_string()).await.expect("call");
-    ///    rpc_call.close().expect("close");
-    /// }
-    pub fn close(&self) -> Result<(), lapin::Error> {
+    #[allow(dead_code)]
+    fn close(&self) -> Result<(), lapin::Error> {
         executor::block_on(self.channel.close(200, "Goodbye"))?;
         Ok(())
     }
-    pub fn get_service_name(&self) -> &str {
-        &self.service_name
-    }
-    pub fn get_call_channel_id(&self) -> u16 {
+    #[allow(dead_code)]
+    fn get_call_channel_id(&self) -> u16 {
         self.channel.id()
     }
 }

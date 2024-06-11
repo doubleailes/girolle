@@ -38,10 +38,13 @@
 //!
 //! ```rust,no_run
 //! use girolle::prelude::*;
+//! use std::vec;
 //!
 //! #[tokio::main]
 //! async fn main() {
-//!    let rpc_call = RpcClient::new(Config::default_config());
+//!    let mut rpc_client = RpcClient::new(Config::default_config());
+//!    rpc_client.register_service("video");
+//!    let result = rpc_client.send("video", "hello", vec!["Girolle"]).unwrap();
 //! }
 //! ```
 mod config;
@@ -51,7 +54,7 @@ pub use config::Config;
 mod nameko_utils;
 pub mod prelude;
 mod rpc_client;
-pub use rpc_client::{RpcCall, RpcClient};
+pub use rpc_client::RpcClient;
 mod rpc_service;
 pub use rpc_service::RpcService;
 mod rpc_task;
