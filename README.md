@@ -164,7 +164,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("exit sleep");
     // Print the result
     let async_result = rpc_client
-        .result(&rpc_call_video, future_result.await?)
+        .result(future_result.await?)
         .await;
     println!("{:?}", async_result);
     assert_eq!(async_result?, Value::String("Hello, Toto!".to_string()));
@@ -180,12 +180,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     thread::sleep(tempo);
     for con in consummers {
         let id = con.1.await?;
-        let _async_result = rpc_client.result(&rpc_call_video, id).await;
-        //println!("{}-{}", con.0, async_result?);
+        let _async_result = rpc_client.result(id).await?;
     }
     let duration = start.elapsed() - tempo;
     println!("Time elapsed in expensive_function() is: {:?}", duration);
-    rpc_call_video.close()?;
+    rpc_client.close().await?;
     Ok(())
 }
 ```

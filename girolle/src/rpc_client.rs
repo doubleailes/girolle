@@ -37,6 +37,8 @@ pub struct RpcClient {
     conf: Config,
     identifier: Uuid,
     conn: Connection,
+    reply_channel: lapin::Channel,
+    consumer: Arc<Mutex<lapin::Consumer>>,
 }
 impl RpcClient {
     /// # new
@@ -63,12 +65,31 @@ impl RpcClient {
     ///   let rpc_call = RpcClient::new(Config::default_config());
     /// }
     pub fn new(conf: Config) -> Self {
+        let identifier =  Uuid::new_v4();
         let conn = executor::block_on(get_connection(conf.AMQP_URI(), conf.heartbeat()))
             .expect("Can't init connection");
+        let reply_queue_name = format!("rpc.listener-{}", identifier);
+        let reply_channel =  executor::block_on(create_message_channel(
+            &conn,
+            &reply_queue_name,
+            &identifier,
+            conf.rpc_exchange(),
+        )).expect("Can't create reply channel");
+        let consumer_arc = executor::block_on(reply_channel
+            .basic_consume(
+                &reply_queue_name,
+                &format!("girolle_consumer"),
+                BasicConsumeOptions::default(),
+                FieldTable::default(),
+            )
+        )
+            .expect("Failed to create consumer");
         Self {
             conf,
-            identifier: Uuid::new_v4(),
+            identifier,
             conn,
+            reply_channel,
+            consumer: Arc::new(Mutex::new(consumer_arc)),
         }
     }
     /// # get_identifier
@@ -200,11 +221,11 @@ impl RpcClient {
     ///    let rpc_call = rpc_client.create_rpc_call("video".to_string()).await.expect("call");
     ///    let method_name = "hello";
     ///    let args = vec!["John Doe"];
-    ///    let consumer = rpc_client.call_async(&rpc_call, method_name, args);
-    ///     let result = rpc_client.result(&rpc_call, consumer.await.expect("call")).await.expect("call");
+    ///    let id = rpc_client.call_async(&rpc_call, method_name, args);
+    ///    let result = rpc_client.result(id.await.expect("call")).await.expect("call");
     /// }
-    pub async fn result(&self, rpc_call: &RpcCall, correlation_id: String) -> lapin::Result<Value> {
-        let consumer_arc_mutex: Arc<Mutex<lapin::Consumer>> = Arc::clone(&rpc_call.consumer);
+    pub async fn result(&self, correlation_id: String) -> lapin::Result<Value> {
+        let consumer_arc_mutex: Arc<Mutex<lapin::Consumer>> = Arc::clone(&self.consumer);
 
         loop {
             let delivery = {
@@ -278,7 +299,7 @@ impl RpcClient {
         args: Vec<T>,
     ) -> NamekoResult<Value> {
         let id = executor::block_on(self.call_async(rpc_call, method_name, args)).expect("call");
-        Ok(executor::block_on(self.result(rpc_call, id)).expect("call"))
+        Ok(executor::block_on(self.result( id)).expect("call"))
     }
     /// # get_config
     ///
@@ -354,55 +375,91 @@ impl RpcClient {
             &self.conf.rpc_exchange(),
         )
         .await?;
-        let reply_queue_name = format!("rpc.listener-{}", self.identifier);
-        let reply_channel = create_message_channel(
-            &self.conn,
-            &reply_queue_name,
-            &self.identifier,
-            &self.conf.rpc_exchange(),
-        )
-        .await?;
-        let consumer = reply_channel
-            .basic_consume(
-                &reply_queue_name,
-                &format!("girolle_consumer"),
-                BasicConsumeOptions::default(),
-                FieldTable::default(),
-            )
-            .await
-            .expect("Failed to create consumer");
         Ok(RpcCall::new(
             service_name,
             channel,
-            reply_channel,
-            Arc::new(Mutex::new(consumer)),
         ))
+    }
+    /// # close
+    /// 
+    /// ## Description
+    /// 
+    /// This function close the connection of the RpcClient struct
+    /// 
+    /// ## Example
+    /// 
+    /// ```rust,no_run
+    /// use girolle::prelude::*;
+    /// 
+    /// #[tokio::main]
+    /// async fn main() {
+    ///   let rpc_client = RpcClient::new(Config::default_config());
+    ///   rpc_client.close().await.expect("close");
+    /// }
+    pub async fn close(&self) -> Result<(), lapin::Error> {
+        self.reply_channel.close(200, "Goodbye").await?;
+        self.conn.close(200, "Goodbye").await?;
+        Ok(())
     }
 }
 
+/// # RpcCall
+/// 
+/// ## Description
+/// 
+/// This struct is used to create a RPC call. It link the client to the service.
+/// By creating the channel, the client can send a message to the service.
+/// 
+/// ## Example
+/// 
+/// ```rust,no_run
+/// use girolle::prelude::*;
+/// 
+/// #[tokio::main]
+/// async fn main() {
+///      let rpc_client = RpcClient::new(Config::default_config());
+///      let rpc_call = rpc_client.create_rpc_call("video".to_string()).await.expect("call");
+/// }
 pub struct RpcCall {
     service_name: String,
     channel: lapin::Channel,
-    reply_channel: lapin::Channel,
-    consumer: Arc<Mutex<lapin::Consumer>>,
 }
 impl RpcCall {
-    pub fn new(
+    fn new(
         service_name: String,
         channel: lapin::Channel,
-        reply_channel: lapin::Channel,
-        consumer: Arc<Mutex<lapin::Consumer>>,
     ) -> Self {
         Self {
             service_name,
             channel,
-            reply_channel,
-            consumer,
         }
     }
+    /// # close
+    /// 
+    /// ## Description
+    /// 
+    /// This function close the channel of the RpcCall struct
+    /// 
+    /// ## Example
+    /// 
+    /// ```rust,no_run
+    /// use girolle::prelude::*;
+    /// use lapin;
+    /// 
+    /// #[tokio::main]
+    /// async fn main() {
+    ///    let rpc_client = RpcClient::new(Config::default_config());
+    ///    let rpc_call = rpc_client.create_rpc_call("video".to_string()).await.expect("call");
+    ///    rpc_call.close().expect("close");
+    /// }
     pub fn close(&self) -> Result<(), lapin::Error> {
         executor::block_on(self.channel.close(200, "Goodbye"))?;
-        executor::block_on(self.reply_channel.close(200, "Goodbye"))?;
         Ok(())
+    }
+    pub fn get_service_name(&self) -> &str {
+        &self.service_name
+    }
+    pub fn get_call_channel_id(&self) -> u16 {
+        self.channel.id()
     }
 }
