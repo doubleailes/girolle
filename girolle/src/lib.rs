@@ -36,12 +36,15 @@
 //!
 //! This example is a simple client that call the hello function in the video service.
 //!
-//! ```rust
+//! ```rust,no_run
 //! use girolle::prelude::*;
+//! use std::vec;
 //!
 //! #[tokio::main]
 //! async fn main() {
-//!    let rpc_call = RpcClient::new(Config::default_config());
+//!    let mut rpc_client = RpcClient::new(Config::default_config());
+//!    rpc_client.register_service("video");
+//!    let result = rpc_client.send("video", "hello", vec!["Girolle"]).unwrap();
 //! }
 //! ```
 mod config;

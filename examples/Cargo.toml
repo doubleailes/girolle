@@ -4,6 +4,14 @@ version = "0.0.0"
 publish = false
 edition = "2021"
 
+[dependencies.tracing]
+version = "0.1.40"
+default-features = false
+
+[dependencies.tracing-subscriber]
+version = "0.3.18"
+features = ["fmt"]
+
 [dev-dependencies]
 girolle = { path = "../girolle" }
 tokio = { workspace = true }

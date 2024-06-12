@@ -131,72 +131,77 @@ fn main() {
 ### Create multiple calls to service of methods, sync and async
 
 ```rust
-use girolle::prelude::*;
+use girolle::{serde_json, Config, TargetService, RpcClient, Value};
+use std::time::Instant;
 use std::vec;
 use std::{thread, time};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // Source the configuration from a yaml file and generate configuration
-    let conf = Config::with_yaml_defaults("staging/config.yml")?;
+    let conf: Config = Config::with_yaml_defaults("staging/config.yml".to_string())?;
     let video_name = "video";
     // Create the rpc call struct
     let rpc_client = RpcClient::new(conf);
+    let target_service_video: TargetService = rpc_client.create_target_service(video_name.to_string()).await?;
+    // Send the payload
+    let new_result = rpc_client.send(&target_service_video, "fibonacci", vec![30])?;
+    let fib_result: u64 = serde_json::from_value(new_result)?;
+    // Print the result
+    println!("fibonacci :{:?}", fib_result);
+    assert_eq!(fib_result, 832040);
+    let sub_result = rpc_client.send(&target_service_video, "sub", vec![10, 5])?;
+    assert_eq!(sub_result, Value::Number(serde_json::Number::from(5)));
     // Create a future result
-    let future_result =
-        rpc_client.call_async(video_name, "hello", vec![Value::String("Toto".to_string())]);
+    let future_result = rpc_client.call_async(&target_service_video, "hello", vec!["Toto"]);
     // Send a message during the previous async process
-    let result = rpc_client.send(
-        video_name,
-        "hello",
-        vec![Value::String("Girolle".to_string())],
-    )?;
+    let result = rpc_client.send(&target_service_video, "hello", vec!["Girolle"])?;
     // Print the result
     println!("{:?}", result);
-    assert_eq!(
-        result,
-        Value::String("Hello, Girolle!, by nameko".to_string())
-    );
-    // Wait for the future result
-    let consumer = future_result.await?;
+    assert_eq!(result, Value::String("Hello, Girolle!".to_string()));
     // wait for it
-    let two_sec = time::Duration::from_secs(2);
-    thread::sleep(two_sec);
+    let tempo: time::Duration = time::Duration::from_secs(4);
+    thread::sleep(tempo);
+    println!("exit sleep");
     // Print the result
-    let async_result = rpc_client.result(consumer).await;
+    let async_result = rpc_client
+        .result(future_result.await?)
+        .await;
     println!("{:?}", async_result);
-    assert_eq!(
-        async_result,
-        Value::String("Hello, Toto!, by nameko".to_string())
-    );
+    assert_eq!(async_result?, Value::String("Hello, Toto!".to_string()));
+    let start = Instant::now();
     let mut consummers: Vec<_> = Vec::new();
-    for n in 1..101 {
-        consummers.push(rpc_client.call_async(
-            video_name,
-            "hello",
-            vec![Value::String(n.to_string())],
+    for n in 1..1001 {
+        consummers.push((
+            n,
+            rpc_client.call_async(&target_service_video, "hello", vec![n.to_string()]),
         ));
     }
     // wait for it
-    thread::sleep(two_sec);
+    thread::sleep(tempo);
     for con in consummers {
-        let async_result = rpc_client.result(con.await?).await;
-        println!("{}", async_result.as_str().unwrap());
+        let id = con.1.await?;
+        let _async_result = rpc_client.result(id).await?;
     }
+    let duration = start.elapsed() - tempo;
+    println!("Time elapsed in expensive_function() is: {:?}", duration);
+    rpc_client.close().await?;
     Ok(())
 }
 ```
 
 ## To-Do
-
-- [x] Handle the error
-- [x] write test
-- [x] create a proxy service in rust to interact with an other service
+nameko-client
+- [x] create a client
+    - [ ] create a proxy service in rust to interact with an other service
 nameko-rpc
+- [x] Create a simple service
+    - [x] Handle the error
+    - [x] write test
 - [ ] Add macro to simplify the creation of a service
   - [x] Add basic macro
   - [ ] fix macro to handle `return`
   - [ ] fix macro to handle recursive function
+nameko-pubsub
 - [ ] listen to a pub/sub queue
 
 ## Limitation
@@ -204,13 +209,69 @@ nameko-rpc
 The current code as been tested with the nameko and girolle examples in this
 repository.
 
-|                 | nameko_test.py  | simple_senders    |
-|-----------------|-----------------|-------------------|
-| simple_service  |       x         |         x         |
-| nameko_service  |       x         |         x         |
-| simple_macro    |       x         |         x         |
+|                    | nameko_test.py  | simple_sender.rs  |
+|--------------------|-----------------|-------------------|
+| nameko_service.py  |       x         |         x         |
+| simple_macro       |       x         |         x         |
 
 ## Benchmark
+
+|                    | nameko_test.py  | simple_sender.rs |
+|--------------------|-----------------|------------------|
+| nameko_service.py  |    15.587 s     |    11.532 s      |
+| simple_macro.rs    |    15.654 s     |    9.995 s       |
+
+### Client benchmark
+
+Using hyperfine to test the client benchmark.
+
+Girolle client ( with Girolle service )
+
+```bash
+hyperfine -N './target/release/examples/simple_sender'
+Benchmark 1: ./target/release/examples/simple_sender
+  Time (mean ± σ):      9.995 s ±  0.116 s    [User: 0.163 s, System: 0.197 s]
+  Range (min … max):    9.778 s … 10.176 s    10 runs
+```	
+
+Nameko client ( with Girolle service )
+
+```bash
+hyperfine -N --warmup 3 'python nameko_test.py'
+Benchmark 1: python nameko_test.py
+  Time (mean ± σ):     15.654 s ±  0.257 s    [User: 1.455 s, System: 0.407 s]
+  Range (min … max):   15.202 s … 15.939 s    10 runs
+```
+### Service benchmark
+
+Girolle service ( with Girolle client )
+
+```bash
+hyperfine -N './target/release/examples/simple_sender'
+Benchmark 1: ./target/release/examples/simple_sender
+  Time (mean ± σ):      9.995 s ±  0.116 s    [User: 0.163 s, System: 0.197 s]
+  Range (min … max):    9.778 s … 10.176 s    10 runs
+```
+
+Nameko service running python 3.9.15 ( with Girolle client )
+
+```bash
+hyperfine -N --warmup 3 'target/release/examples/simple_sender'
+Benchmark 1: target/release/examples/simple_sender
+  Time (mean ± σ):     11.532 s ±  0.091 s    [User: 0.199 s, System: 0.213 s]
+  Range (min … max):   11.396 s … 11.670 s    10 runs
+```
+
+Nameko service running python 3.9.15 ( with Nameko client )
+
+```bash
+hyperfine -N --warmup 3 'python nameko_test.py'
+Benchmark 1: python nameko_test.py
+  Time (mean ± σ):     15.587 s ±  0.325 s    [User: 1.443 s, System: 0.420 s]
+  Range (min … max):   15.181 s … 16.034 s    10 runs
+```
+
+### Macro-overhead benchmark
 
 The benchmark is done to test the overhead of the macro.
 

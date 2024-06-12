@@ -6,7 +6,6 @@ use crate::types::NamekoFunction;
 use lapin::{
     message::{Delivery, DeliveryResult},
     options::*,
-    publisher_confirm::Confirmation,
     types::FieldTable,
     BasicProperties, Channel,
 };
@@ -240,20 +239,25 @@ async fn publish(
     properties: BasicProperties,
     reply_to_id: String,
     rpc_exchange: &str,
-) -> lapin::Result<Confirmation> {
-    let confirm = rpc_channel
-        .basic_publish(
-            rpc_exchange,
-            &format!("{}", &reply_to_id),
-            BasicPublishOptions::default(),
-            payload.as_bytes(),
-            properties,
-        )
-        .await?
-        .await?;
+) -> lapin::Result<()> {
+    let rpc_channel_clone = rpc_channel.clone();
+    let rpc_exchange_clone = rpc_exchange.to_string();
+    tokio::spawn(async move {
+        rpc_channel_clone
+            .basic_publish(
+                &rpc_exchange_clone,
+                &format!("{}", &reply_to_id),
+                BasicPublishOptions::default(),
+                payload.as_bytes(),
+                properties,
+            )
+            .await
+            .unwrap()
+            .await
+            .unwrap();
+    });
     // The message was correctly published
-    assert_eq!(confirm, Confirmation::NotRequested);
-    Ok(confirm)
+    Ok(())
 }
 
 /// Execute the delivery
@@ -388,7 +392,6 @@ async fn rpc_service(
         let shared_data_clone = Arc::clone(&shared_data);
         async move {
             let _permit = shared_data_clone.semaphore.acquire().await;
-            info!("will consume");
             let delivery = match delivery {
                 // Carries the delivery alongside its channel
                 Ok(Some(delivery)) => delivery,
@@ -396,7 +399,7 @@ async fn rpc_service(
                 Ok(None) => return,
                 // Carries the error and is always followed by Ok(None)
                 Err(error) => {
-                    dbg!("Failed to consume queue message {}", error);
+                    error!("Failed to consume queue message {}", error);
                     return;
                 }
             };
