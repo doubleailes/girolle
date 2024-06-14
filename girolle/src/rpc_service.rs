@@ -277,6 +277,12 @@ async fn execute_delivery(
         .iter()
         .map(|x| x.clone())
         .collect();
+    let kwargs: HashMap<String, &Value> = incomming_data["kwargs"]
+        .as_object()
+        .expect("kargs")
+        .iter()
+        .map(|(k, v)| (k.clone(), v))
+        .collect();
     // Get the correlation_id and reply_to_id
     let correlation_id = get_id(delivery.properties.correlation_id(), "correlation_id");
     let reply_to_id = get_id(delivery.properties.reply_to(), "reply_to_id");
