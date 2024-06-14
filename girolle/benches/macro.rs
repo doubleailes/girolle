@@ -20,7 +20,7 @@ fn fibonacci_fast(n: u64) -> u64 {
         }
     }
 }
-#[girolle]
+#[girolle_macro]
 fn fibonacci_macro(u: u64) -> u64 {
     fibonacci_fast(u)
 }

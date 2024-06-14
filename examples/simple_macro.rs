@@ -1,12 +1,12 @@
 use girolle::prelude::*;
 use std::{thread, time};
 
-#[girolle]
+#[girolle_macro]
 fn hello(s: String) -> String {
     format!("Hello, {}!", s)
 }
 
-#[girolle]
+#[girolle_macro]
 fn substraction(a: i64, b: i64) -> i64 {
     a - b
 }
@@ -18,15 +18,20 @@ fn fibonacci(n: u64) -> u64 {
     return fibonacci(n - 1) + fibonacci(n - 2);
 }
 
-#[girolle]
+#[girolle_macro]
 fn temporary_sleep(n: u64) -> String {
     thread::sleep(time::Duration::from_secs(n));
     format!("Slept for {} seconds", n)
 }
 
-#[girolle]
+#[girolle_macro]
 fn fib_warp(n: u64) -> u64 {
     fibonacci(n)
+}
+
+#[girolle_task]
+fn new_hello(s: String, n: String) -> String {
+    format!("Hello, {} {}!", s, n)
 }
 
 fn main() {
@@ -39,5 +44,6 @@ fn main() {
         .register(rpc_task_fib)
         .register(rpc_task_sleep)
         .register(RpcTask::new("sub", vec!["a", "b"], substraction))
+        .register_fn(new_hello)
         .start();
 }

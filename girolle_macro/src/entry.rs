@@ -1,7 +1,7 @@
 use proc_macro2::TokenStream;
 use quote::quote;
 use syn::fold::Fold;
-use syn::parse_quote;
+use syn::{parse_quote,parse_macro_input};
 use syn::{parse2, FnArg, ItemFn};
 
 struct Task {
@@ -77,7 +77,7 @@ impl Fold for Task {
     }
 }
 
-pub(crate) fn main(input: TokenStream) -> TokenStream {
+pub(crate) fn function(input: TokenStream) -> TokenStream {
     // proc_marco2 version of "parse_macro_input!(input as ItemFn)"
     let old_item_fn = match parse2::<ItemFn>(input) {
         Ok(syntax_tree) => syntax_tree,
@@ -90,4 +90,36 @@ pub(crate) fn main(input: TokenStream) -> TokenStream {
     task.add_output_final();
     new_item_fn.block.stmts = task.inner_statements.clone();
     TokenStream::from(quote!(#new_item_fn))
+}
+
+pub(crate) fn girolle_task(input: TokenStream) -> TokenStream {
+    let item_fn = parse2::<ItemFn>(input).unwrap();
+    let mut task = Task::new();
+    let mut new_item_fn = task.fold_item_fn(item_fn.clone());
+    task.add_input_serialize();
+    task.add_output_serialize();
+    task.add_output_final();
+    new_item_fn.block.stmts = task.inner_statements.clone();
+
+    let name = &item_fn.sig.ident;
+    let inputs = &item_fn.sig.inputs;
+    let output = &item_fn.sig.output;
+    let block = &item_fn.block;
+    let args_str:Vec<String> = task.args.iter().map(|arg| {
+        match arg {
+            FnArg::Typed(pat_type) => {
+                let pat = &pat_type.pat;
+                quote! {#pat}.to_string()
+            }
+            _ => "".to_string()
+        }
+    }).collect();
+
+    let expanded = quote! {
+        fn #name() -> girolle::RpcTask {
+            girolle::RpcTask::new(stringify!(#name),#inputs, #new_item_fn)
+        }
+    };
+
+    TokenStream::from(expanded)
 }

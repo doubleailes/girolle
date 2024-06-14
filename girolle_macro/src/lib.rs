@@ -28,5 +28,10 @@ mod entry;
 /// The function must be deterministic, which means that it must always return a serializable result.
 #[proc_macro_attribute]
 pub fn girolle(_metadata: TokenStream, input: TokenStream) -> TokenStream {
-    entry::main(input.into()).into()
+    entry::function(input.into()).into()
+}
+
+#[proc_macro_attribute]
+pub fn girolle_task(_metadata: TokenStream, input: TokenStream) -> TokenStream {
+    entry::girolle_task(input.into()).into()
 }
