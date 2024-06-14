@@ -31,13 +31,13 @@ fn fib_warp(n: u64) -> u64 {
 
 fn main() {
     let conf: Config = Config::with_yaml_defaults("staging/config.yml".to_string()).unwrap();
-    let rpc_task = RpcTask::new("hello", hello);
-    let rpc_task_fib = RpcTask::new("fibonacci", fib_warp);
-    let rpc_task_sleep = RpcTask::new("sleep", temporary_sleep);
+    let rpc_task_hello = RpcTask::new("hello", vec!["s"], hello);
+    let rpc_task_fib = RpcTask::new("fibonacci", vec!["n"], fib_warp);
+    let rpc_task_sleep = RpcTask::new("sleep", vec!["n"], temporary_sleep);
     let _ = RpcService::new(conf, "video")
-        .register(rpc_task)
+        .register(rpc_task_hello)
         .register(rpc_task_fib)
         .register(rpc_task_sleep)
-        .register(RpcTask::new("sub", substraction))
+        .register(RpcTask::new("sub", vec!["a", "b"], substraction))
         .start();
 }

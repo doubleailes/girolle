@@ -16,6 +16,7 @@
 //! ```rust,no_run
 //!
 //! use girolle::prelude::*;
+//! use std::vec;
 //!
 //! fn hello(s: &[Value]) -> NamekoResult<Value> {
 //!    // Parse the incomming data
@@ -27,8 +28,7 @@
 //! fn main() {
 //!   let conf: Config = Config::with_yaml_defaults("config.yml".to_string()).unwrap();
 //!   let mut services: RpcService = RpcService::new(conf,"video");
-//!   services.insert("hello", hello);
-//!   services.start();
+//!   services.register(RpcTask::new("hello", vec!["s"], hello)).start();
 //! }
 //! ```
 //!

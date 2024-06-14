@@ -10,6 +10,7 @@ use crate::types::NamekoFunction;
 ///
 /// ```rust,no_run
 /// use girolle::prelude::*;
+/// use std::vec;
 ///
 /// fn hello(s: &[Value]) -> NamekoResult<Value> {
 ///    // Parse the incomming data
@@ -21,13 +22,14 @@ use crate::types::NamekoFunction;
 ///
 /// fn main() {
 ///     let mut services: RpcService = RpcService::new(Config::default_config(),"video");
-///     let rpc_task = RpcTask::new("hello", hello);
+///     let rpc_task = RpcTask::new("hello", vec!["s"], hello);
 ///     services.register(rpc_task).start();
 /// }
 ///
 #[derive(Clone)]
 pub struct RpcTask {
     pub name: &'static str,
+    pub args: Vec<&'static str>,
     pub inner_function: NamekoFunction,
 }
 impl RpcTask {
@@ -50,6 +52,7 @@ impl RpcTask {
     ///
     /// ```rust,no_run
     /// use girolle::prelude::*;
+    /// use std::vec;
     ///
     /// fn hello(s: &[Value]) -> NamekoResult<Value> {
     ///    // Parse the incomming data
@@ -60,13 +63,18 @@ impl RpcTask {
     ///
     /// fn main() {
     ///     let mut services: RpcService = RpcService::new(Config::default_config(),"video");
-    ///     let rpc_task = RpcTask::new("hello", hello);
+    ///     let rpc_task = RpcTask::new("hello", vec!["s"], hello);
     ///     services.register(rpc_task).start();
     /// }
     ///
-    pub fn new(name: &'static str, inner_function: NamekoFunction) -> Self {
+    pub fn new(
+        name: &'static str,
+        args: Vec<&'static str>,
+        inner_function: NamekoFunction,
+    ) -> Self {
         Self {
             name,
+            args,
             inner_function,
         }
     }

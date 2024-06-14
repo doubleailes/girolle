@@ -1,3 +1,5 @@
+use std::vec;
+
 use girolle::prelude::*;
 use serde_json;
 
@@ -35,11 +37,13 @@ fn main() {
     // Get the configuration from the staging/config.yml file
     let conf: Config = Config::with_yaml_defaults("staging/config.yml".to_string()).unwrap();
     // Create the rpc service struct
-    let mut services: RpcService = RpcService::new(conf, "video");
+    let services: RpcService = RpcService::new(conf, "video");
     // Add the method with the insert method
-    services.insert("hello", hello);
-    let rpc_task = RpcTask::new("fibonacci", fibonacci_reccursive);
+    let rpc_task = RpcTask::new("fibonacci", vec!["s"], fibonacci_reccursive);
     // Add the method with the register ans start the service because
     // register return the service
-    let _ = services.register(rpc_task).start();
+    let _ = services
+        .register(rpc_task)
+        .register(RpcTask::new("hello", vec!["s"], hello))
+        .start();
 }
