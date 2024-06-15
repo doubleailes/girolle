@@ -19,6 +19,16 @@ impl Task {
             args_input_core: Vec::new(),
         }
     }
+    /// # add_input_serialize
+    ///
+    /// ## Description
+    ///
+    /// This function is used to add the input serialization to the task.
+    /// It use for the second function to deserialize the input.
+    ///
+    /// ## Arguments
+    ///
+    /// - `self` : &mut Task : The task to modify.
     fn add_input_serialize(&mut self) {
         let mut stmts: Vec<syn::Stmt> = Vec::new();
         let mut i: usize = 0;
@@ -44,6 +54,20 @@ impl Task {
 }
 
 impl Fold for Task {
+    /// # fold_ident
+    ///
+    /// ## Description
+    ///
+    /// This function is used to fold the ident of the function by replacing the
+    /// original name by the name suffixed by `_core`.
+    ///
+    /// ## Arguments
+    ///
+    /// - `i` : proc_macro2::Ident : The ident to fold.
+    ///
+    /// ## Returns
+    ///
+    /// - `proc_macro2::Ident` : The folded ident.
     fn fold_ident(&mut self, i: proc_macro2::Ident) -> proc_macro2::Ident {
         let folded_item = i.clone();
         // Capture the original statements
@@ -64,7 +88,6 @@ pub(crate) fn girolle_task(input: TokenStream) -> TokenStream {
     task.args = item_fn.sig.inputs.iter().cloned().collect();
     let new_item_fn = task.fold_item_fn(item_fn.clone());
     task.add_input_serialize();
-    let _inputs = &item_fn.sig.inputs;
     let args_str: Vec<String> = task
         .args
         .iter()
