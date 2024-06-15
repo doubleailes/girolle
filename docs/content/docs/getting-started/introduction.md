@@ -54,6 +54,19 @@ The macro do a real complexe job. It transform the function into three functions
 
 It returns a `fn()->RpcTask` that can be used to register to the RpcService.
 
+The macro is set to replace recursively the function call in the function body to
+call the `_core` function.
+It may result in a issue with the `#[girolle]` macro. For example:
+```rust
+#[girolle]
+fn sleep(n: u64) -> String {
+    thread::sleep(time::Duration::from_secs(n));
+    format!("Slept for {} seconds", n)
+}
+```
+The `thread::sleep` will be replace by the `thread::sleep_core` function call
+and the function will not sleep.
+
 ### hand made deserialization and serialization
 
 if you do not use the macro `#[girolle]` you need to create a function that
