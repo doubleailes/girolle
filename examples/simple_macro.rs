@@ -44,6 +44,6 @@ fn main() {
         .register(rpc_task_fib)
         .register(rpc_task_sleep)
         .register(RpcTask::new("sub", vec!["a", "b"], substraction))
-        .register_fn(new_hello)
+        .register_fn(new_hello_rpc_task)
         .start();
 }

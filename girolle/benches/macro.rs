@@ -1,7 +1,6 @@
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 
-use girolle::types::NamekoResult;
-use girolle_macro::girolle;
+use girolle::prelude::*;
 use serde_json::Value;
 
 fn fibonacci_fast(n: u64) -> u64 {

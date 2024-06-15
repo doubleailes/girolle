@@ -2,7 +2,6 @@ use crate::config::Config;
 use crate::nameko_utils::{get_id, insert_new_id_to_call_id};
 use crate::queue::{create_service_channel, get_connection};
 use crate::rpc_task::RpcTask;
-use crate::types::NamekoResult;
 use crate::types::GirolleError;
 use lapin::{
     message::{Delivery, DeliveryResult},
@@ -136,10 +135,9 @@ impl RpcService {
         self.insert(rpc_task.name, rpc_task);
         self
     }
-    pub fn register_fn(mut self, fn_macro:fn()->RpcTask) -> Self
-    {
+    pub fn register_fn(mut self, fn_macro: fn() -> RpcTask) -> Self {
         let rpc_task = fn_macro();
-        self.insert(rpc_task.name, rpc_task);
+        self.insert(&rpc_task.name, rpc_task);
         self
     }
     /// # start
