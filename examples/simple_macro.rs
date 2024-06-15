@@ -1,23 +1,23 @@
 use girolle::prelude::*;
 use std::{thread, time};
 
-#[girolle_task]
+#[girolle]
 fn hello(s: String) -> String {
     format!("Hello, {}!", s)
 }
 
-#[girolle_task]
+#[girolle]
 fn sub(a: i64, b: i64) -> i64 {
     a - b
 }
 
-#[girolle_task]
-fn sleep(n: u64) -> String {
+#[girolle]
+fn slip(n: u64) -> String {
     thread::sleep(time::Duration::from_secs(n));
     format!("Slept for {} seconds", n)
 }
 
-#[girolle_task]
+#[girolle]
 fn fibonacci(n: u64) -> u64 {
     if n <= 1 {
         return n;
@@ -30,7 +30,7 @@ fn main() {
     let _ = RpcService::new(conf, "video")
         .register(hello)
         .register(sub)
-        .register(sleep)
+        .register(slip)
         .register(fibonacci)
         .start();
 }

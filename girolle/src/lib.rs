@@ -18,17 +18,15 @@
 //! use girolle::prelude::*;
 //! use std::vec;
 //!
-//! fn hello(s: &[Value]) -> NamekoResult<Value> {
-//!    // Parse the incomming data
-//!    let n: String = serde_json::from_value(s[0].clone())?;
-//!    let hello_str: Value = format!("Hello, {}!, by Girolle", n).into();
-//!    Ok(hello_str)
+//! #[girolle]
+//! fn hello(s: String) -> String {
+//!     format!("Hello, {}!, by Girolle", s)
 //! }
 //!
 //! fn main() {
 //!   let conf: Config = Config::with_yaml_defaults("config.yml".to_string()).unwrap();
-//!   let mut services: RpcService = RpcService::new(conf,"video");
-//!   services.register(RpcTask::new("hello", vec!["s"], hello)).start();
+//!   let mut services: RpcService = RpcService::new(conf, "video");
+//!   services.register(hello).start();
 //! }
 //! ```
 //!

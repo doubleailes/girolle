@@ -12,7 +12,7 @@ use crate::types::NamekoFunction;
 /// use girolle::prelude::*;
 /// use std::vec;
 ///
-/// fn hello(s: &[Value]) -> NamekoResult<Value> {
+/// fn hello(s: &[Value]) -> GirolleResult<Value> {
 ///    // Parse the incomming data
 ///    let n: String = serde_json::from_value(s[0].clone())?;
 ///    let hello_str: Value = format!("Hello, {}!, by Girolle", n).into();
@@ -23,7 +23,6 @@ use crate::types::NamekoFunction;
 /// fn main() {
 ///     let mut services: RpcService = RpcService::new(Config::default_config(),"video");
 ///     let rpc_task = RpcTask::new("hello", vec!["s"], hello);
-///     services.register(rpc_task).start();
 /// }
 ///
 #[derive(Clone)]
@@ -54,7 +53,7 @@ impl RpcTask {
     /// use girolle::prelude::*;
     /// use std::vec;
     ///
-    /// fn hello(s: &[Value]) -> NamekoResult<Value> {
+    /// fn hello(s: &[Value]) -> GirolleResult<Value> {
     ///    // Parse the incomming data
     ///    let n: String = serde_json::from_value(s[0].clone())?;
     ///    let hello_str: Value = format!("Hello, {}!, by Girolle", n).into();
@@ -64,7 +63,6 @@ impl RpcTask {
     /// fn main() {
     ///     let mut services: RpcService = RpcService::new(Config::default_config(),"video");
     ///     let rpc_task = RpcTask::new("hello", vec!["s"], hello);
-    ///     services.register(rpc_task).start();
     /// }
     ///
     pub fn new(

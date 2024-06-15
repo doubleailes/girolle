@@ -29,17 +29,14 @@ use uuid::Uuid;
 /// ```rust, no_run
 /// use girolle::prelude::*;
 /// use std::vec;
-///
-/// fn hello(s: &[Value]) -> NamekoResult<Value> {
-///     // Parse the incomming data
-///     let n: String = serde_json::from_value(s[0].clone())?;
-///     let hello_str: Value = format!("Hello, {}!, by Girolle", n).into();
-///     Ok(hello_str)
+/// #[girolle]
+/// fn hello(s: String) -> String {
+///     format!("Hello, {}!, by Girolle", s)
 /// }
 ///
 /// fn main() {
 ///     let mut services: RpcService = RpcService::new(Config::default_config(),"video");
-///     services.register(RpcTask::new("hello", vec!["s"], hello)).start();
+///     services.register(hello).start();
 /// }
 pub struct RpcService {
     conf: Config,
@@ -116,25 +113,23 @@ impl RpcService {
     /// use girolle::prelude::*;
     /// use std::vec;
     ///
-    /// fn hello(s: &[Value]) -> GirolleResult<Value> {
-    ///    // Parse the incomming data
-    ///   let n: String = serde_json::from_value(s[0].clone())?;
-    ///   let hello_str: Value = format!("Hello, {}!, by Girolle", n).into();
-    ///   Ok(hello_str)
+    /// #[girolle]
+    /// fn hello(s: String) -> String {
+    ///   format!("Hello, {}!, by Girolle", s)
     /// }
     ///
     /// fn main() {
     ///   let mut services: RpcService = RpcService::new(Config::default_config(),"video");
-    ///   services.register(RpcTask::new("hello", vec!["s"], hello));
+    ///   services.register(hello);
     /// }
-    fn insert(&mut self, method_name: &'static str, f: RpcTask) {
-        let routing_key = format!("{}.{}", self.service_name, method_name);
-        self.f.insert(routing_key.to_string(), f);
-    }
     pub fn register(mut self, fn_macro: fn() -> RpcTask) -> Self {
         let rpc_task = fn_macro();
         self.insert(&rpc_task.name, rpc_task);
         self
+    }
+    fn insert(&mut self, method_name: &'static str, f: RpcTask) {
+        let routing_key = format!("{}.{}", self.service_name, method_name);
+        self.f.insert(routing_key.to_string(), f);
     }
     /// # start
     ///
@@ -146,18 +141,15 @@ impl RpcService {
     ///
     /// ```rust
     /// use girolle::prelude::*;
-    /// use std::vec;
     ///
-    /// fn hello(s: &[Value]) -> NamekoResult<Value> {
-    ///     // Parse the incomming data
-    ///     let n: String = serde_json::from_value(s[0].clone())?;
-    ///     let hello_str: Value = format!("Hello, {}!, by Girolle", n).into();
-    ///    Ok(hello_str)
+    /// #[girolle]
+    /// fn hello(s: String) -> String {
+    ///   format!("Hello, {}!, by Girolle", s)
     /// }
     ///
     /// fn main() {
     ///    let mut services: RpcService = RpcService::new(Config::default_config(),"video");
-    ///    services.register(RpcTask::new("hello", vec!["s"], hello));
+    ///    services.register(hello).start();
     /// }
     pub fn start(&self) -> lapin::Result<()> {
         if self.f.is_empty() {
@@ -177,17 +169,14 @@ impl RpcService {
     /// use girolle::prelude::*;
     /// use std::vec;
     ///
-    /// fn hello(s: &[Value]) -> NamekoResult<Value> {
-    ///
-    ///    // Parse the incomming data
-    ///    let n: String = serde_json::from_value(s[0].clone())?;
-    ///    let hello_str: Value = format!("Hello, {}!, by Girolle", n).into();
-    ///    Ok(hello_str)
+    /// #[girolle]
+    /// fn hello(s: String) -> String {
+    ///     format!("Hello, {}!, by Girolle", s)
     /// }
     ///
     /// fn main() {
     ///    let mut services: RpcService = RpcService::new(Config::default_config(),"video");
-    ///    let routing_keys =services.register(RpcTask::new("hello", vec!["s"], hello)).get_routing_keys();
+    ///    let routing_keys = services.register(hello).get_routing_keys();
     /// }
     pub fn get_routing_keys(&self) -> Vec<String> {
         self.f.keys().map(|x| x.to_string()).collect()
