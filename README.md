@@ -94,12 +94,25 @@ fn fibonacci_reccursive(s: &[Value]) -> Result<Value> {
 
 ```rust
 use girolle::prelude::*;
+use std::{thread, time};
 
 #[girolle]
 fn hello(s: String) -> String {
     format!("Hello, {}!", s)
 }
 
+#[girolle]
+fn sub(a: i64, b: i64) -> i64 {
+    a - b
+}
+
+#[girolle]
+fn slip(n: u64) -> String {
+    thread::sleep(time::Duration::from_secs(n));
+    format!("Slept for {} seconds", n)
+}
+
+#[girolle]
 fn fibonacci(n: u64) -> u64 {
     if n <= 1 {
         return n;
@@ -107,23 +120,13 @@ fn fibonacci(n: u64) -> u64 {
     return fibonacci(n - 1) + fibonacci(n - 2);
 }
 
-// Because the function is recursive, it need to be wrap in a function
-#[girolle]
-fn fib_wrap(n: u64) -> u64 {
-    fibonacci(n)
-}
-
 fn main() {
-    // Create the configuration
-    let conf = Config::default_config();
-    // Create the rpc task
-    let rpc_task = RpcTask::new("hello", hello);
-    // Create another rpc task
-    let rpc_task_fib = RpcTask::new("fibonacci", fib_wrap);
-    // Create and start the service
-    let _ = RpcService::new(conf,"video")
-        .register(rpc_task)
-        .register(rpc_task_fib)
+    let conf: Config = Config::with_yaml_defaults("staging/config.yml".to_string()).unwrap();
+    let _ = RpcService::new(conf, "video")
+        .register(hello)
+        .register(sub)
+        .register(slip)
+        .register(fibonacci)
         .start();
 }
 ```
@@ -197,10 +200,10 @@ nameko-rpc
 - [x] Create a simple service
     - [x] Handle the error
     - [x] write test
-- [ ] Add macro to simplify the creation of a service
+- [x] Add macro to simplify the creation of a service
   - [x] Add basic macro
-  - [ ] fix macro to handle `return`
-  - [ ] fix macro to handle recursive function
+  - [x] fix macro to handle `return`
+  - [x] fix macro to handle recursive function
 nameko-pubsub
 - [ ] listen to a pub/sub queue
 

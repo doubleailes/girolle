@@ -25,23 +25,35 @@ def rpc_proxy(CONFIG) -> ClusterRpcClient:
     config.setup(CONFIG)
     return ClusterRpcClient(CONFIG)
 
+
 if __name__ == "__main__":
     tempo = 4
     with rpc_proxy(CONFIG) as client:
+        # test a simple messgae
         response = client.video.fibonacci(30)
         print(response)
         assert 832040 == response
-        response = client.video.sub(10, 5)
-        assert 5 == response
+        # test message with two arguments
+        assert 5 == client.video.sub(b=5, a=10)
+        # test kwargs
+        assert client.video.sub(10, 5) == 5
+        # test arguments error
+        try:
+            client.video.sub(b=5, a=10, c=4)
+        except RemoteError as e:
+            print(e)
+        # make an async call
         async_response = client.video.hello.call_async("Toto")
+        # make an sync call
         response = client.video.hello("Girolle")
         print(response)
         assert "Hello, Girolle!" == response
         time.sleep(tempo)
+        # get the result of the aysnc call
         response_async = async_response.result()
         print(response_async)
         assert "Hello, Toto!" == response_async
-        assert client.video.sub(10, 5) == 5
+        # batch a pack of async call
         start = datetime.now()
         data: list = [[i, client.video.hello.call_async(str(i))] for i in range(1000)]
         time.sleep(tempo)

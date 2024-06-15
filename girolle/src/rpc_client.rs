@@ -1,7 +1,7 @@
 use crate::config::Config;
 use crate::payload::Payload;
 use crate::queue::{create_message_channel, create_service_channel, get_connection};
-use crate::types::NamekoResult;
+use crate::types::GirolleResult;
 use futures::{executor, stream::StreamExt};
 use lapin::{
     options::*,
@@ -67,25 +67,24 @@ impl RpcClient {
     ///   let target_service = RpcClient::new(Config::default_config());
     /// }
     pub fn new(conf: Config) -> Self {
-        let identifier =  Uuid::new_v4();
+        let identifier = Uuid::new_v4();
         let conn = executor::block_on(get_connection(conf.AMQP_URI(), conf.heartbeat()))
             .expect("Can't init connection");
         let reply_queue_name = format!("rpc.listener-{}", identifier);
-        let reply_channel =  executor::block_on(create_message_channel(
+        let reply_channel = executor::block_on(create_message_channel(
             &conn,
             &reply_queue_name,
             &identifier,
             conf.rpc_exchange(),
-        )).expect("Can't create reply channel");
-        let consumer_arc = executor::block_on(reply_channel
-            .basic_consume(
-                &reply_queue_name,
-                &format!("girolle_consumer"),
-                BasicConsumeOptions::default(),
-                FieldTable::default(),
-            )
-        )
-            .expect("Failed to create consumer");
+        ))
+        .expect("Can't create reply channel");
+        let consumer_arc = executor::block_on(reply_channel.basic_consume(
+            &reply_queue_name,
+            &format!("girolle_consumer"),
+            BasicConsumeOptions::default(),
+            FieldTable::default(),
+        ))
+        .expect("Failed to create consumer");
         Self {
             conf,
             identifier,
@@ -303,9 +302,10 @@ impl RpcClient {
         target_service: &str,
         method_name: &str,
         args: Vec<T>,
-    ) -> NamekoResult<Value> {
-        let id = executor::block_on(self.call_async(target_service, method_name, args)).expect("call");
-        Ok(executor::block_on(self.result( id)).expect("call"))
+    ) -> GirolleResult<Value> {
+        let id =
+            executor::block_on(self.call_async(target_service, method_name, args)).expect("call");
+        Ok(executor::block_on(self.result(id)).expect("call"))
     }
     fn service_exist(&self, service_name: &str) -> bool {
         self.services.contains_key(service_name)
@@ -384,28 +384,29 @@ impl RpcClient {
             &self.conf.rpc_exchange(),
         )
         .await?;
-        self.services.insert(service_name.to_string(), TargetService::new(channel));
+        self.services
+            .insert(service_name.to_string(), TargetService::new(channel));
         Ok(())
     }
     /// # unregister_service
-    /// 
+    ///
     /// ## Description
-    /// 
+    ///
     /// This function remove a service from the RpcClient struct
-    /// 
+    ///
     /// ## Arguments
-    /// 
+    ///
     /// * `service_name` - The name of the service in the Nameko microservice
-    /// 
+    ///
     /// ## Returns
-    /// 
+    ///
     /// This function return a Result<(), lapin::Error>
-    /// 
+    ///
     /// ## Example
-    /// 
+    ///
     /// ```rust,no_run
     /// use girolle::prelude::*;
-    /// 
+    ///
     /// #[tokio::main]
     /// async fn main() {
     ///    let mut rpc_client = RpcClient::new(Config::default_config());
@@ -419,16 +420,16 @@ impl RpcClient {
         Ok(())
     }
     /// # close
-    /// 
+    ///
     /// ## Description
-    /// 
+    ///
     /// This function close the connection of the RpcClient struct
-    /// 
+    ///
     /// ## Example
-    /// 
+    ///
     /// ```rust,no_run
     /// use girolle::prelude::*;
-    /// 
+    ///
     /// #[tokio::main]
     /// async fn main() {
     ///   let rpc_client = RpcClient::new(Config::default_config());
@@ -442,17 +443,17 @@ impl RpcClient {
 }
 
 /// # TargetService
-/// 
+///
 /// ## Description
-/// 
+///
 /// This struct is used to create a RPC call. It link the client to the service.
 /// By creating the channel, the client can send a message to the service.
-/// 
+///
 /// ## Example
-/// 
+///
 /// ```rust,no_run
 /// use girolle::prelude::*;
-/// 
+///
 /// #[tokio::main]
 /// async fn main() {
 ///      let mut rpc_client = RpcClient::new(Config::default_config());
@@ -462,12 +463,8 @@ struct TargetService {
     channel: lapin::Channel,
 }
 impl TargetService {
-    fn new(
-        channel: lapin::Channel,
-    ) -> Self {
-        Self {
-            channel,
-        }
+    fn new(channel: lapin::Channel) -> Self {
+        Self { channel }
     }
     #[allow(dead_code)]
     fn close(&self) -> Result<(), lapin::Error> {

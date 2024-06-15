@@ -2,7 +2,7 @@ use crate::config::Config;
 use crate::nameko_utils::{get_id, insert_new_id_to_call_id};
 use crate::queue::{create_service_channel, get_connection};
 use crate::rpc_task::RpcTask;
-use crate::types::NamekoFunction;
+use crate::types::GirolleError;
 use lapin::{
     message::{Delivery, DeliveryResult},
     options::*,
@@ -13,6 +13,7 @@ use serde_json::{json, Value};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::Semaphore;
+use tracing::Level;
 use tracing::{debug, error, info, warn};
 use uuid::Uuid;
 
@@ -27,23 +28,20 @@ use uuid::Uuid;
 ///
 /// ```rust, no_run
 /// use girolle::prelude::*;
-///
-/// fn hello(s: &[Value]) -> NamekoResult<Value> {
-///     // Parse the incomming data
-///     let n: String = serde_json::from_value(s[0].clone())?;
-///     let hello_str: Value = format!("Hello, {}!, by Girolle", n).into();
-///     Ok(hello_str)
+/// use std::vec;
+/// #[girolle]
+/// fn hello(s: String) -> String {
+///     format!("Hello, {}!, by Girolle", s)
 /// }
 ///
 /// fn main() {
 ///     let mut services: RpcService = RpcService::new(Config::default_config(),"video");
-///     services.insert("hello", hello);
-///     services.start();
+///     services.register(hello).start();
 /// }
 pub struct RpcService {
     conf: Config,
     service_name: String,
-    f: HashMap<String, NamekoFunction>,
+    f: HashMap<String, RpcTask>,
 }
 impl RpcService {
     /// # new
@@ -113,25 +111,25 @@ impl RpcService {
     ///
     /// ```rust
     /// use girolle::prelude::*;
+    /// use std::vec;
     ///
-    /// fn hello(s: &[Value]) -> NamekoResult<Value> {
-    ///    // Parse the incomming data
-    ///   let n: String = serde_json::from_value(s[0].clone())?;
-    ///   let hello_str: Value = format!("Hello, {}!, by Girolle", n).into();
-    ///   Ok(hello_str)
+    /// #[girolle]
+    /// fn hello(s: String) -> String {
+    ///   format!("Hello, {}!, by Girolle", s)
     /// }
     ///
     /// fn main() {
     ///   let mut services: RpcService = RpcService::new(Config::default_config(),"video");
-    ///   services.insert("hello", hello);
+    ///   services.register(hello);
     /// }
-    pub fn insert(&mut self, method_name: &'static str, f: NamekoFunction) {
+    pub fn register(mut self, fn_macro: fn() -> RpcTask) -> Self {
+        let rpc_task = fn_macro();
+        self.insert(&rpc_task.name, rpc_task);
+        self
+    }
+    fn insert(&mut self, method_name: &'static str, f: RpcTask) {
         let routing_key = format!("{}.{}", self.service_name, method_name);
         self.f.insert(routing_key.to_string(), f);
-    }
-    pub fn register(mut self, rpc_task: RpcTask) -> Self {
-        self.insert(rpc_task.name, rpc_task.inner_function);
-        self
     }
     /// # start
     ///
@@ -144,16 +142,14 @@ impl RpcService {
     /// ```rust
     /// use girolle::prelude::*;
     ///
-    /// fn hello(s: &[Value]) -> NamekoResult<Value> {
-    ///     // Parse the incomming data
-    ///     let n: String = serde_json::from_value(s[0].clone())?;
-    ///     let hello_str: Value = format!("Hello, {}!, by Girolle", n).into();
-    ///    Ok(hello_str)
+    /// #[girolle]
+    /// fn hello(s: String) -> String {
+    ///   format!("Hello, {}!, by Girolle", s)
     /// }
     ///
     /// fn main() {
     ///    let mut services: RpcService = RpcService::new(Config::default_config(),"video");
-    ///    services.insert("hello", hello);
+    ///    services.register(hello).start();
     /// }
     pub fn start(&self) -> lapin::Result<()> {
         if self.f.is_empty() {
@@ -171,19 +167,16 @@ impl RpcService {
     ///
     /// ```rust
     /// use girolle::prelude::*;
+    /// use std::vec;
     ///
-    /// fn hello(s: &[Value]) -> NamekoResult<Value> {
-    ///
-    ///    // Parse the incomming data
-    ///    let n: String = serde_json::from_value(s[0].clone())?;
-    ///    let hello_str: Value = format!("Hello, {}!, by Girolle", n).into();
-    ///    Ok(hello_str)
+    /// #[girolle]
+    /// fn hello(s: String) -> String {
+    ///     format!("Hello, {}!, by Girolle", s)
     /// }
     ///
     /// fn main() {
     ///    let mut services: RpcService = RpcService::new(Config::default_config(),"video");
-    ///    services.insert("hello", hello);
-    ///    let routing_keys = services.get_routing_keys();
+    ///    let routing_keys = services.register(hello).get_routing_keys();
     /// }
     pub fn get_routing_keys(&self) -> Vec<String> {
         self.f.keys().map(|x| x.to_string()).collect()
@@ -260,22 +253,91 @@ async fn publish(
     Ok(())
 }
 
+fn build_inputs_fn_service(
+    service_args: Vec<&str>,
+    args: Vec<Value>,
+    kwargs: HashMap<String, Value>,
+) -> Result<Vec<Value>, GirolleError> {
+    if service_args.len() == args.len() {
+        Ok(args)
+    } else if service_args.len() == args.len() + kwargs.len() {
+        let mut result: Vec<Value> = Vec::new();
+        result.extend(args.clone());
+        for i in args.len()..args.len() + kwargs.len() {
+            result.push(match kwargs.get(service_args[i]) {
+                Some(value) => value.clone(),
+                None => return Err(GirolleError::ArgumentsError),
+            });
+        }
+        Ok(result)
+    } else {
+        Err(GirolleError::ArgumentsError)
+    }
+}
+
+#[test]
+fn test_build_inputs_fn_service() {
+    let service_args = vec!["a", "b", "c"];
+    let args = vec![json!("value_a"), json!("value_b")];
+    let mut kwargs = HashMap::new();
+    kwargs.insert("c".to_string(), json!("value_c"));
+    let result = build_inputs_fn_service(service_args, args, kwargs).unwrap();
+    assert_eq!(
+        result,
+        vec![json!("value_a"), json!("value_b"), json!("value_c")]
+    );
+}
+
+fn get_result_paylaod(result: Value) -> String {
+    json!(
+        {
+            "result": result,
+            "error": null,
+        }
+    )
+    .to_string()
+}
+
+fn get_error_payload(error: GirolleError) -> String {
+    error!("Error: {}", &error);
+    let err_str = error.to_string();
+    let exc = HashMap::from([
+        ("exc_path", "builtins.Exception"),
+        ("exc_type", "Exception"),
+        ("exc_args", "Error"),
+        ("value", &err_str),
+    ]);
+    json!(
+        {
+            "result": null,
+            "error": exc,
+        }
+    )
+    .to_string()
+}
 /// Execute the delivery
 async fn execute_delivery(
     delivery: Delivery,
     id: &Uuid,
-    fn_service: NamekoFunction,
+    rpc_task_struct: RpcTask,
     rpc_channel: &Channel,
     rpc_queue: &str,
     rpc_exchange: &str,
 ) {
     let opt_routing_key = delivery.routing_key.to_string();
-    let incomming_data: Value = serde_json::from_slice(&delivery.data).expect("json");
+    let incomming_data: Value =
+        serde_json::from_slice(&delivery.data).expect("Can't deserialize incomming data");
     let args: Vec<Value> = incomming_data["args"]
         .as_array()
         .expect("args")
         .iter()
         .map(|x| x.clone())
+        .collect();
+    let kwargs: HashMap<String, Value> = incomming_data["kwargs"]
+        .as_object()
+        .expect("kargs")
+        .into_iter()
+        .map(|(k, v)| (k.clone(), v.clone()))
         .collect();
     // Get the correlation_id and reply_to_id
     let correlation_id = get_id(delivery.properties.correlation_id(), "correlation_id");
@@ -297,40 +359,53 @@ async fn execute_delivery(
         .with_delivery_mode(2)
         .with_priority(0);
     // Publish the response
-    let payload: String = match fn_service(&args) {
-        Ok(result) => json!(
-            {
-                "result": result,
-                "error": null,
-            }
-        )
-        .to_string(),
+    let fn_service = rpc_task_struct.inner_function;
+    let buildted_args = match build_inputs_fn_service(rpc_task_struct.args, args, kwargs) {
+        Ok(result) => result,
         Err(error) => {
-            error!("Error: {}", &error);
-            let err_str = error.to_string();
-            let exc = HashMap::from([
-                ("exc_path", "builtins.Exception"),
-                ("exc_type", "Exception"),
-                ("exc_args", "Error"),
-                ("value", &err_str),
-            ]);
-            json!(
-                {
-                    "result": null,
-                    "error": exc,
-                }
+            publish(
+                &rpc_channel,
+                get_error_payload(error),
+                properties,
+                reply_to_id,
+                rpc_exchange,
             )
-            .to_string()
+            .await
+            .expect("Error publishing");
+            return;
         }
     };
-    publish(&rpc_channel, payload, properties, reply_to_id, rpc_exchange)
-        .await
-        .expect("Error publishing");
+    match fn_service(&buildted_args) {
+        Ok(result) => {
+            publish(
+                &rpc_channel,
+                get_result_paylaod(result),
+                properties,
+                reply_to_id,
+                rpc_exchange,
+            )
+            .await
+            .expect("Error publishing");
+            return;
+        }
+        Err(error) => {
+            publish(
+                &rpc_channel,
+                get_error_payload(error),
+                properties,
+                reply_to_id,
+                rpc_exchange,
+            )
+            .await
+            .expect("Error publishing");
+            return;
+        }
+    };
 }
 
 struct SharedData {
     rpc_channel: Channel,
-    f_task: HashMap<String, NamekoFunction>,
+    f_task: HashMap<String, RpcTask>,
     rpc_queue: String,
     rpc_exchange: String,
     semaphore: Semaphore,
@@ -351,13 +426,15 @@ struct SharedData {
 async fn rpc_service(
     conf: Config,
     service_name: &str,
-    f_task: HashMap<String, NamekoFunction>,
+    f_task: HashMap<String, RpcTask>,
 ) -> lapin::Result<()> {
     info!("Starting the service");
     // Define the queue name1
     let rpc_queue = format!("rpc-{}", service_name);
     // Add tracing
-    tracing_subscriber::fmt::init();
+    tracing_subscriber::fmt()
+        .with_max_level(Level::DEBUG)
+        .init();
     // Uuid of the service
     let id = Uuid::new_v4();
     // check list of function
@@ -405,10 +482,10 @@ async fn rpc_service(
             };
 
             let opt_routing_key = delivery.routing_key.to_string();
-            let fn_service: NamekoFunction = match shared_data_clone.f_task.get(&opt_routing_key) {
-                Some(fn_service) => *fn_service,
+            let rpc_task_struct: RpcTask = match shared_data_clone.f_task.get(&opt_routing_key) {
+                Some(rpc_task_struct) => rpc_task_struct.clone(),
                 None => {
-                    warn!("fn_service: None");
+                    warn!("fn_service: None for routing_key: {}", &opt_routing_key);
                     return;
                 }
             };
@@ -416,7 +493,7 @@ async fn rpc_service(
             execute_delivery(
                 delivery,
                 &id,
-                fn_service,
+                rpc_task_struct,
                 &shared_data_clone.rpc_channel,
                 &shared_data_clone.rpc_queue,
                 &shared_data_clone.rpc_exchange,

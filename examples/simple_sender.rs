@@ -30,9 +30,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     thread::sleep(tempo);
     println!("exit sleep");
     // Print the result
-    let async_result = rpc_client
-        .result(future_result.await?)
-        .await;
+    let async_result = rpc_client.result(future_result.await?).await;
     println!("{:?}", async_result);
     assert_eq!(async_result?, Value::String("Hello, Toto!".to_string()));
     let start = Instant::now();
