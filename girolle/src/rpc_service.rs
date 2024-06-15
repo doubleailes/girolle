@@ -131,11 +131,7 @@ impl RpcService {
         let routing_key = format!("{}.{}", self.service_name, method_name);
         self.f.insert(routing_key.to_string(), f);
     }
-    pub fn register(mut self, rpc_task: RpcTask) -> Self {
-        self.insert(rpc_task.name, rpc_task);
-        self
-    }
-    pub fn register_fn(mut self, fn_macro: fn() -> RpcTask) -> Self {
+    pub fn register(mut self, fn_macro: fn() -> RpcTask) -> Self {
         let rpc_task = fn_macro();
         self.insert(&rpc_task.name, rpc_task);
         self
@@ -503,7 +499,7 @@ async fn rpc_service(
             let rpc_task_struct: RpcTask = match shared_data_clone.f_task.get(&opt_routing_key) {
                 Some(rpc_task_struct) => rpc_task_struct.clone(),
                 None => {
-                    warn!("fn_service: None");
+                    warn!("fn_service: None for routing_key: {}", &opt_routing_key);
                     return;
                 }
             };

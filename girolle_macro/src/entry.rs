@@ -119,10 +119,11 @@ pub(crate) fn girolle_task(input: TokenStream) -> TokenStream {
         &format!("{}_rpc_task", name),
         proc_macro2::Span::call_site(),
     );
+    new_item_fn.sig.ident = rpc_task_name.clone();
     let expanded = quote! {
         #new_item_fn
-        fn #rpc_task_name() -> girolle::RpcTask {
-            girolle::RpcTask::new(#name_fn,vec![#(#args_str),*], #name)
+        fn #name() -> girolle::RpcTask {
+            girolle::RpcTask::new(#name_fn,vec![#(#args_str),*], #rpc_task_name)
         }
     };
     println!("{}", expanded.to_string());

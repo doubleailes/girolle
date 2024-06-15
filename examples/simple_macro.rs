@@ -1,49 +1,40 @@
 use girolle::prelude::*;
 use std::{thread, time};
 
-#[girolle_macro]
+#[girolle_task]
 fn hello(s: String) -> String {
     format!("Hello, {}!", s)
 }
 
-#[girolle_macro]
-fn substraction(a: i64, b: i64) -> i64 {
+#[girolle_task]
+fn sub(a: i64, b: i64) -> i64 {
     a - b
 }
 
-fn fibonacci(n: u64) -> u64 {
+fn fib(n: u64) -> u64 {
     if n <= 1 {
         return n;
     }
-    return fibonacci(n - 1) + fibonacci(n - 2);
+    return fib(n - 1) + fib(n - 2);
 }
 
-#[girolle_macro]
-fn temporary_sleep(n: u64) -> String {
+#[girolle_task]
+fn sleep(n: u64) -> String {
     thread::sleep(time::Duration::from_secs(n));
     format!("Slept for {} seconds", n)
 }
 
-#[girolle_macro]
-fn fib_warp(n: u64) -> u64 {
-    fibonacci(n)
-}
-
 #[girolle_task]
-fn new_hello(s: String, n: String) -> String {
-    format!("Hello, {} {}!", s, n)
+fn fibonacci(n: u64) -> u64 {
+    fib(n)
 }
 
 fn main() {
     let conf: Config = Config::with_yaml_defaults("staging/config.yml".to_string()).unwrap();
-    let rpc_task_hello = RpcTask::new("hello", vec!["s"], hello);
-    let rpc_task_fib = RpcTask::new("fibonacci", vec!["n"], fib_warp);
-    let rpc_task_sleep = RpcTask::new("sleep", vec!["n"], temporary_sleep);
     let _ = RpcService::new(conf, "video")
-        .register(rpc_task_hello)
-        .register(rpc_task_fib)
-        .register(rpc_task_sleep)
-        .register(RpcTask::new("sub", vec!["a", "b"], substraction))
-        .register_fn(new_hello_rpc_task)
+        .register(hello)
+        .register(sub)
+        .register(sleep)
+        .register(fibonacci)
         .start();
 }
