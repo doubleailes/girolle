@@ -116,7 +116,7 @@ impl RpcService {
     /// use girolle::prelude::*;
     /// use std::vec;
     ///
-    /// fn hello(s: &[Value]) -> NamekoResult<Value> {
+    /// fn hello(s: &[Value]) -> GirolleResult<Value> {
     ///    // Parse the incomming data
     ///   let n: String = serde_json::from_value(s[0].clone())?;
     ///   let hello_str: Value = format!("Hello, {}!, by Girolle", n).into();

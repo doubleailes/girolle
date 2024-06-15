@@ -2,17 +2,23 @@ use proc_macro2::TokenStream;
 use quote::quote;
 use syn::fold::Fold;
 use syn::parse_quote;
+use syn::parse_str;
+use syn::Receiver;
 use syn::{parse2, FnArg, ItemFn};
 
 struct Task {
     args: Vec<FnArg>,
     inner_statements: Vec<syn::Stmt>,
+    deser_wrapper: Vec<syn::Stmt>,
+    args_input_core: Vec<syn::Pat>,
 }
 impl Task {
     fn new() -> Self {
         Task {
             args: Vec::new(),
             inner_statements: Vec::new(),
+            deser_wrapper: Vec::new(),
+            args_input_core: Vec::new(),
         }
     }
     fn add_input_serialize(&mut self) {
@@ -26,6 +32,7 @@ impl Task {
                 FnArg::Typed(pat_type) => {
                     let pat = &pat_type.pat;
                     let ty = &pat_type.ty;
+                    self.args_input_core.push(*pat.clone());
                     stmts.push(
                         parse_quote! {let #pat: #ty = serde_json::from_value(#data_quote.clone())?;},
                     );
@@ -34,9 +41,7 @@ impl Task {
             }
             i += 1;
         }
-        let previous_stmts = self.inner_statements.clone();
-        stmts.extend(previous_stmts.clone());
-        self.inner_statements = stmts.clone();
+        self.deser_wrapper = stmts.clone();
     }
     fn add_output_serialize(&mut self) {
         let last_imut = self.inner_statements.pop().clone();
@@ -65,7 +70,7 @@ impl Fold for Task {
             data: &[Value]
         };
         // Replace the return type by the NamekoFunction return type
-        folded_item.output = parse_quote! {-> NamekoResult<Value>};
+        folded_item.output = parse_quote! {-> GirolleResult<Value>};
         folded_item
     }
     fn fold_stmt(&mut self, i: syn::Stmt) -> syn::Stmt {
@@ -88,7 +93,10 @@ pub(crate) fn function(input: TokenStream) -> TokenStream {
     task.add_input_serialize();
     task.add_output_serialize();
     task.add_output_final();
-    new_item_fn.block.stmts = task.inner_statements.clone();
+    let mut temp_vec: Vec<syn::Stmt> = Vec::new();
+    temp_vec.extend(task.inner_statements);
+    temp_vec.extend(task.deser_wrapper);
+    new_item_fn.block.stmts = temp_vec;
     TokenStream::from(quote!(#new_item_fn))
 }
 
@@ -100,7 +108,10 @@ pub(crate) fn girolle_task(input: TokenStream) -> TokenStream {
     task.add_input_serialize();
     task.add_output_serialize();
     task.add_output_final();
-    new_item_fn.block.stmts = task.inner_statements.clone();
+    let mut temp_vec: Vec<syn::Stmt> = Vec::new();
+    temp_vec.extend(task.inner_statements);
+    temp_vec.extend(task.deser_wrapper.clone());
+    new_item_fn.block.stmts = temp_vec;
 
     let _inputs = &item_fn.sig.inputs;
     let args_str: Vec<String> = task
@@ -115,15 +126,22 @@ pub(crate) fn girolle_task(input: TokenStream) -> TokenStream {
         })
         .collect();
     let name_fn = quote! {#name}.to_string();
-    let rpc_task_name = syn::Ident::new(
-        &format!("{}_rpc_task", name),
-        proc_macro2::Span::call_site(),
-    );
-    new_item_fn.sig.ident = rpc_task_name.clone();
+    let fn_wrap_name = syn::Ident::new(&format!("{}_wrap", name), proc_macro2::Span::call_site());
+    let fn_core_name: syn::Ident =
+        syn::Ident::new(&format!("{}_core", name), proc_macro2::Span::call_site());
+    new_item_fn.sig.ident = fn_wrap_name.clone();
+    let mut fn_core = item_fn.clone();
+    fn_core.sig.ident = fn_core_name.clone();
+    let wrap = task.deser_wrapper;
+    let args_input_core: Vec<syn::Pat> = task.args_input_core.clone();
     let expanded = quote! {
-        #new_item_fn
+        #fn_core
+        fn #fn_wrap_name(data : & [Value]) -> GirolleResult<Value>{
+            #(#wrap)*
+            Ok(serde_json :: to_value(#fn_core_name(#(#args_input_core),*)) ?)
+        }
         fn #name() -> girolle::RpcTask {
-            girolle::RpcTask::new(#name_fn,vec![#(#args_str),*], #rpc_task_name)
+            girolle::RpcTask::new(#name_fn,vec![#(#args_str),*], #fn_wrap_name)
         }
     };
     println!("{}", expanded.to_string());

@@ -11,13 +11,6 @@ fn sub(a: i64, b: i64) -> i64 {
     a - b
 }
 
-fn fib(n: u64) -> u64 {
-    if n <= 1 {
-        return n;
-    }
-    return fib(n - 1) + fib(n - 2);
-}
-
 #[girolle_task]
 fn sleep(n: u64) -> String {
     thread::sleep(time::Duration::from_secs(n));
@@ -26,7 +19,10 @@ fn sleep(n: u64) -> String {
 
 #[girolle_task]
 fn fibonacci(n: u64) -> u64 {
-    fib(n)
+    if n <= 1 {
+        return n;
+    }
+    return fibonacci(n - 1) + fibonacci(n - 2);
 }
 
 fn main() {
