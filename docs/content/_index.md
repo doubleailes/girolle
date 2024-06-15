@@ -33,6 +33,10 @@ content = "<b>Girolle</b> is made to be really fast, leveraging Rust's speed and
 [[extra.list]]
 title = "Nameko Config"
 content = "<b>Girolle</b> is able to read Nameko configuration files"
+
+[[extra.list]]
+title = "Macro"
+content = "<b>Girolle</b> use the power of Rust macro to help you write less code"
  
 
 +++

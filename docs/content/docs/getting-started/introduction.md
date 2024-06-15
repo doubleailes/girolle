@@ -35,7 +35,7 @@ mokcing the **Nameko** architecture, and to use an abstract type
 
 ### macro procedural
 
-The lib a procedural macro `#[girolle]` to create a service like this:
+The lib offer a procedural macro `#[girolle]` to create a Task like this:
 
 ```rust
 use girolle::prelude::*;
@@ -46,8 +46,13 @@ fn hello(s: String) -> String {
 }
 ```
 
-The macro will replace the signature of the function by a `fn` that take a
-`&[Value]` and return a `Result<Value>`.
+The macro do a real complexe job. It transform the function into three functions:
+
+- The first function is a copy of the original function with a suffix `_core`.
+- The second one is just a wrapper to deserialize the input and serialize the output with serde_json.
+- The thrid one is the creation of the RpcTask.
+
+It returns a `fn()->RpcTask` that can be used to register to the RpcService.
 
 ### hand made deserialization and serialization
 
@@ -55,7 +60,14 @@ if you do not use the macro `#[girolle]` you need to create a function that
 extract the data from the a `&[Value]` like this and return a `Result<Value>`:
 
 ```rust
-fn fibonacci_reccursive(s: &[Value]) -> Result<Value> {
+fn fibonacci(n: u64) -> u64 {
+    if n <= 1 {
+        return n;
+    }
+    return fibonacci(n - 1) + fibonacci(n - 2);
+}
+
+fn fibonacci_wrap(s: &[Value]) -> Result<Value> {
     // extract the data from the Value
     let n: u64 = serde_json::from_value(s[0].clone())?;
     // create the result
@@ -63,4 +75,12 @@ fn fibonacci_reccursive(s: &[Value]) -> Result<Value> {
     // return the result in a Result
     Ok(result)
 }
+
+fn fibonacci_task() -> RpcTask {
+    RpcTask::new("fibonacci", vec!["n"], fibonacci)
+}
 ```
+
+As you can see it is little bit more complexe than the macro. To create the RpcTask we need to
+set the name of the method, the list of the argument and the function that will be called. With this breabdown
+workflow you get more control to like the method register in the AMQP server.
