@@ -264,12 +264,10 @@ fn build_inputs_fn_service(
         let mut result: Vec<Value> = Vec::new();
         result.extend(args.clone());
         for i in args.len()..args.len() + kwargs.len() {
-            result.push(
-                kwargs
-                    .get(service_args[i])
-                    .expect("Arguments Error")
-                    .clone(),
-            );
+            result.push(match kwargs.get(service_args[i]) {
+                Some(value) => value.clone(),
+                None => return Err(GirolleError::ArgumentsError),
+            });
         }
         Ok(result)
     } else {
