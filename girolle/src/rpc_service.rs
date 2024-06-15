@@ -317,7 +317,6 @@ fn get_error_payload(error: GirolleError) -> String {
     )
     .to_string()
 }
-
 /// Execute the delivery
 async fn execute_delivery(
     delivery: Delivery,
@@ -339,7 +338,7 @@ async fn execute_delivery(
     let kwargs: HashMap<String, Value> = incomming_data["kwargs"]
         .as_object()
         .expect("kargs")
-        .iter()
+        .into_iter()
         .map(|(k, v)| (k.clone(), v.clone()))
         .collect();
     // Get the correlation_id and reply_to_id
