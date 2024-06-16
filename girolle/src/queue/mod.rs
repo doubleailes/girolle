@@ -108,6 +108,7 @@ pub async fn create_message_channel(
     response_arguments.insert("x-expires".into(), QUEUE_TTL.into());
     let mut queue_declare_options = QueueDeclareOptions::default();
     queue_declare_options.durable = true;
+    // Need to clone the response_arguments because the queue_declare function takes ownership of the FieldTable
     response_channel
         .queue_declare(
             rpc_queue_reply,

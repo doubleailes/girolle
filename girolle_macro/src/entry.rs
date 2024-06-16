@@ -83,10 +83,10 @@ impl Fold for Task {
 
 pub(crate) fn girolle_task(input: TokenStream) -> TokenStream {
     let item_fn = parse2::<ItemFn>(input).unwrap();
-    let name = &item_fn.sig.ident.clone();
+    let name = item_fn.sig.ident.clone();
     let mut task = Task::new(name.clone());
     task.args = item_fn.sig.inputs.iter().cloned().collect();
-    let new_item_fn = task.fold_item_fn(item_fn.clone());
+    let new_item_fn = task.fold_item_fn(item_fn);
     task.add_input_serialize();
     let args_str: Vec<String> = task
         .args

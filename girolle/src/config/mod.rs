@@ -232,10 +232,9 @@ impl Config {
     ///
     /// A Config that holds the new configuration.
     // Get the max workers
-    pub fn with_amqp_uri(&self, amqp_uri: &str) -> Config {
-        let mut new_config = self.clone();
-        new_config.AMQP_URI = Some(amqp_uri.to_string());
-        new_config
+    pub fn with_amqp_uri(mut self, amqp_uri: &str) -> Config {
+        self.AMQP_URI = Some(amqp_uri.to_string());
+        self
     }
     /// # with_prefetch_count
     ///
@@ -250,10 +249,9 @@ impl Config {
     /// ## Returns
     ///
     /// A Config that holds the new configuration.
-    pub fn with_prefetch_count(&self, prefetch_count: u16) -> Config {
-        let mut new_config = self.clone();
-        new_config.prefetch_count = Some(prefetch_count);
-        new_config
+    pub fn with_prefetch_count(mut self, prefetch_count: u16) -> Config {
+        self.prefetch_count = Some(prefetch_count);
+        self
     }
     /// # with_heartbeat
     ///
@@ -268,10 +266,9 @@ impl Config {
     /// ## Returns
     ///
     /// A Config that holds the new configuration.
-    pub fn with_heartbeat(&self, heartbeat: u16) -> Config {
-        let mut new_config = self.clone();
-        new_config.heartbeat = Some(heartbeat);
-        new_config
+    pub fn with_heartbeat(mut self, heartbeat: u16) -> Config {
+        self.heartbeat = Some(heartbeat);
+        self
     }
     /// # with_rpc_exchange
     ///
@@ -286,10 +283,9 @@ impl Config {
     /// ## Returns
     ///
     /// A Config that holds the new configuration.
-    pub fn with_rpc_exchange(&self, rpc_exchange: &str) -> Config {
-        let mut new_config = self.clone();
-        new_config.rpc_exchange = Some(rpc_exchange.to_string());
-        new_config
+    pub fn with_rpc_exchange(mut self, rpc_exchange: &str) -> Config {
+        self.rpc_exchange = Some(rpc_exchange.to_string());
+        self
     }
     /// # with_max_workers
     ///
@@ -304,10 +300,9 @@ impl Config {
     /// ## Returns
     ///
     /// A Config that holds the new configuration.
-    pub fn with_max_workers(&self, max_workers: u32) -> Config {
-        let mut new_config = self.clone();
-        new_config.max_workers = Some(max_workers);
-        new_config
+    pub fn with_max_workers(mut self, max_workers: u32) -> Config {
+        self.max_workers = Some(max_workers);
+        self
     }
 }
 
