@@ -22,9 +22,6 @@ section to see limitation.
 
 `cargo add girolle`
 
-## Stack
-
-Girolle use [lapin](https://github.com/amqp-rs/lapin) as an AMQP client/server library.
 
 ## Configuration
 
@@ -134,7 +131,7 @@ fn main() {
 ### Create multiple calls to service of methods, sync and async
 
 ```rust
-use girolle::{serde_json, Config, TargetService, RpcClient, Value};
+use girolle::{serde_json, Config, RpcClient, Value};
 use std::time::Instant;
 use std::vec;
 use std::{thread, time};
@@ -142,22 +139,22 @@ use std::{thread, time};
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let conf: Config = Config::with_yaml_defaults("staging/config.yml".to_string())?;
-    let video_name = "video";
+    let service_name = "video";
     // Create the rpc call struct
-    let rpc_client = RpcClient::new(conf);
-    let target_service_video: TargetService = rpc_client.create_target_service(video_name.to_string()).await?;
+    let mut rpc_client = RpcClient::new(conf);
+    rpc_client.register_service(service_name).await?;
     // Send the payload
-    let new_result = rpc_client.send(&target_service_video, "fibonacci", vec![30])?;
+    let new_result = rpc_client.send(service_name, "fibonacci", vec![30])?;
     let fib_result: u64 = serde_json::from_value(new_result)?;
     // Print the result
     println!("fibonacci :{:?}", fib_result);
     assert_eq!(fib_result, 832040);
-    let sub_result = rpc_client.send(&target_service_video, "sub", vec![10, 5])?;
+    let sub_result = rpc_client.send(service_name, "sub", vec![10, 5])?;
     assert_eq!(sub_result, Value::Number(serde_json::Number::from(5)));
     // Create a future result
-    let future_result = rpc_client.call_async(&target_service_video, "hello", vec!["Toto"]);
+    let future_result = rpc_client.call_async(service_name, "hello", vec!["Toto"]);
     // Send a message during the previous async process
-    let result = rpc_client.send(&target_service_video, "hello", vec!["Girolle"])?;
+    let result = rpc_client.send(service_name, "hello", vec!["Girolle"])?;
     // Print the result
     println!("{:?}", result);
     assert_eq!(result, Value::String("Hello, Girolle!".to_string()));
@@ -166,9 +163,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     thread::sleep(tempo);
     println!("exit sleep");
     // Print the result
-    let async_result = rpc_client
-        .result(future_result.await?)
-        .await;
+    let async_result = rpc_client.result(future_result.await?).await;
     println!("{:?}", async_result);
     assert_eq!(async_result?, Value::String("Hello, Toto!".to_string()));
     let start = Instant::now();
@@ -176,7 +171,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     for n in 1..1001 {
         consummers.push((
             n,
-            rpc_client.call_async(&target_service_video, "hello", vec![n.to_string()]),
+            rpc_client.call_async(service_name, "hello", vec![n.to_string()]),
         ));
     }
     // wait for it
@@ -187,16 +182,21 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
     let duration = start.elapsed() - tempo;
     println!("Time elapsed in expensive_function() is: {:?}", duration);
+    rpc_client.unregister_service("video")?;
     rpc_client.close().await?;
     Ok(())
 }
+
 ```
 
-## To-Do
-nameko-client
+## Stack
+
+Girolle use [lapin](https://github.com/amqp-rs/lapin) as an AMQP client/server library.
+
+## Supported features
+
 - [x] create a client
     - [ ] create a proxy service in rust to interact with an other service
-nameko-rpc
 - [x] Create a simple service
     - [x] Handle the error
     - [x] write test
@@ -204,8 +204,31 @@ nameko-rpc
   - [x] Add basic macro
   - [x] fix macro to handle `return`
   - [x] fix macro to handle recursive function
-nameko-pubsub
 - [ ] listen to a pub/sub queue
+
+### nameko-client
+
+The Girolle client got the basic features to send sync request and async resquest.
+I'm not really happy about the way it need to interact with. I would like to find a
+more elegant way like in the nameko. But it works, and it is not really painfull to
+use.
+
+### nameko-rpc
+
+The RpcService and the macro procedural are the core of the lib. It does not
+suppport **proxy**, i know that's one of the most important feature of the
+**Nameko** lib. I will try to implement it in the future. But i think i need a bit refactor
+the non-oriented object aspect of Rust make it harder.
+
+### nameko-pubsub
+
+The PubSub service is not at all implemented. I dunno if that's something i'm interested in.
+
+### nameko-web
+
+The web service is not implemented. I'm not sure if i will implement it. I need to rework the client
+to be make it 100% thread safe. It should be a commun subject with the proxy.
+
 
 ## Limitation
 
