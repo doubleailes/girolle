@@ -155,7 +155,8 @@ impl RpcService {
         if self.f.is_empty() {
             panic!("No function insert");
         }
-        rpc_service(self.conf.clone(), &self.service_name, self.f.clone())
+        // Need to clone f because it is behind a shared reference
+        rpc_service(&self.conf, &self.service_name, self.f.clone())
     }
     /// # get_routing_keys
     ///
@@ -233,6 +234,7 @@ async fn publish(
     reply_to_id: String,
     rpc_exchange: &str,
 ) -> lapin::Result<()> {
+    // Need to clone the rpc_channel to be able to use it in the tokio::spawn
     let rpc_channel_clone = rpc_channel.clone();
     let rpc_exchange_clone = rpc_exchange.to_string();
     tokio::spawn(async move {
@@ -254,16 +256,19 @@ async fn publish(
 }
 
 fn build_inputs_fn_service(
-    service_args: Vec<&str>,
+    service_args: &Vec<&str>,
     args: Vec<Value>,
     kwargs: HashMap<String, Value>,
 ) -> Result<Vec<Value>, GirolleError> {
-    if service_args.len() == args.len() {
+    let args_size: usize = args.len();
+    let kwargs_size: usize = kwargs.len();
+    let service_args_size: usize = service_args.len();
+    if service_args_size == args_size {
         Ok(args)
-    } else if service_args.len() == args.len() + kwargs.len() {
+    } else if service_args_size == args_size + kwargs_size {
         let mut result: Vec<Value> = Vec::new();
-        result.extend(args.clone());
-        for i in args.len()..args.len() + kwargs.len() {
+        result.extend(args);
+        for i in args_size..args_size + kwargs_size {
             result.push(match kwargs.get(service_args[i]) {
                 Some(value) => value.clone(),
                 None => return Err(GirolleError::ArgumentsError),
@@ -281,7 +286,7 @@ fn test_build_inputs_fn_service() {
     let args = vec![json!("value_a"), json!("value_b")];
     let mut kwargs = HashMap::new();
     kwargs.insert("c".to_string(), json!("value_c"));
-    let result = build_inputs_fn_service(service_args, args, kwargs).unwrap();
+    let result = build_inputs_fn_service(&service_args, args, kwargs).unwrap();
     assert_eq!(
         result,
         vec![json!("value_a"), json!("value_b"), json!("value_c")]
@@ -319,7 +324,7 @@ fn get_error_payload(error: GirolleError) -> String {
 async fn execute_delivery(
     delivery: Delivery,
     id: &Uuid,
-    rpc_task_struct: RpcTask,
+    rpc_task_struct: &RpcTask,
     rpc_channel: &Channel,
     rpc_queue: &str,
     rpc_exchange: &str,
@@ -330,7 +335,7 @@ async fn execute_delivery(
     let args: Vec<Value> = incomming_data["args"]
         .as_array()
         .expect("args")
-        .iter()
+        .into_iter()
         .map(|x| x.clone())
         .collect();
     let kwargs: HashMap<String, Value> = incomming_data["kwargs"]
@@ -342,9 +347,10 @@ async fn execute_delivery(
     // Get the correlation_id and reply_to_id
     let correlation_id = get_id(delivery.properties.correlation_id(), "correlation_id");
     let reply_to_id = get_id(delivery.properties.reply_to(), "reply_to_id");
-    let opt_headers = delivery.properties.headers().clone(); //need to clone to modify the headers
+    //need to clone to modify the headers
+    let opt_headers = delivery.properties.headers();
     let headers = match opt_headers {
-        Some(h) => insert_new_id_to_call_id(h, &opt_routing_key, &id.to_string()),
+        Some(h) => insert_new_id_to_call_id(h.clone(), &opt_routing_key, &id.to_string()),
         None => {
             error!("No headers found in delivery properties");
             return;
@@ -360,7 +366,7 @@ async fn execute_delivery(
         .with_priority(0);
     // Publish the response
     let fn_service = rpc_task_struct.inner_function;
-    let buildted_args = match build_inputs_fn_service(rpc_task_struct.args, args, kwargs) {
+    let buildted_args = match build_inputs_fn_service(&rpc_task_struct.args, args, kwargs) {
         Ok(result) => result,
         Err(error) => {
             publish(
@@ -424,7 +430,7 @@ struct SharedData {
 /// * `f_task` - The function to call
 #[tokio::main]
 async fn rpc_service(
-    conf: Config,
+    conf: &Config,
     service_name: &str,
     f_task: HashMap<String, RpcTask>,
 ) -> lapin::Result<()> {
@@ -482,8 +488,8 @@ async fn rpc_service(
             };
 
             let opt_routing_key = delivery.routing_key.to_string();
-            let rpc_task_struct: RpcTask = match shared_data_clone.f_task.get(&opt_routing_key) {
-                Some(rpc_task_struct) => rpc_task_struct.clone(),
+            let rpc_task_struct: &RpcTask = match shared_data_clone.f_task.get(&opt_routing_key) {
+                Some(rpc_task_struct) => rpc_task_struct,
                 None => {
                     warn!("fn_service: None for routing_key: {}", &opt_routing_key);
                     return;
