@@ -16,7 +16,7 @@ use std::{
     collections::BTreeMap,
     sync::{Arc, Mutex},
 };
-use tracing::{debug, error};
+use tracing::error;
 use uuid::Uuid;
 
 /// # RpcClient

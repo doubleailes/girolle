@@ -17,10 +17,6 @@ girolle = { path = "../girolle" }
 tokio = { workspace = true }
 
 [[example]]
-name = "advance_senders"
-path = "advance_senders.rs"
-
-[[example]]
 name = "simple_sender"
 path = "simple_sender.rs"
 
