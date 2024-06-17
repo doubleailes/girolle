@@ -20,7 +20,7 @@ pub type NamekoFunction = fn(&[Value]) -> GirolleResult<Value>;
 pub enum GirolleError {
     SerdeJsonError(serde_json::Error),
     LapinError(lapin::Error),
-    ArgumentsError,
+    ArgumentsError(String),
     RemoteError(String),
 }
 
@@ -29,7 +29,7 @@ impl fmt::Display for GirolleError {
         match self {
             GirolleError::SerdeJsonError(e) => write!(f, "Serde JSON error: {}", e),
             GirolleError::LapinError(e) => write!(f, "Lapin error: {}", e),
-            GirolleError::ArgumentsError => write!(f, "Arguments error"),
+            GirolleError::ArgumentsError(e) => write!(f, "Arguments error: {}", e),
             GirolleError::RemoteError(e) => write!(f, "Remote error: {}", e),
         }
     }
@@ -40,7 +40,7 @@ impl fmt::Debug for GirolleError {
         match self {
             GirolleError::SerdeJsonError(e) => write!(f, "Serde JSON error: {:?}", e),
             GirolleError::LapinError(e) => write!(f, "Lapin error: {:?}", e),
-            GirolleError::ArgumentsError => write!(f, "Arguments error"),
+            GirolleError::ArgumentsError(e) => write!(f, "Arguments error: {}", e),
             GirolleError::RemoteError(e) => write!(f, "Remote error: {:?}", e),
         }
     }

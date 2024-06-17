@@ -245,7 +245,7 @@ repository.
 |                    | nameko_test.py  | simple_sender.rs |
 |--------------------|-----------------|------------------|
 | nameko_service.py  |    15.587 s     |    17.754048ms   |
-| simple_macro.rs    |    15.654 s     |    16.398924ms   |
+| simple_macro.rs    |    15.654 s     |      8.078 s     |
 
 ### Client benchmark
 
