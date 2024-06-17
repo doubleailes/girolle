@@ -175,7 +175,7 @@ impl RpcClient {
         target_service: &str,
         method_name: &str,
         args: Vec<T>,
-    ) -> lapin::Result<RpcEventReply> {
+    ) -> lapin::Result<RpcReply> {
         if self.service_exist(target_service) == false {
             panic!("Service {} not found", target_service);
         }
@@ -223,7 +223,7 @@ impl RpcClient {
                 .expect("Failed to publish");
         });
 
-        Ok(RpcEventReply::new(correlation_id))
+        Ok(RpcReply::new(correlation_id))
     }
     /// # result
     ///
@@ -255,7 +255,7 @@ impl RpcClient {
     ///    let result = rpc_client.result(id)?;
     ///    Ok(())
     /// }
-    pub fn result(&self, rpc_event: RpcEventReply) -> GirolleResult<Value> {
+    pub fn result(&self, rpc_event: RpcReply) -> GirolleResult<Value> {
         let incomming_id = rpc_event.get_correlation_id();
         loop {
             let result = {
@@ -496,14 +496,14 @@ impl TargetService {
         self.channel.id()
     }
 }
-pub struct RpcEventReply {
+pub struct RpcReply {
     pub correlation_id: uuid::Uuid,
 }
-impl RpcEventReply {
-    pub fn new(correlation_id: uuid::Uuid) -> Self {
+impl RpcReply {
+    fn new(correlation_id: uuid::Uuid) -> Self {
         Self { correlation_id }
     }
-    pub fn get_correlation_id(&self) -> String {
+    fn get_correlation_id(&self) -> String {
         self.correlation_id.to_string()
     }
 }
