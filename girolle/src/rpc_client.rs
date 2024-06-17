@@ -75,6 +75,7 @@ impl RpcClient {
         let reply_channel = executor::block_on(create_message_channel(
             &conn,
             &reply_queue_name,
+            conf.prefetch_count(),
             &identifier,
             conf.rpc_exchange(),
         ))

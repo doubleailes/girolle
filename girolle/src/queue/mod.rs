@@ -99,6 +99,7 @@ pub async fn create_service_channel(
 pub async fn create_message_channel(
     conn: &Connection,
     rpc_queue_reply: &str,
+    prefetch_count: u16,
     id: &Uuid,
     rpc_exchange: &str,
 ) -> lapin::Result<lapin::Channel> {
@@ -120,7 +121,6 @@ pub async fn create_message_channel(
             // Handle or log the error
             e
         })?;
-    let prefetch_count: u16 = 10;
     response_channel
         .basic_qos(prefetch_count, BasicQosOptions::default())
         .await?;
