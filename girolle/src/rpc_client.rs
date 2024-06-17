@@ -175,13 +175,13 @@ impl RpcClient {
         target_service: &str,
         method_name: &str,
         args: Vec<T>,
-    ) -> lapin::Result<String> {
+    ) -> lapin::Result<RpcEventReply> {
         if self.service_exist(target_service) == false {
             panic!("Service {} not found", target_service);
         }
         let payload: Payload = Payload::new(json!(args));
         let routing_key = format!("{}.{}", target_service, method_name);
-        let correlation_id = Uuid::new_v4().to_string();
+        let correlation_id = Uuid::new_v4();
         let mut headers: BTreeMap<lapin::types::ShortString, AMQPValue> = BTreeMap::new();
         headers.insert(
             "nameko.AMQP_URI".into(),
@@ -195,7 +195,7 @@ impl RpcClient {
         );
         let properties: lapin::protocol::basic::AMQPProperties = BasicProperties::default()
             .with_reply_to(self.identifier.to_string().into())
-            .with_correlation_id(correlation_id.clone().into())
+            .with_correlation_id(correlation_id.to_string().into())
             .with_content_type("application/json".into())
             .with_content_encoding("utf-8".into())
             .with_headers(FieldTable::from(headers))
@@ -223,7 +223,7 @@ impl RpcClient {
                 .expect("Failed to publish");
         });
 
-        Ok(correlation_id)
+        Ok(RpcEventReply::new(correlation_id))
     }
     /// # result
     ///
@@ -245,20 +245,22 @@ impl RpcClient {
     /// use girolle::prelude::*;
     ///
     /// #[tokio::main]
-    /// async fn main() {
+    /// async fn main() -> Result<(), Box<dyn std::error::Error>> {
     ///    let conf = Config::with_yaml_defaults("config.yml".to_string()).unwrap();
     ///    let mut rpc_client = RpcClient::new(conf);
     ///    rpc_client.register_service("video").await.expect("call");
     ///    let method_name = "hello";
     ///    let args = vec!["John Doe"];
-    ///    let id = rpc_client.call_async("video", method_name, args);
-    ///    let result = rpc_client.result(id.await.expect("call")).await.expect("call");
+    ///    let id = rpc_client.call_async("video", method_name, args)?;
+    ///    let result = rpc_client.result(id)?;
+    ///    Ok(())
     /// }
-    pub fn result(&self, correlation_id: String) -> GirolleResult<Value> {
+    pub fn result(&self, rpc_event: RpcEventReply) -> GirolleResult<Value> {
+        let incomming_id = rpc_event.get_correlation_id();
         loop {
             let result = {
                 let replies = self.replies.lock().unwrap();
-                if let Some(value) = replies.get(&correlation_id) {
+                if let Some(value) = replies.get(&incomming_id) {
                     Some(value.clone())
                 } else {
                     None
@@ -268,7 +270,7 @@ impl RpcClient {
             match result {
                 Some(value) => {
                     let mut replies = self.replies.lock().unwrap();
-                    replies.remove(&correlation_id);
+                    replies.remove(&incomming_id);
                     match value["error"].as_object() {
                         Some(error) => {
                             error!("Error: {:?}", error);
@@ -492,5 +494,16 @@ impl TargetService {
     #[allow(dead_code)]
     fn get_call_channel_id(&self) -> u16 {
         self.channel.id()
+    }
+}
+pub struct RpcEventReply {
+    pub correlation_id: uuid::Uuid,
+}
+impl RpcEventReply {
+    pub fn new(correlation_id: uuid::Uuid) -> Self {
+        Self { correlation_id }
+    }
+    pub fn get_correlation_id(&self) -> String {
+        self.correlation_id.to_string()
     }
 }
