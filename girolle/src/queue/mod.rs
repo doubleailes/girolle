@@ -120,6 +120,10 @@ pub async fn create_message_channel(
             // Handle or log the error
             e
         })?;
+    let prefetch_count: u16 = 10;
+    response_channel
+        .basic_qos(prefetch_count, BasicQosOptions::default())
+        .await?;
     response_channel
         .queue_bind(
             rpc_queue_reply,

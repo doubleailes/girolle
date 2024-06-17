@@ -31,3 +31,7 @@ path = "simple_service.rs"
 [[example]]
 name = "simple_macro"
 path = "simple_macro.rs"
+
+[[example]]
+name = "async_test"
+path = "async_test.rs"

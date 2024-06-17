@@ -2,20 +2,23 @@ use crate::config::Config;
 use crate::payload::Payload;
 use crate::queue::{create_message_channel, create_service_channel, get_connection};
 use crate::types::GirolleResult;
-use futures::{executor, stream::StreamExt};
+use futures::executor;
+use futures::StreamExt;
 use lapin::{
+    message::DeliveryResult,
     options::*,
     types::{AMQPValue, FieldArray, FieldTable},
     BasicProperties, Connection,
 };
-use serde::Serialize;
+use serde::{de, Serialize};
 use serde_json::{json, Value};
 use std::collections::HashMap;
 use std::{
     collections::BTreeMap,
     sync::{Arc, Mutex},
 };
-use tracing::error;
+use tracing::{debug, error};
+use tracing_subscriber::field::debug;
 use uuid::Uuid;
 
 /// # RpcClient
@@ -39,8 +42,8 @@ pub struct RpcClient {
     identifier: Uuid,
     conn: Connection,
     reply_channel: lapin::Channel,
-    consumer: Arc<Mutex<lapin::Consumer>>,
     services: HashMap<String, TargetService>,
+    replies: Arc<Mutex<HashMap<String, Value>>>,
 }
 impl RpcClient {
     /// # new
@@ -78,21 +81,47 @@ impl RpcClient {
             conf.rpc_exchange(),
         ))
         .expect("Can't create reply channel");
-        let consumer_arc = executor::block_on(reply_channel.basic_consume(
-            &reply_queue_name,
-            &format!("girolle_consumer"),
-            BasicConsumeOptions::default(),
-            FieldTable::default(),
-        ))
-        .expect("Failed to create consumer");
         Self {
             conf,
             identifier,
             conn,
             reply_channel,
-            consumer: Arc::new(Mutex::new(consumer_arc)),
             services: HashMap::new(),
+            replies: Arc::new(Mutex::new(HashMap::new())),
         }
+    }
+    pub async fn start(&mut self) -> GirolleResult<()> {
+        let reply_queue_name = format!("rpc.listener-{}", self.identifier);
+        let consumer = self
+            .reply_channel
+            .basic_consume(
+                &reply_queue_name,
+                "girolle_consumer",
+                BasicConsumeOptions::default(),
+                FieldTable::default(),
+            )
+            .await?;
+        let channel = self.reply_channel.clone();
+        let replies = self.replies.clone();
+        consumer.set_delegate(move |delivery: DeliveryResult| {
+            let channel = channel.clone();
+            let replies = replies.clone();
+            async move {
+                if let Ok(Some(delivery)) = delivery {
+                    let correlation_id = delivery.properties.correlation_id().clone().unwrap();
+                    let payload = serde_json::from_slice(&delivery.data).expect("json");
+                    replies
+                        .lock()
+                        .unwrap()
+                        .insert(correlation_id.to_string(), payload);
+                    channel
+                        .basic_ack(delivery.delivery_tag, BasicAckOptions::default())
+                        .await
+                        .expect("ack");
+                }
+            }
+        });
+        Ok(())
     }
     /// # get_identifier
     ///
@@ -143,7 +172,7 @@ impl RpcClient {
     ///    let consumer = rpc_client.call_async("video", method_name, args);
     /// }
     ///
-    pub async fn call_async<T: Serialize>(
+    pub fn call_async<T: Serialize>(
         &self,
         target_service: &str,
         method_name: &str,
@@ -183,8 +212,8 @@ impl RpcClient {
                     &exchange_clone,
                     &routing_key,
                     BasicPublishOptions {
-                        mandatory: true,
-                        ..BasicPublishOptions::default()
+                        mandatory: false,
+                        immediate: false,
                     },
                     serde_json::to_value(payload)
                         .expect("json")
@@ -193,9 +222,7 @@ impl RpcClient {
                     properties,
                 )
                 .await
-                .expect("Failed to publish")
-                .await
-                .expect("Failed to confirm");
+                .expect("Failed to publish");
         });
 
         Ok(correlation_id)
@@ -229,41 +256,23 @@ impl RpcClient {
     ///    let id = rpc_client.call_async("video", method_name, args);
     ///    let result = rpc_client.result(id.await.expect("call")).await.expect("call");
     /// }
-    pub async fn result(&self, correlation_id: String) -> lapin::Result<Value> {
-        let consumer_arc_mutex: Arc<Mutex<lapin::Consumer>> = Arc::clone(&self.consumer);
-
+    pub fn result(&self, correlation_id: String) -> lapin::Result<Value> {
+        let mut replies = self.replies.lock().unwrap();
         loop {
-            let delivery = {
-                let mut consumer = consumer_arc_mutex.lock().unwrap();
-                consumer
-                    .next()
-                    .await
-                    .expect("error in consumer")
-                    .expect("error in consumer")
-            };
-
-            let current_id = delivery
-                .properties
-                .correlation_id()
-                .clone()
-                .unwrap()
-                .to_string();
-
-            if current_id == correlation_id {
-                let mut incomming_data: Value =
-                    serde_json::from_slice(&delivery.data).expect("json");
-                delivery.ack(BasicAckOptions::default()).await.expect("ack");
-
-                match incomming_data["error"].as_object() {
-                    Some(error) => {
-                        let value = error["value"].as_str().expect("value");
-                        error!("Error: {}", value);
-                        panic!("Error: {}", value);
-                    }
-                    None => {}
+            match replies.get(&correlation_id) {
+                Some(value) => {
+                    let result = value.clone();
+                    replies.remove(&correlation_id);
+                    return Ok(result);
                 }
-
-                return Ok(incomming_data["result"].take());
+                None => {
+                    debug!(
+                        "Waiting for result for {} replies len {}",
+                        correlation_id,
+                        replies.len()
+                    );
+                    std::thread::sleep(std::time::Duration::from_millis(100));
+                }
             }
         }
     }
@@ -303,9 +312,8 @@ impl RpcClient {
         method_name: &str,
         args: Vec<T>,
     ) -> GirolleResult<Value> {
-        let id =
-            executor::block_on(self.call_async(target_service, method_name, args)).expect("call");
-        Ok(executor::block_on(self.result(id)).expect("call"))
+        let id = self.call_async(target_service, method_name, args)?;
+        Ok(self.result(id)?)
     }
     fn service_exist(&self, service_name: &str) -> bool {
         self.services.contains_key(service_name)
