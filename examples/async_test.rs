@@ -2,13 +2,10 @@ use girolle::prelude::*;
 use std::time::Instant;
 use std::vec;
 use std::{thread, time};
-use tracing::Level;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    tracing_subscriber::fmt()
-        .with_max_level(Level::DEBUG)
-        .init();
+    tracing_subscriber::fmt::init();
     let conf: Config = Config::with_yaml_defaults("staging/config.yml".to_string())?;
     let service_name = "video";
     // Create the rpc call struct

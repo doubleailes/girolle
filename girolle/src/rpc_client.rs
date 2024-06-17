@@ -255,7 +255,6 @@ impl RpcClient {
     ///    let result = rpc_client.result(id.await.expect("call")).await.expect("call");
     /// }
     pub fn result(&self, correlation_id: String) -> GirolleResult<Value> {
-        let mut count: usize = 0;
         loop {
             let result = {
                 let replies = self.replies.lock().unwrap();
@@ -282,18 +281,9 @@ impl RpcClient {
                     }
                 }
                 None => {
-                    debug!(
-                        "Waiting for result for {} replies len {}",
-                        correlation_id,
-                        self.replies.lock().unwrap().len()
-                    );
                     std::thread::sleep(std::time::Duration::from_nanos(4));
                 }
             }
-
-            count += 1;
-            debug!("Count {}", count);
-            std::thread::sleep(std::time::Duration::from_secs_f32(1.0));
         }
     }
     /// # send
