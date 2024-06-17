@@ -21,6 +21,7 @@ pub enum GirolleError {
     SerdeJsonError(serde_json::Error),
     LapinError(lapin::Error),
     ArgumentsError,
+    RemoteError(String),
 }
 
 impl fmt::Display for GirolleError {
@@ -29,6 +30,7 @@ impl fmt::Display for GirolleError {
             GirolleError::SerdeJsonError(e) => write!(f, "Serde JSON error: {}", e),
             GirolleError::LapinError(e) => write!(f, "Lapin error: {}", e),
             GirolleError::ArgumentsError => write!(f, "Arguments error"),
+            GirolleError::RemoteError(e) => write!(f, "Remote error: {}", e),
         }
     }
 }
@@ -39,6 +41,7 @@ impl fmt::Debug for GirolleError {
             GirolleError::SerdeJsonError(e) => write!(f, "Serde JSON error: {:?}", e),
             GirolleError::LapinError(e) => write!(f, "Lapin error: {:?}", e),
             GirolleError::ArgumentsError => write!(f, "Arguments error"),
+            GirolleError::RemoteError(e) => write!(f, "Remote error: {:?}", e),
         }
     }
 }

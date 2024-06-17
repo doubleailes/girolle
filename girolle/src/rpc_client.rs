@@ -1,16 +1,15 @@
 use crate::config::Config;
 use crate::payload::Payload;
 use crate::queue::{create_message_channel, create_service_channel, get_connection};
-use crate::types::GirolleResult;
+use crate::types::{GirolleError, GirolleResult};
 use futures::executor;
-use futures::StreamExt;
 use lapin::{
     message::DeliveryResult,
     options::*,
     types::{AMQPValue, FieldArray, FieldTable},
     BasicProperties, Connection,
 };
-use serde::{de, Serialize};
+use serde::Serialize;
 use serde_json::{json, Value};
 use std::collections::HashMap;
 use std::{
@@ -18,7 +17,6 @@ use std::{
     sync::{Arc, Mutex},
 };
 use tracing::{debug, error};
-use tracing_subscriber::field::debug;
 use uuid::Uuid;
 
 /// # RpcClient
@@ -256,24 +254,46 @@ impl RpcClient {
     ///    let id = rpc_client.call_async("video", method_name, args);
     ///    let result = rpc_client.result(id.await.expect("call")).await.expect("call");
     /// }
-    pub fn result(&self, correlation_id: String) -> lapin::Result<Value> {
-        let mut replies = self.replies.lock().unwrap();
+    pub fn result(&self, correlation_id: String) -> GirolleResult<Value> {
+        let mut count: usize = 0;
         loop {
-            match replies.get(&correlation_id) {
+            let result = {
+                let replies = self.replies.lock().unwrap();
+                if let Some(value) = replies.get(&correlation_id) {
+                    Some(value.clone())
+                } else {
+                    None
+                }
+            };
+
+            match result {
                 Some(value) => {
-                    let result = value.clone();
+                    let mut replies = self.replies.lock().unwrap();
                     replies.remove(&correlation_id);
-                    return Ok(result);
+                    match value["error"].as_object() {
+                        Some(error) => {
+                            error!("Error: {:?}", error);
+                            let e = error["exc_type"].as_str().unwrap().to_string();
+                            return Err(GirolleError::RemoteError(e));
+                        }
+                        None => {
+                            return Ok(value["result"].clone());
+                        }
+                    }
                 }
                 None => {
                     debug!(
                         "Waiting for result for {} replies len {}",
                         correlation_id,
-                        replies.len()
+                        self.replies.lock().unwrap().len()
                     );
-                    std::thread::sleep(std::time::Duration::from_millis(100));
+                    std::thread::sleep(std::time::Duration::from_nanos(4));
                 }
             }
+
+            count += 1;
+            debug!("Count {}", count);
+            std::thread::sleep(std::time::Duration::from_secs_f32(1.0));
         }
     }
     /// # send

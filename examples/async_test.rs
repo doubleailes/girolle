@@ -15,11 +15,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut rpc_client = RpcClient::new(conf);
     rpc_client.register_service(service_name).await?;
     rpc_client.start().await?;
-    let tempo: time::Duration = time::Duration::from_secs(4);
+    let tempo: time::Duration = time::Duration::from_secs(2);
     let start = Instant::now();
     let mut consummers: Vec<_> = Vec::new();
     println!("Start expensive function");
-    for n in 0..1000 {
+    for n in 0..1000000 {
         consummers.push((
             n,
             rpc_client.call_async(service_name, "hello", vec![n.to_string()])?,
