@@ -271,12 +271,18 @@ fn build_inputs_fn_service(
         for i in args_size..args_size + kwargs_size {
             result.push(match kwargs.get(service_args[i]) {
                 Some(value) => value.clone(),
-                None => return Err(GirolleError::ArgumentsError),
+                None => {
+                    return Err(GirolleError::ArgumentsError(
+                        "Key is missing in kwargs".to_string(),
+                    ))
+                }
             });
         }
         Ok(result)
     } else {
-        Err(GirolleError::ArgumentsError)
+        Err(GirolleError::ArgumentsError(
+            "Length of the arguments is not correct".to_string(),
+        ))
     }
 }
 

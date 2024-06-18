@@ -10,6 +10,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Create the rpc call struct
     let mut rpc_client = RpcClient::new(conf);
     rpc_client.register_service(service_name).await?;
+    rpc_client.start().await?;
     // Send the payload
     let new_result = rpc_client.send(service_name, "fibonacci", vec![30])?;
     let fib_result: u64 = serde_json::from_value(new_result)?;
@@ -19,7 +20,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let sub_result = rpc_client.send(service_name, "sub", vec![10, 5])?;
     assert_eq!(sub_result, Value::Number(serde_json::Number::from(5)));
     // Create a future result
-    let future_result = rpc_client.call_async(service_name, "hello", vec!["Toto"]);
+    let future_result = rpc_client.call_async(service_name, "hello", vec!["Toto"])?;
     // Send a message during the previous async process
     let result = rpc_client.send(service_name, "hello", vec!["Girolle"])?;
     // Print the result
@@ -30,9 +31,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     thread::sleep(tempo);
     println!("exit sleep");
     // Print the result
-    let async_result = rpc_client.result(future_result.await?).await;
+    let async_result = rpc_client.result(future_result)?;
     println!("{:?}", async_result);
-    assert_eq!(async_result?, Value::String("Hello, Toto!".to_string()));
+    assert_eq!(async_result, Value::String("Hello, Toto!".to_string()));
     let start = Instant::now();
     let mut consummers: Vec<_> = Vec::new();
     for n in 1..1001 {
@@ -44,8 +45,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // wait for it
     thread::sleep(tempo);
     for con in consummers {
-        let id = con.1.await?;
-        let _async_result = rpc_client.result(id).await?;
+        let _async_result = rpc_client.result(con.1?)?;
     }
     let duration = start.elapsed() - tempo;
     println!("Time elapsed in expensive_function() is: {:?}", duration);
