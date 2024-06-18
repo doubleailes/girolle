@@ -19,7 +19,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     for n in 0..1000000 {
         consummers.push((
             n,
-            rpc_client.call_async(service_name, "hello", vec![n.to_string()])?,
+            rpc_client.call_async(service_name, "hello", Payload::new().arg(n.to_string()))?,
         ));
     }
     println!("Enter sleep");

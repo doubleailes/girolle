@@ -42,7 +42,8 @@
 //! async fn main() {
 //!    let mut rpc_client = RpcClient::new(Config::default_config());
 //!    rpc_client.register_service("video");
-//!    let result = rpc_client.send("video", "hello", vec!["Girolle"]).unwrap();
+//!    
+//!    let result = rpc_client.send("video", "hello", Payload::new().arg("Girolle")).unwrap();
 //! }
 //! ```
 mod config;
@@ -58,5 +59,6 @@ pub use rpc_service::RpcService;
 mod rpc_task;
 pub use rpc_task::RpcTask;
 mod payload;
+pub use payload::Payload;
 pub use serde_json;
 pub use serde_json::{json, Value};

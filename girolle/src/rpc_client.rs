@@ -9,8 +9,7 @@ use lapin::{
     types::{AMQPValue, FieldArray, FieldTable},
     BasicProperties, Connection,
 };
-use serde::Serialize;
-use serde_json::{json, Value};
+use serde_json::Value;
 use std::collections::HashMap;
 use std::{
     collections::BTreeMap,
@@ -90,17 +89,17 @@ impl RpcClient {
         }
     }
     /// # start
-    /// 
+    ///
     /// ## Description
-    /// 
+    ///
     /// This function start the RpcClient. It create a consumer to listen and consume all incoming
     /// messages from the AMQP server. And store the result in the replies HashMap.
-    /// 
+    ///
     /// ## Example
-    /// 
+    ///
     /// ```rust,no_run
     /// use girolle::prelude::*;
-    /// 
+    ///
     /// #[tokio::main]
     /// async fn main() {
     ///    let mut rpc_client = RpcClient::new(Config::default_config());
@@ -187,23 +186,21 @@ impl RpcClient {
     ///    let mut rpc_client = RpcClient::new(conf);
     ///    rpc_client.register_service("video").await.expect("call");
     ///    let method_name = "hello";
-    ///    let args = vec!["John Doe"];
-    ///    let consumer = rpc_client.call_async("video", method_name, args);
+    ///    let consumer = rpc_client.call_async("video", method_name, Paylaod::new().arg("John Doe"));
     /// }
     ///
-    pub fn call_async<T: Serialize>(
+    pub fn call_async(
         &self,
         target_service: &str,
         method_name: &str,
-        args: Vec<T>,
-    ) -> Result<RpcReply,GirolleError> {
+        payload: Payload,
+    ) -> Result<RpcReply, GirolleError> {
         if self.service_exist(target_service) == false {
             return Err(GirolleError::ServiceMissingError(format!(
                 "Service {} is missing",
                 target_service
-            )))
+            )));
         }
-        let payload: Payload = Payload::new(json!(args));
         let routing_key = format!("{}.{}", target_service, method_name);
         let correlation_id = Uuid::new_v4();
         let mut headers: BTreeMap<lapin::types::ShortString, AMQPValue> = BTreeMap::new();
@@ -237,10 +234,7 @@ impl RpcClient {
                         mandatory: false,
                         immediate: false,
                     },
-                    serde_json::to_value(payload)
-                        .expect("json")
-                        .to_string()
-                        .as_bytes(),
+                    payload.to_string().as_bytes(),
                     properties,
                 )
                 .await
@@ -342,14 +336,13 @@ impl RpcClient {
     ///    let args = vec!["John Doe"];
     ///     let result = rpc_client.send("video", method_name, args).expect("call");
     /// }
-    pub fn send<T: Serialize>(
+    pub fn send(
         &self,
         target_service: &str,
         method_name: &str,
-        args: Vec<T>,
+        payload: Payload,
     ) -> GirolleResult<Value> {
-        let id = self.call_async(target_service, method_name, args)?;
-        Ok(self.result(id)?)
+        Ok(self.result(self.call_async(target_service, method_name, payload)?)?)
     }
     fn service_exist(&self, service_name: &str) -> bool {
         self.services.contains_key(service_name)
