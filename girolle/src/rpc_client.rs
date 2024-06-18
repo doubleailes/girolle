@@ -89,6 +89,23 @@ impl RpcClient {
             replies: Arc::new(Mutex::new(HashMap::new())),
         }
     }
+    /// # start
+    /// 
+    /// ## Description
+    /// 
+    /// This function start the RpcClient. It create a consumer to listen and consume all incoming
+    /// messages from the AMQP server. And store the result in the replies HashMap.
+    /// 
+    /// ## Example
+    /// 
+    /// ```rust,no_run
+    /// use girolle::prelude::*;
+    /// 
+    /// #[tokio::main]
+    /// async fn main() {
+    ///    let mut rpc_client = RpcClient::new(Config::default_config());
+    ///    rpc_client.start().await.expect("call");
+    /// }
     pub async fn start(&mut self) -> GirolleResult<()> {
         let reply_queue_name = format!("rpc.listener-{}", self.identifier);
         let consumer = self
@@ -107,12 +124,15 @@ impl RpcClient {
             let replies = replies.clone();
             async move {
                 if let Ok(Some(delivery)) = delivery {
-                    let correlation_id = delivery.properties.correlation_id().clone().unwrap();
+                    let correlation_id = delivery.properties.correlation_id().clone();
                     let payload = serde_json::from_slice(&delivery.data).expect("json");
-                    replies
-                        .lock()
-                        .unwrap()
-                        .insert(correlation_id.to_string(), payload);
+                    if let Ok(mut replies) = replies.lock() {
+                        if let Some(correlation_id) = correlation_id {
+                            replies.insert(correlation_id.to_string(), payload);
+                        } else {
+                            error!("Correlation id is missing");
+                        }
+                    }
                     channel
                         .basic_ack(delivery.delivery_tag, BasicAckOptions::default())
                         .await
@@ -176,9 +196,12 @@ impl RpcClient {
         target_service: &str,
         method_name: &str,
         args: Vec<T>,
-    ) -> lapin::Result<RpcReply> {
+    ) -> Result<RpcReply,GirolleError> {
         if self.service_exist(target_service) == false {
-            panic!("Service {} not found", target_service);
+            return Err(GirolleError::ServiceMissingError(format!(
+                "Service {} is missing",
+                target_service
+            )))
         }
         let payload: Payload = Payload::new(json!(args));
         let routing_key = format!("{}.{}", target_service, method_name);

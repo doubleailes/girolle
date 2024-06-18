@@ -22,6 +22,7 @@ pub enum GirolleError {
     LapinError(lapin::Error),
     ArgumentsError(String),
     RemoteError(String),
+    ServiceMissingError(String),
 }
 
 impl fmt::Display for GirolleError {
@@ -31,6 +32,7 @@ impl fmt::Display for GirolleError {
             GirolleError::LapinError(e) => write!(f, "Lapin error: {}", e),
             GirolleError::ArgumentsError(e) => write!(f, "Arguments error: {}", e),
             GirolleError::RemoteError(e) => write!(f, "Remote error: {}", e),
+            GirolleError::ServiceMissingError(e) => write!(f, "Service missing error: {}", e),
         }
     }
 }
@@ -42,6 +44,7 @@ impl fmt::Debug for GirolleError {
             GirolleError::LapinError(e) => write!(f, "Lapin error: {:?}", e),
             GirolleError::ArgumentsError(e) => write!(f, "Arguments error: {}", e),
             GirolleError::RemoteError(e) => write!(f, "Remote error: {:?}", e),
+            GirolleError::ServiceMissingError(e) => write!(f, "Service missing error: {:?}", e),
         }
     }
 }
