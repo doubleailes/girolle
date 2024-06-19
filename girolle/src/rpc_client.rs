@@ -2,6 +2,7 @@ use crate::config::Config;
 use crate::payload::Payload;
 use crate::queue::{create_message_channel, create_service_channel, get_connection};
 use crate::types::{GirolleError, GirolleResult};
+use std::time::{Duration, SystemTime,SystemTimeError};
 use futures::executor;
 use lapin::{
     message::DeliveryResult,
@@ -268,11 +269,17 @@ impl RpcClient {
     ///    let mut rpc_client = RpcClient::new(conf);
     ///    rpc_client.register_service("video").await.expect("call");
     ///    let method_name = "hello";
-    ///    let id = rpc_client.call_async("video", method_name, Payload::new().arg("John Doe"))?;
-    ///    let result = rpc_client.result(id)?;
+    ///    let rpc_event = rpc_client.call_async("video", method_name, Payload::new().arg("John Doe"))?;
+    ///    let result = rpc_client.result(&rpc_event)?;
     ///    Ok(())
     /// }
-    pub fn result(&self, rpc_event: RpcReply) -> GirolleResult<Value> {
+    pub fn result(&self, rpc_event: &RpcReply) -> GirolleResult<RpcResult> {
+        Ok(RpcResult::new(
+            self._result(rpc_event)?,
+            rpc_event.get_elapsed_time()?,
+        ))
+    }
+    fn _result(&self, rpc_event: &RpcReply) -> GirolleResult<Value> {
         let incomming_id = rpc_event.get_correlation_id();
         loop {
             let result = {
@@ -339,12 +346,18 @@ impl RpcClient {
         target_service: &str,
         method_name: &str,
         payload: Payload,
-    ) -> GirolleResult<Value> {
-        Ok(self.result(self.call_async(target_service, method_name, payload)?)?)
+    ) -> GirolleResult<RpcResult> {
+        let rpc_event = self.call_async(target_service, method_name, payload)?;
+        Ok(RpcResult::new(
+            self._result(&rpc_event)?,
+            rpc_event.get_elapsed_time()?,
+
+        ))
     }
     fn service_exist(&self, service_name: &str) -> bool {
         self.services.contains_key(service_name)
     }
+    
     /// # get_config
     ///
     /// ## Description
@@ -511,14 +524,118 @@ impl TargetService {
         self.channel.id()
     }
 }
+/// # RpcReply
+/// 
+/// ## Description
+/// 
+/// This struct is used to create a RPC reply. It contains the correlation_id and the time_stamp
 pub struct RpcReply {
-    pub correlation_id: uuid::Uuid,
+    correlation_id: uuid::Uuid,
+    time_stamp: SystemTime,
+
 }
 impl RpcReply {
     fn new(correlation_id: uuid::Uuid) -> Self {
-        Self { correlation_id }
+        Self { correlation_id, time_stamp: SystemTime::now()}
     }
-    fn get_correlation_id(&self) -> String {
+    pub fn get_correlation_id(&self) -> String {
         self.correlation_id.to_string()
+    }
+    pub fn get_elapsed_time(&self) -> Result<Duration, SystemTimeError> {
+        self.time_stamp.elapsed()
+    }
+}
+
+/// # RpcResult
+/// 
+/// ## Description
+/// 
+/// This struct is used to create a RPC result. It contains the result and the elapsed_time
+pub struct RpcResult {
+    result: Value,
+    elapsed_time: Duration,
+}
+impl RpcResult {
+    fn new(result: Value, elapsed_time: Duration) -> Self {
+        Self {
+            result,
+            elapsed_time,
+        }
+    }
+    /// # get_result
+    /// 
+    /// ## Description
+    /// 
+    /// This function return the result of the RPC call as `serde_json::Value`
+    pub fn get_value(&self) -> Value {
+        self.result.clone()
+    }
+    /// # get_elapsed_time
+    /// 
+    /// ## Description
+    /// 
+    /// This function return the elapsed time of the RPC call as `std::time::Duration`
+    pub fn get_elapsed_time(&self) -> Duration {
+        self.elapsed_time
+    }
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+    use std::time::Duration;
+    use uuid::Uuid;
+
+    #[test]
+    fn test_rpc_result_new() {
+        let result = json!({"success": true});
+        let elapsed_time = Duration::from_secs(5);
+        let rpc_result = RpcResult::new(result.clone(), elapsed_time);
+
+        assert_eq!(rpc_result.get_value(), result);
+        assert_eq!(rpc_result.get_elapsed_time(), elapsed_time);
+    }
+
+    #[test]
+    fn test_rpc_result_get_value() {
+        let result = json!({"success": true});
+        let elapsed_time = Duration::from_secs(5);
+        let rpc_result = RpcResult::new(result.clone(), elapsed_time);
+
+        assert_eq!(rpc_result.get_value(), result);
+    }
+
+    #[test]
+    fn test_rpc_result_get_elapsed_time() {
+        let result = json!({"success": true});
+        let elapsed_time = Duration::from_secs(5);
+        let rpc_result = RpcResult::new(result, elapsed_time);
+
+        assert_eq!(rpc_result.get_elapsed_time(), elapsed_time);
+    }
+    #[test]
+    fn test_rpc_reply_new() {
+        let correlation_id = Uuid::new_v4();
+        let rpc_reply = RpcReply::new(correlation_id);
+
+        assert_eq!(rpc_reply.get_correlation_id(), correlation_id.to_string());
+    }
+
+    #[test]
+    fn test_rpc_reply_get_correlation_id() {
+        let correlation_id = Uuid::new_v4();
+        let rpc_reply = RpcReply::new(correlation_id);
+
+        assert_eq!(rpc_reply.get_correlation_id(), correlation_id.to_string());
+    }
+
+    #[test]
+    fn test_rpc_reply_get_elapsed_time() {
+        let correlation_id = Uuid::new_v4();
+        let rpc_reply = RpcReply::new(correlation_id);
+
+        // We can't predict the exact elapsed time, but it should be a very small duration
+        let elapsed_time = rpc_reply.get_elapsed_time().unwrap();
+        assert!(elapsed_time < Duration::from_secs(1));
     }
 }

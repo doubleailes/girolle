@@ -1,6 +1,6 @@
 [package]
 name = "girolle_macro"
-version = "1.7.2"
+version = "1.8.0"
 edition = "2021"
 readme = "../README.md"
 license-file = "../LICENSE"
