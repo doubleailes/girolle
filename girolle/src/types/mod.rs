@@ -23,6 +23,7 @@ pub enum GirolleError {
     ArgumentsError(String),
     RemoteError(String),
     ServiceMissingError(String),
+    SystemTimeError(std::time::SystemTimeError),
 }
 
 impl fmt::Display for GirolleError {
@@ -33,6 +34,7 @@ impl fmt::Display for GirolleError {
             GirolleError::ArgumentsError(e) => write!(f, "Arguments error: {}", e),
             GirolleError::RemoteError(e) => write!(f, "Remote error: {}", e),
             GirolleError::ServiceMissingError(e) => write!(f, "Service missing error: {}", e),
+            GirolleError::SystemTimeError(e) => write!(f, "System time error: {}", e),
         }
     }
 }
@@ -45,6 +47,7 @@ impl fmt::Debug for GirolleError {
             GirolleError::ArgumentsError(e) => write!(f, "Arguments error: {}", e),
             GirolleError::RemoteError(e) => write!(f, "Remote error: {:?}", e),
             GirolleError::ServiceMissingError(e) => write!(f, "Service missing error: {:?}", e),
+            GirolleError::SystemTimeError(e) => write!(f, "System time error: {:?}", e),
         }
     }
 }
@@ -59,6 +62,12 @@ impl From<lapin::Error> for GirolleError {
     fn from(error: lapin::Error) -> Self {
         GirolleError::LapinError(error)
     }
+}
+impl From<std::time::SystemTimeError> for GirolleError {
+    fn from(error: std::time::SystemTimeError) -> Self {
+        GirolleError::SystemTimeError(error)
+    }
+    
 }
 
 impl std::error::Error for GirolleError {}
