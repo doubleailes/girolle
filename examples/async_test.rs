@@ -26,7 +26,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("exit sleep");
     for con in consummers {
         let _async_result = rpc_client.result(&con.1)?;
-        println!("{:?}", _async_result.get_result());
+        println!("{:?}", _async_result.get_value());
     }
     let duration = start.elapsed() - tempo;
     println!("Time elapsed in expensive_function() is: {:?}", duration);

@@ -567,7 +567,7 @@ impl RpcResult {
     /// ## Description
     /// 
     /// This function return the result of the RPC call as `serde_json::Value`
-    pub fn get_result(&self) -> Value {
+    pub fn get_value(&self) -> Value {
         self.result.clone()
     }
     /// # get_elapsed_time
@@ -592,17 +592,17 @@ mod tests {
         let elapsed_time = Duration::from_secs(5);
         let rpc_result = RpcResult::new(result.clone(), elapsed_time);
 
-        assert_eq!(rpc_result.get_result(), result);
+        assert_eq!(rpc_result.get_value(), result);
         assert_eq!(rpc_result.get_elapsed_time(), elapsed_time);
     }
 
     #[test]
-    fn test_rpc_result_get_result() {
+    fn test_rpc_result_get_value() {
         let result = json!({"success": true});
         let elapsed_time = Duration::from_secs(5);
         let rpc_result = RpcResult::new(result.clone(), elapsed_time);
 
-        assert_eq!(rpc_result.get_result(), result);
+        assert_eq!(rpc_result.get_value(), result);
     }
 
     #[test]
