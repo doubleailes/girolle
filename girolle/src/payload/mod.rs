@@ -80,7 +80,7 @@ impl Payload {
     /// let p = Payload::new().arg(1);
     /// ```
     pub fn arg<T: Serialize>(mut self, arg: T) -> Self {
-        self.args.push(serde_json::to_value(arg).unwrap());
+        self.args.push(serde_json::to_value(arg).expect("Failed to serialize argument"));
         self
     }
     /// # kwarg
@@ -97,10 +97,26 @@ impl Payload {
     /// ```
     pub fn kwarg<T: Serialize>(mut self, key: &str, value: T) -> Self {
         self.kwargs
-            .insert(key.to_string(), serde_json::to_value(value).unwrap());
+            .insert(key.to_string(), serde_json::to_value(value).expect("Failed to serialize argument"));
         self
     }
     pub fn to_string(&self) -> String {
         serde_json::to_string(self).unwrap()
+    }
+    /// # is_empty
+    /// 
+    /// ## Description
+    /// 
+    /// Check if the Payload is empty
+    /// 
+    /// ## Example
+    /// 
+    /// ```rust
+    /// use girolle::prelude::Payload;
+    /// let p = Payload::new();
+    /// assert_eq!(p.is_empty(), true);
+    /// ```
+    pub fn is_empty(&self) -> bool {
+        self.args.is_empty() && self.kwargs.is_empty()
     }
 }
