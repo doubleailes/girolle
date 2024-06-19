@@ -186,7 +186,7 @@ impl RpcClient {
     ///    let mut rpc_client = RpcClient::new(conf);
     ///    rpc_client.register_service("video").await.expect("call");
     ///    let method_name = "hello";
-    ///    let consumer = rpc_client.call_async("video", method_name, Paylaod::new().arg("John Doe"));
+    ///    let consumer = rpc_client.call_async("video", method_name, Payload::new().arg("John Doe"));
     /// }
     ///
     pub fn call_async(
@@ -268,8 +268,7 @@ impl RpcClient {
     ///    let mut rpc_client = RpcClient::new(conf);
     ///    rpc_client.register_service("video").await.expect("call");
     ///    let method_name = "hello";
-    ///    let args = vec!["John Doe"];
-    ///    let id = rpc_client.call_async("video", method_name, args)?;
+    ///    let id = rpc_client.call_async("video", method_name, Payload::new().arg("John Doe"))?;
     ///    let result = rpc_client.result(id)?;
     ///    Ok(())
     /// }
@@ -333,8 +332,7 @@ impl RpcClient {
     ///    let mut rpc_client = RpcClient::new(conf);
     ///    rpc_client.register_service("video").await.expect("call");
     ///    let method_name = "hello";
-    ///    let args = vec!["John Doe"];
-    ///     let result = rpc_client.send("video", method_name, args).expect("call");
+    ///     let result = rpc_client.send("video", method_name, Payload::new().arg("John Doe")).expect("call");
     /// }
     pub fn send(
         &self,

@@ -1,6 +1,5 @@
 use girolle::prelude::*;
 use std::time::Instant;
-use std::vec;
 use std::{thread, time};
 
 #[tokio::main]
