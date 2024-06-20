@@ -265,7 +265,7 @@ fn push_values_to_result(
     let mut result: Vec<Value> = Vec::new();
     let error_message = "Key is missing in kwargs".to_string();
     for i in start..end {
-        result.push(kwargs.get(service_args[i]).ok_or_else(|| GirolleError::ArgumentsError(error_message.clone()))?.clone());
+        result.push(kwargs.get(service_args[i]).ok_or_else(|| GirolleError::IncorrectSignature(error_message.clone()))?.clone());
     }
     Ok(result)
 }
@@ -286,7 +286,8 @@ fn build_inputs_fn_service(
             result.extend(push_values_to_result(service_args, &data_delivery.kwargs, args_size, args_size + kwargs_size)?);
             Ok(result)
         },
-        _ => Err(GirolleError::ArgumentsError("Number of the arguments is not correct".to_string())),
+        _ => Err(GirolleError::IncorrectSignature(format!("takes {} positional arguments but {} were given",
+            service_args_size, args_size + kwargs_size))),
     }
 }
 

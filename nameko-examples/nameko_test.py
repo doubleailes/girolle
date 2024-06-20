@@ -1,5 +1,5 @@
 from nameko.standalone.rpc import ClusterRpcClient, config
-from nameko.exceptions import RemoteError
+from nameko.exceptions import IncorrectSignature
 import os
 from datetime import datetime, timedelta
 import time
@@ -35,12 +35,21 @@ if __name__ == "__main__":
         assert 832040 == response
         # test message with two arguments
         assert 5 == client.video.sub(b=5, a=10)
+        assert 5 == client.video.sub(10, b=5)
         # test kwargs
         assert client.video.sub(10, 5) == 5
         # test arguments error
         try:
             client.video.sub(b=5, a=10, c=4)
-        except RemoteError as e:
+        except IncorrectSignature as e:
+            print(e)
+        try:
+            client.video.sub(10)
+        except IncorrectSignature as e:
+            print(e)
+        try:
+            client.video.sub(10, 5, 4)
+        except IncorrectSignature as e:
             print(e)
         # make an async call
         async_response = client.video.hello.call_async("Toto")
