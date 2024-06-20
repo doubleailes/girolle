@@ -9,6 +9,7 @@ use lapin::{
     types::FieldTable,
     BasicProperties, Channel,
 };
+use serde::Deserialize;
 use serde_json::{json, Value};
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -255,48 +256,55 @@ async fn publish(
     Ok(())
 }
 
+fn push_values_to_result(
+    service_args: &[&str],
+    kwargs: &HashMap<String, Value>,
+    start: usize,
+    end: usize,
+) -> Result<Vec<Value>, GirolleError> {
+    let mut result: Vec<Value> = Vec::new();
+    let error_message = "Key is missing in kwargs".to_string();
+    for i in start..end {
+        result.push(kwargs.get(service_args[i]).ok_or_else(|| GirolleError::IncorrectSignature(error_message.clone()))?.clone());
+    }
+    Ok(result)
+}
+
 fn build_inputs_fn_service(
     service_args: &Vec<&str>,
-    args: Vec<Value>,
-    kwargs: HashMap<String, Value>,
+    data_delivery: DeliveryData,
 ) -> Result<Vec<Value>, GirolleError> {
-    let args_size: usize = args.len();
-    let kwargs_size: usize = kwargs.len();
+    let args_size: usize = data_delivery.args.len();
+    let kwargs_size: usize = data_delivery.kwargs.len();
     let service_args_size: usize = service_args.len();
-    if service_args_size == args_size {
-        Ok(args)
-    } else if service_args_size == args_size + kwargs_size {
-        let mut result: Vec<Value> = Vec::new();
-        result.extend(args);
-        for i in args_size..args_size + kwargs_size {
-            result.push(match kwargs.get(service_args[i]) {
-                Some(value) => value.clone(),
-                None => {
-                    return Err(GirolleError::ArgumentsError(
-                        "Key is missing in kwargs".to_string(),
-                    ))
-                }
-            });
-        }
-        Ok(result)
-    } else {
-        Err(GirolleError::ArgumentsError(
-            "Length of the arguments is not correct".to_string(),
-        ))
+
+    match (data_delivery.kwargs.is_empty(), data_delivery.args.is_empty(), service_args_size == args_size + kwargs_size) {
+        (true, _, _) if service_args_size == args_size => Ok(data_delivery.args),
+        (_, true, _) if service_args_size == kwargs_size => push_values_to_result(service_args, &data_delivery.kwargs, 0, kwargs_size),
+        (_, _, true) => {
+            let mut result = data_delivery.args;
+            result.extend(push_values_to_result(service_args, &data_delivery.kwargs, args_size, args_size + kwargs_size)?);
+            Ok(result)
+        },
+        _ => Err(GirolleError::IncorrectSignature(format!("takes {} positional arguments but {} were given",
+            service_args_size, args_size + kwargs_size))),
     }
 }
 
 #[test]
 fn test_build_inputs_fn_service() {
     let service_args = vec!["a", "b", "c"];
-    let args = vec![json!("value_a"), json!("value_b")];
-    let mut kwargs = HashMap::new();
-    kwargs.insert("c".to_string(), json!("value_c"));
-    let result = build_inputs_fn_service(&service_args, args, kwargs).unwrap();
-    assert_eq!(
-        result,
-        vec![json!("value_a"), json!("value_b"), json!("value_c")]
-    );
+    let data_delivery = DeliveryData {
+        args: vec![Value::String("1".to_string()), Value::String("2".to_string())],
+        kwargs: HashMap::from([("c".to_string(), Value::String("3".to_string()))]),
+    };
+    let result = build_inputs_fn_service(&service_args, data_delivery);
+    assert_eq!(result.is_ok(), true);
+    let result = result.unwrap();
+    assert_eq!(result.len(), 3);
+    assert_eq!(result[0], Value::String("1".to_string()));
+    assert_eq!(result[1], Value::String("2".to_string()));
+    assert_eq!(result[2], Value::String("3".to_string()));
 }
 
 fn get_result_paylaod(result: Value) -> String {
@@ -326,6 +334,11 @@ fn get_error_payload(error: GirolleError) -> String {
     )
     .to_string()
 }
+#[derive(Debug, Deserialize)]
+struct DeliveryData{
+    args: Vec<Value>,
+    kwargs: HashMap<String, Value>,
+}
 /// Execute the delivery
 async fn execute_delivery(
     delivery: Delivery,
@@ -336,20 +349,7 @@ async fn execute_delivery(
     rpc_exchange: &str,
 ) {
     let opt_routing_key = delivery.routing_key.to_string();
-    let incomming_data: Value =
-        serde_json::from_slice(&delivery.data).expect("Can't deserialize incomming data");
-    let args: Vec<Value> = incomming_data["args"]
-        .as_array()
-        .expect("args")
-        .into_iter()
-        .map(|x| x.clone())
-        .collect();
-    let kwargs: HashMap<String, Value> = incomming_data["kwargs"]
-        .as_object()
-        .expect("kargs")
-        .into_iter()
-        .map(|(k, v)| (k.clone(), v.clone()))
-        .collect();
+    let incomming_data: DeliveryData = serde_json::from_slice(&delivery.data).expect("Can't deserialize incomming data");
     // Get the correlation_id and reply_to_id
     let correlation_id = get_id(delivery.properties.correlation_id(), "correlation_id");
     let reply_to_id = get_id(delivery.properties.reply_to(), "reply_to_id");
@@ -372,7 +372,7 @@ async fn execute_delivery(
         .with_priority(0);
     // Publish the response
     let fn_service = rpc_task_struct.inner_function;
-    let buildted_args = match build_inputs_fn_service(&rpc_task_struct.args, args, kwargs) {
+    let buildted_args = match build_inputs_fn_service(&rpc_task_struct.args, incomming_data) {
         Ok(result) => result,
         Err(error) => {
             publish(
@@ -422,6 +422,7 @@ struct SharedData {
     rpc_exchange: String,
     semaphore: Semaphore,
 }
+
 
 /// # rpc_service
 ///
