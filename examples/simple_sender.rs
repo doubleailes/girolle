@@ -19,10 +19,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("fibonacci :{:?}", fib_result);
     assert_eq!(fib_result, 832040);
     let sub_result = rpc_client.send(service_name, "sub", Payload::new().arg(10).arg(5))?;
-    assert_eq!(sub_result.get_value(), Value::Number(serde_json::Number::from(5)));
+    assert_eq!(
+        sub_result.get_value(),
+        Value::Number(serde_json::Number::from(5))
+    );
     match rpc_client.send(service_name, "sub", Payload::new().arg(10).arg(5).arg(6)) {
         Ok(_) => panic!("Should have failed"),
-        Err(e )=> {
+        Err(e) => {
             println!("{:?}", e);
         }
     }
@@ -32,7 +35,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let result = rpc_client.send(service_name, "hello", Payload::new().arg("Girolle"))?;
     // Print the result
     println!("{:?}", result.get_value());
-    assert_eq!(result.get_value(), Value::String("Hello, Girolle!".to_string()));
+    assert_eq!(
+        result.get_value(),
+        Value::String("Hello, Girolle!".to_string())
+    );
     // wait for it
     let tempo: time::Duration = time::Duration::from_secs(4);
     thread::sleep(tempo);
@@ -40,8 +46,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Print the result
     let async_result = rpc_client.result(&future_result)?;
     println!("{:?}", async_result.get_value());
-    assert_eq!(async_result.get_value(), Value::String("Hello, Toto!".to_string()));
-    println!("Time elapsed in for the previous call is: {:?}", async_result.get_elapsed_time()-tempo);
+    assert_eq!(
+        async_result.get_value(),
+        Value::String("Hello, Toto!".to_string())
+    );
+    println!(
+        "Time elapsed in for the previous call is: {:?}",
+        async_result.get_elapsed_time() - tempo
+    );
     let start = Instant::now();
     let mut consummers: Vec<_> = Vec::new();
     for n in 1..1001 {

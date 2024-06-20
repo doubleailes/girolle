@@ -1,6 +1,6 @@
+use crate::error::GirolleError;
 use serde_json;
 use serde_json::Value;
-use crate::error::GirolleError;
 
 /// # Result
 ///

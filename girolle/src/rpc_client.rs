@@ -1,9 +1,8 @@
 use crate::config::Config;
+use crate::error::{GirolleError, RemoteError};
 use crate::payload::Payload;
 use crate::queue::{create_message_channel, create_service_channel, get_connection};
 use crate::types::GirolleResult;
-use crate::error::{GirolleError, RemoteError};
-use std::time::{Duration, SystemTime,SystemTimeError};
 use futures::executor;
 use lapin::{
     message::DeliveryResult,
@@ -13,6 +12,7 @@ use lapin::{
 };
 use serde_json::Value;
 use std::collections::HashMap;
+use std::time::{Duration, SystemTime, SystemTimeError};
 use std::{
     collections::BTreeMap,
     sync::{Arc, Mutex},
@@ -300,7 +300,8 @@ impl RpcClient {
                         Some(_error) => {
                             //error!("Error: {:?}", error);
                             //eprintln!("Error: {:?}", error);
-                            let e: RemoteError = serde_json::from_value(value["error"].clone()).unwrap();
+                            let e: RemoteError =
+                                serde_json::from_value(value["error"].clone()).unwrap();
                             return Err(e.convert_to_girolle_error());
                         }
                         None => {
@@ -353,13 +354,12 @@ impl RpcClient {
         Ok(RpcResult::new(
             self._result(&rpc_event)?,
             rpc_event.get_elapsed_time()?,
-
         ))
     }
     fn service_exist(&self, service_name: &str) -> bool {
         self.services.contains_key(service_name)
     }
-    
+
     /// # get_config
     ///
     /// ## Description
@@ -527,18 +527,20 @@ impl TargetService {
     }
 }
 /// # RpcReply
-/// 
+///
 /// ## Description
-/// 
+///
 /// This struct is used to create a RPC reply. It contains the correlation_id and the time_stamp
 pub struct RpcReply {
     correlation_id: uuid::Uuid,
     time_stamp: SystemTime,
-
 }
 impl RpcReply {
     fn new(correlation_id: uuid::Uuid) -> Self {
-        Self { correlation_id, time_stamp: SystemTime::now()}
+        Self {
+            correlation_id,
+            time_stamp: SystemTime::now(),
+        }
     }
     pub fn get_correlation_id(&self) -> String {
         self.correlation_id.to_string()
@@ -549,9 +551,9 @@ impl RpcReply {
 }
 
 /// # RpcResult
-/// 
+///
 /// ## Description
-/// 
+///
 /// This struct is used to create a RPC result. It contains the result and the elapsed_time
 pub struct RpcResult {
     result: Value,
@@ -565,17 +567,17 @@ impl RpcResult {
         }
     }
     /// # get_result
-    /// 
+    ///
     /// ## Description
-    /// 
+    ///
     /// This function return the result of the RPC call as `serde_json::Value`
     pub fn get_value(&self) -> Value {
         self.result.clone()
     }
     /// # get_elapsed_time
-    /// 
+    ///
     /// ## Description
-    /// 
+    ///
     /// This function return the elapsed time of the RPC call as `std::time::Duration`
     pub fn get_elapsed_time(&self) -> Duration {
         self.elapsed_time

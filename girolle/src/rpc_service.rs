@@ -1,8 +1,8 @@
 use crate::config::Config;
+use crate::error::{GirolleError, RemoteError};
 use crate::nameko_utils::{get_id, insert_new_id_to_call_id};
 use crate::queue::{create_service_channel, get_connection};
 use crate::rpc_task::RpcTask;
-use crate::error::{GirolleError, RemoteError};
 use lapin::{
     message::{Delivery, DeliveryResult},
     options::*,
@@ -265,7 +265,12 @@ fn push_values_to_result(
     let mut result: Vec<Value> = Vec::new();
     let error_message = "Key is missing in kwargs".to_string();
     for i in start..end {
-        result.push(kwargs.get(service_args[i]).ok_or_else(|| GirolleError::IncorrectSignature(error_message.clone()))?.clone());
+        result.push(
+            kwargs
+                .get(service_args[i])
+                .ok_or_else(|| GirolleError::IncorrectSignature(error_message.clone()))?
+                .clone(),
+        );
     }
     Ok(result)
 }
@@ -278,16 +283,30 @@ fn build_inputs_fn_service(
     let kwargs_size: usize = data_delivery.kwargs.len();
     let service_args_size: usize = service_args.len();
 
-    match (data_delivery.kwargs.is_empty(), data_delivery.args.is_empty(), service_args_size == args_size + kwargs_size) {
+    match (
+        data_delivery.kwargs.is_empty(),
+        data_delivery.args.is_empty(),
+        service_args_size == args_size + kwargs_size,
+    ) {
         (true, _, _) if service_args_size == args_size => Ok(data_delivery.args),
-        (_, true, _) if service_args_size == kwargs_size => push_values_to_result(service_args, &data_delivery.kwargs, 0, kwargs_size),
+        (_, true, _) if service_args_size == kwargs_size => {
+            push_values_to_result(service_args, &data_delivery.kwargs, 0, kwargs_size)
+        }
         (_, _, true) => {
             let mut result = data_delivery.args;
-            result.extend(push_values_to_result(service_args, &data_delivery.kwargs, args_size, args_size + kwargs_size)?);
+            result.extend(push_values_to_result(
+                service_args,
+                &data_delivery.kwargs,
+                args_size,
+                args_size + kwargs_size,
+            )?);
             Ok(result)
-        },
-        _ => Err(GirolleError::IncorrectSignature(format!("takes {} positional arguments but {} were given",
-            service_args_size, args_size + kwargs_size))),
+        }
+        _ => Err(GirolleError::IncorrectSignature(format!(
+            "takes {} positional arguments but {} were given",
+            service_args_size,
+            args_size + kwargs_size
+        ))),
     }
 }
 
@@ -295,7 +314,10 @@ fn build_inputs_fn_service(
 fn test_build_inputs_fn_service() {
     let service_args = vec!["a", "b", "c"];
     let data_delivery = DeliveryData {
-        args: vec![Value::String("1".to_string()), Value::String("2".to_string())],
+        args: vec![
+            Value::String("1".to_string()),
+            Value::String("2".to_string()),
+        ],
         kwargs: HashMap::from([("c".to_string(), Value::String("3".to_string()))]),
     };
     let result = build_inputs_fn_service(&service_args, data_delivery);
@@ -327,13 +349,13 @@ fn get_error_payload(error: RemoteError) -> String {
     .to_string()
 }
 #[derive(Debug, Deserialize)]
-struct DeliveryData{
+struct DeliveryData {
     args: Vec<Value>,
     kwargs: HashMap<String, Value>,
 }
 /// Execute the delivery
-async fn execute_delivery(
-    delivery: Delivery,
+async fn compute_deliver(
+    delivery: &Delivery,
     id: &Uuid,
     rpc_task_struct: &RpcTask,
     rpc_channel: &Channel,
@@ -341,7 +363,8 @@ async fn execute_delivery(
     rpc_exchange: &str,
 ) {
     let opt_routing_key = delivery.routing_key.to_string();
-    let incomming_data: DeliveryData = serde_json::from_slice(&delivery.data).expect("Can't deserialize incomming data");
+    let incomming_data: DeliveryData =
+        serde_json::from_slice(&delivery.data).expect("Can't deserialize incomming data");
     // Get the correlation_id and reply_to_id
     let correlation_id = get_id(delivery.properties.correlation_id(), "correlation_id");
     let reply_to_id = get_id(delivery.properties.reply_to(), "reply_to_id");
@@ -412,9 +435,9 @@ struct SharedData {
     f_task: HashMap<String, RpcTask>,
     rpc_queue: String,
     rpc_exchange: String,
+    service_name: String,
     semaphore: Semaphore,
 }
-
 
 /// # rpc_service
 ///
@@ -468,6 +491,7 @@ async fn rpc_service(
         f_task,
         rpc_queue,
         rpc_exchange: conf.rpc_exchange().to_string(),
+        service_name: service_name.to_string(),
         semaphore: Semaphore::new(conf.max_workers() as usize),
     });
     consumer.set_delegate(move |delivery: DeliveryResult| {
@@ -487,23 +511,27 @@ async fn rpc_service(
             };
 
             let opt_routing_key = delivery.routing_key.to_string();
-            let rpc_task_struct: &RpcTask = match shared_data_clone.f_task.get(&opt_routing_key) {
-                Some(rpc_task_struct) => rpc_task_struct,
-                None => {
-                    warn!("fn_service: None for routing_key: {}", &opt_routing_key);
-                    return;
+            let (incommig_service, incomming_method) = opt_routing_key.split_once('.').unwrap();
+            match (shared_data_clone.f_task.get(&opt_routing_key),incommig_service==&shared_data_clone.service_name) {
+                (Some(rpc_task_struct),_) => {
+                    compute_deliver(
+                        &delivery,
+                        &id,
+                        rpc_task_struct,
+                        &shared_data_clone.rpc_channel,
+                        &shared_data_clone.rpc_queue,
+                        &shared_data_clone.rpc_exchange,
+                    )
+                    .await
+                }
+                (None,false) => {
+                    error!("Service {} is not found", &incommig_service);
+                }
+                (None,true) => {
+                    error!("Method {} is not found", &incomming_method);
                 }
             };
             delivery.ack(BasicAckOptions::default()).await.expect("ack");
-            execute_delivery(
-                delivery,
-                &id,
-                rpc_task_struct,
-                &shared_data_clone.rpc_channel,
-                &shared_data_clone.rpc_queue,
-                &shared_data_clone.rpc_exchange,
-            )
-            .await;
         }
     });
     tokio::signal::ctrl_c()
