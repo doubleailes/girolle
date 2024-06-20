@@ -1,5 +1,5 @@
 from nameko.standalone.rpc import ClusterRpcClient, config
-from nameko.exceptions import IncorrectSignature
+from nameko.exceptions import IncorrectSignature,MethodNotFound,UnknownService
 import os
 from datetime import datetime, timedelta
 import time
@@ -50,6 +50,14 @@ if __name__ == "__main__":
         try:
             client.video.sub(10, 5, 4)
         except IncorrectSignature as e:
+            print(e)
+        try:
+            client.video.plus(10,5)
+        except MethodNotFound as e:
+            print(e)
+        try:
+            client.hello.hello("Toto")
+        except UnknownService as e:
             print(e)
         # make an async call
         async_response = client.video.hello.call_async("Toto")

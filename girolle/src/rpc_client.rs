@@ -1,7 +1,8 @@
 use crate::config::Config;
 use crate::payload::Payload;
 use crate::queue::{create_message_channel, create_service_channel, get_connection};
-use crate::types::{GirolleError, GirolleResult};
+use crate::types::GirolleResult;
+use crate::error::{GirolleError, RemoteError};
 use std::time::{Duration, SystemTime,SystemTimeError};
 use futures::executor;
 use lapin::{
@@ -296,10 +297,11 @@ impl RpcClient {
                     let mut replies = self.replies.lock().unwrap();
                     replies.remove(&incomming_id);
                     match value["error"].as_object() {
-                        Some(error) => {
-                            error!("Error: {:?}", error);
-                            let e = error["exc_type"].as_str().unwrap().to_string();
-                            return Err(GirolleError::RemoteError(e));
+                        Some(_error) => {
+                            //error!("Error: {:?}", error);
+                            //eprintln!("Error: {:?}", error);
+                            let e: RemoteError = serde_json::from_value(value["error"].clone()).unwrap();
+                            return Err(e.convert_to_girolle_error());
                         }
                         None => {
                             return Ok(value["result"].clone());

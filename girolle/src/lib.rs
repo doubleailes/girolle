@@ -62,3 +62,5 @@ mod payload;
 pub use payload::Payload;
 pub use serde_json;
 pub use serde_json::{json, Value};
+mod error;
+pub use error::GirolleError;

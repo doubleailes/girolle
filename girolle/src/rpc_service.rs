@@ -2,7 +2,7 @@ use crate::config::Config;
 use crate::nameko_utils::{get_id, insert_new_id_to_call_id};
 use crate::queue::{create_service_channel, get_connection};
 use crate::rpc_task::RpcTask;
-use crate::types::GirolleError;
+use crate::error::{GirolleError, RemoteError};
 use lapin::{
     message::{Delivery, DeliveryResult},
     options::*,
@@ -317,19 +317,11 @@ fn get_result_paylaod(result: Value) -> String {
     .to_string()
 }
 
-fn get_error_payload(error: GirolleError) -> String {
-    error!("Error: {}", &error);
-    let err_str = error.to_string();
-    let exc = HashMap::from([
-        ("exc_path", "builtins.Exception"),
-        ("exc_type", "Exception"),
-        ("exc_args", "Error"),
-        ("value", &err_str),
-    ]);
+fn get_error_payload(error: RemoteError) -> String {
     json!(
         {
             "result": null,
-            "error": exc,
+            "error": error,
         }
     )
     .to_string()
@@ -377,7 +369,7 @@ async fn execute_delivery(
         Err(error) => {
             publish(
                 &rpc_channel,
-                get_error_payload(error),
+                get_error_payload(error.convert()),
                 properties,
                 reply_to_id,
                 rpc_exchange,
@@ -403,7 +395,7 @@ async fn execute_delivery(
         Err(error) => {
             publish(
                 &rpc_channel,
-                get_error_payload(error),
+                get_error_payload(error.convert()),
                 properties,
                 reply_to_id,
                 rpc_exchange,

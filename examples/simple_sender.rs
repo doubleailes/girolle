@@ -20,6 +20,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     assert_eq!(fib_result, 832040);
     let sub_result = rpc_client.send(service_name, "sub", Payload::new().arg(10).arg(5))?;
     assert_eq!(sub_result.get_value(), Value::Number(serde_json::Number::from(5)));
+    match rpc_client.send(service_name, "sub", Payload::new().arg(10).arg(5).arg(6)) {
+        Ok(_) => panic!("Should have failed"),
+        Err(e )=> {
+            println!("{:?}", e);
+        }
+    }
     // Create a future result
     let future_result = rpc_client.call_async(service_name, "hello", Payload::new().arg("Toto"))?;
     // Send a message during the previous async process
