@@ -1,21 +1,16 @@
 use crate::config::Config;
 use crate::error::{GirolleError, RemoteError};
-use crate::nameko_utils::{get_id, insert_new_id_to_call_id};
+use crate::nameko_utils::{delivery_to_message_properties, get_id};
 use crate::queue::{create_service_channel, get_connection};
 use crate::rpc_task::RpcTask;
-use lapin::{
-    message::{Delivery, DeliveryResult},
-    options::*,
-    types::FieldTable,
-    BasicProperties, Channel,
-};
+use lapin::{message::DeliveryResult, options::*, types::FieldTable, BasicProperties, Channel};
 use serde::Deserialize;
 use serde_json::{json, Value};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::Semaphore;
 use tracing::Level;
-use tracing::{debug, error, info, warn};
+use tracing::{debug, error, info};
 use uuid::Uuid;
 
 /// # RpcService
@@ -152,7 +147,7 @@ impl RpcService {
     ///    let mut services: RpcService = RpcService::new(Config::default_config(),"video");
     ///    services.register(hello).start();
     /// }
-    pub fn start(&self) -> lapin::Result<()> {
+    pub fn start(&self) -> Result<(), GirolleError> {
         if self.f.is_empty() {
             panic!("No function insert");
         }
@@ -410,36 +405,9 @@ async fn compute_deliver(
 struct SharedData {
     rpc_channel: Channel,
     f_task: HashMap<String, RpcTask>,
-    rpc_queue: String,
     rpc_exchange: String,
     service_name: String,
     semaphore: Semaphore,
-}
-fn delivery_to_message_properties(
-    delivery: &Delivery,
-    id: &Uuid,
-    rpc_queue: &str,
-) -> Result<lapin::protocol::basic::AMQPProperties, GirolleError> {
-    let opt_routing_key = delivery.routing_key.to_string();
-    // Get the correlation_id and reply_to_id
-    let correlation_id = get_id(delivery.properties.correlation_id(), "correlation_id");
-    //need to clone to modify the headers
-    let opt_headers = delivery.properties.headers();
-    let headers = match opt_headers {
-        Some(h) => insert_new_id_to_call_id(h.clone(), &opt_routing_key, &id.to_string()),
-        None => {
-            error!("No headers found in delivery properties");
-            return Err(GirolleError::MissingHeader);
-        }
-    };
-    Ok(BasicProperties::default()
-        .with_correlation_id(correlation_id.into())
-        .with_content_type("application/json".into())
-        .with_reply_to(rpc_queue.into())
-        .with_content_encoding("utf-8".into())
-        .with_headers(headers)
-        .with_delivery_mode(2)
-        .with_priority(0))
 }
 
 /// # rpc_service
@@ -458,7 +426,7 @@ async fn rpc_service(
     conf: &Config,
     service_name: &str,
     f_task: HashMap<String, RpcTask>,
-) -> lapin::Result<()> {
+) -> Result<(), GirolleError> {
     info!("Starting the service");
     // Define the queue name1
     let rpc_queue = format!("rpc-{}", service_name);
@@ -492,7 +460,6 @@ async fn rpc_service(
     let shared_data: Arc<SharedData> = Arc::new(SharedData {
         rpc_channel,
         f_task,
-        rpc_queue,
         rpc_exchange: conf.rpc_exchange().to_string(),
         service_name: service_name.to_string(),
         semaphore: Semaphore::new(conf.max_workers() as usize),
@@ -515,8 +482,10 @@ async fn rpc_service(
 
             let opt_routing_key = delivery.routing_key.to_string();
             let reply_to_id = get_id(delivery.properties.reply_to(), "reply_to_id");
-            let properties = delivery_to_message_properties(&delivery, &id, &reply_to_id).unwrap();
-            let (incommig_service, incomming_method) = opt_routing_key.split_once('.').unwrap();
+            let properties = delivery_to_message_properties(&delivery, &id, &reply_to_id)
+                .expect("Error creating properties");
+            let (incommig_service, incomming_method) =
+                opt_routing_key.split_once('.').expect("Error splitting");
             match (
                 shared_data_clone.f_task.get(&opt_routing_key),
                 incommig_service == &shared_data_clone.service_name,
@@ -529,8 +498,8 @@ async fn rpc_service(
                         properties,
                         rpc_task_struct,
                         &shared_data_clone.rpc_channel,
-                        &shared_data_clone.rpc_queue,
-                        shared_data_clone.rpc_exchange.clone(),
+                        &shared_data_clone.rpc_exchange,
+                        reply_to_id,
                     )
                     .await
                 }
@@ -548,7 +517,7 @@ async fn rpc_service(
                         payload,
                         properties,
                         reply_to_id,
-                        &shared_data_clone.rpc_queue,
+                        &shared_data_clone.rpc_exchange,
                     )
                     .await
                     .expect("Error publishing");
@@ -567,7 +536,7 @@ async fn rpc_service(
                         payload,
                         properties,
                         reply_to_id,
-                        &shared_data_clone.rpc_queue,
+                        &shared_data_clone.rpc_exchange,
                     )
                     .await
                     .expect("Error publishing");

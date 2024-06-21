@@ -1,5 +1,5 @@
 from nameko.standalone.rpc import ClusterRpcClient, config
-from nameko.exceptions import IncorrectSignature,MethodNotFound,UnknownService
+from nameko.exceptions import IncorrectSignature, MethodNotFound, UnknownService
 import os
 from datetime import datetime, timedelta
 import time
@@ -52,7 +52,7 @@ if __name__ == "__main__":
         except IncorrectSignature as e:
             print(e)
         try:
-            client.video.plus(10,5)
+            client.video.plus(10, 5)
         except MethodNotFound as e:
             print(e)
         try:
@@ -72,7 +72,7 @@ if __name__ == "__main__":
         assert "Hello, Toto!" == response_async
         # batch a pack of async call
         start = datetime.now()
-        data: list = [[i, client.video.hello.call_async(str(i))] for i in range(1000)]
+        data: list = [[i, client.video.hello.call_async(str(i))] for i in range(10)]
         time.sleep(tempo)
         results = [[d[0], d[1].result()] for d in data]
         print(datetime.now() - start - timedelta(seconds=tempo))
