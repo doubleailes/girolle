@@ -1,16 +1,16 @@
-use crate::config::Config;
-use crate::error::{GirolleError, RemoteError};
-use crate::nameko_utils::{delivery_to_message_properties, get_id};
-use crate::queue::{create_service_channel, get_connection};
-use crate::rpc_task::RpcTask;
+use crate::{
+    config::Config,
+    error::{GirolleError, RemoteError},
+    nameko_utils::{delivery_to_message_properties, get_id},
+    queue::{create_service_channel, get_connection},
+    rpc_task::RpcTask,
+};
 use lapin::{message::DeliveryResult, options::*, types::FieldTable, BasicProperties, Channel};
 use serde::Deserialize;
 use serde_json::{json, Value};
-use std::collections::HashMap;
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 use tokio::sync::Semaphore;
-use tracing::Level;
-use tracing::{debug, error, info};
+use tracing::{debug, error, info, warn, Level};
 use uuid::Uuid;
 
 /// # RpcService
@@ -504,7 +504,7 @@ async fn rpc_service(
                     .await
                 }
                 (None, false) => {
-                    error!("Service {} is not found", &incommig_service);
+                    warn!("Service {} is not found", &incommig_service);
                     let payload = get_error_payload(
                         GirolleError::UnknownService(format!(
                             "Service {} is not found",
@@ -523,7 +523,7 @@ async fn rpc_service(
                     .expect("Error publishing");
                 }
                 (None, true) => {
-                    error!("Method {} is not found", &incomming_method);
+                    warn!("Method {} is not found", &incomming_method);
                     let payload = get_error_payload(
                         GirolleError::MethodNotFound(format!(
                             "Method {} is not found",
