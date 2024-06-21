@@ -71,7 +71,7 @@ impl From<RemoteError> for GirolleError {
     }
 }
 impl GirolleError {
-    pub fn convert(&self) -> RemoteError {
+    pub(crate) fn convert(&self) -> RemoteError {
         match self {
             GirolleError::RemoteError(e) => e.clone(),
             GirolleError::IncorrectSignature(e) => RemoteError {
@@ -112,7 +112,7 @@ pub struct RemoteError {
     exc_args: Vec<String>,
 }
 impl RemoteError {
-    pub fn convert_to_girolle_error(&self) -> GirolleError {
+    pub(crate) fn convert_to_girolle_error(&self) -> GirolleError {
         match self.exc_type.as_str() {
             "IncorrectSignature" => GirolleError::IncorrectSignature(self.value.clone()),
             "MethodNotFound" => GirolleError::MethodNotFound(self.value.clone()),

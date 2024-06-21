@@ -12,7 +12,7 @@ use uuid::Uuid;
 /// # QUEUE_TTL
 const QUEUE_TTL: u32 = 300000;
 
-pub async fn get_connection(
+pub(crate) async fn get_connection(
     amqp_uri: String,
     heartbeat_value: u16,
 ) -> Result<lapin::Connection, lapin::Error> {
@@ -49,7 +49,7 @@ pub async fn get_connection(
 /// ## Returns
 ///
 /// A lapin::Result<lapin::Channel> that holds the channel.
-pub async fn create_service_channel(
+pub(crate) async fn create_service_channel(
     conn: &Connection,
     service_name: &str,
     prefetch_count: u16,
@@ -96,7 +96,7 @@ pub async fn create_service_channel(
 /// ## Returns
 ///
 /// A lapin::Result<lapin::Channel> that holds the channel.
-pub async fn create_message_channel(
+pub(crate) async fn create_message_channel(
     conn: &Connection,
     rpc_queue_reply: &str,
     prefetch_count: u16,
