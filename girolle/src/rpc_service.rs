@@ -355,36 +355,13 @@ struct DeliveryData {
 }
 /// Execute the delivery
 async fn compute_deliver(
-    delivery: &Delivery,
-    id: &Uuid,
+    incomming_data: DeliveryData,
+    properties: BasicProperties,
     rpc_task_struct: &RpcTask,
     rpc_channel: &Channel,
-    rpc_queue: &str,
     rpc_exchange: &str,
+    reply_to_id: String,
 ) {
-    let opt_routing_key = delivery.routing_key.to_string();
-    let incomming_data: DeliveryData =
-        serde_json::from_slice(&delivery.data).expect("Can't deserialize incomming data");
-    // Get the correlation_id and reply_to_id
-    let correlation_id = get_id(delivery.properties.correlation_id(), "correlation_id");
-    let reply_to_id = get_id(delivery.properties.reply_to(), "reply_to_id");
-    //need to clone to modify the headers
-    let opt_headers = delivery.properties.headers();
-    let headers = match opt_headers {
-        Some(h) => insert_new_id_to_call_id(h.clone(), &opt_routing_key, &id.to_string()),
-        None => {
-            error!("No headers found in delivery properties");
-            return;
-        }
-    };
-    let properties = BasicProperties::default()
-        .with_correlation_id(correlation_id.into())
-        .with_content_type("application/json".into())
-        .with_reply_to(rpc_queue.into())
-        .with_content_encoding("utf-8".into())
-        .with_headers(headers)
-        .with_delivery_mode(2)
-        .with_priority(0);
     // Publish the response
     let fn_service = rpc_task_struct.inner_function;
     let buildted_args = match build_inputs_fn_service(&rpc_task_struct.args, incomming_data) {
@@ -437,6 +414,32 @@ struct SharedData {
     rpc_exchange: String,
     service_name: String,
     semaphore: Semaphore,
+}
+fn delivery_to_message_properties(
+    delivery: &Delivery,
+    id: &Uuid,
+    rpc_queue: &str,
+) -> Result<lapin::protocol::basic::AMQPProperties, GirolleError> {
+    let opt_routing_key = delivery.routing_key.to_string();
+    // Get the correlation_id and reply_to_id
+    let correlation_id = get_id(delivery.properties.correlation_id(), "correlation_id");
+    //need to clone to modify the headers
+    let opt_headers = delivery.properties.headers();
+    let headers = match opt_headers {
+        Some(h) => insert_new_id_to_call_id(h.clone(), &opt_routing_key, &id.to_string()),
+        None => {
+            error!("No headers found in delivery properties");
+            return Err(GirolleError::MissingHeader);
+        }
+    };
+    Ok(BasicProperties::default()
+        .with_correlation_id(correlation_id.into())
+        .with_content_type("application/json".into())
+        .with_reply_to(rpc_queue.into())
+        .with_content_encoding("utf-8".into())
+        .with_headers(headers)
+        .with_delivery_mode(2)
+        .with_priority(0))
 }
 
 /// # rpc_service
@@ -511,24 +514,63 @@ async fn rpc_service(
             };
 
             let opt_routing_key = delivery.routing_key.to_string();
+            let reply_to_id = get_id(delivery.properties.reply_to(), "reply_to_id");
+            let properties = delivery_to_message_properties(&delivery, &id, &reply_to_id).unwrap();
             let (incommig_service, incomming_method) = opt_routing_key.split_once('.').unwrap();
-            match (shared_data_clone.f_task.get(&opt_routing_key),incommig_service==&shared_data_clone.service_name) {
-                (Some(rpc_task_struct),_) => {
+            match (
+                shared_data_clone.f_task.get(&opt_routing_key),
+                incommig_service == &shared_data_clone.service_name,
+            ) {
+                (Some(rpc_task_struct), _) => {
+                    let incomming_data: DeliveryData = serde_json::from_slice(&delivery.data)
+                        .expect("Can't deserialize incomming data");
                     compute_deliver(
-                        &delivery,
-                        &id,
+                        incomming_data,
+                        properties,
                         rpc_task_struct,
                         &shared_data_clone.rpc_channel,
                         &shared_data_clone.rpc_queue,
-                        &shared_data_clone.rpc_exchange,
+                        shared_data_clone.rpc_exchange.clone(),
                     )
                     .await
                 }
-                (None,false) => {
+                (None, false) => {
                     error!("Service {} is not found", &incommig_service);
+                    let payload = get_error_payload(
+                        GirolleError::UnknownService(format!(
+                            "Service {} is not found",
+                            &incommig_service,
+                        ))
+                        .convert(),
+                    );
+                    publish(
+                        &shared_data_clone.rpc_channel,
+                        payload,
+                        properties,
+                        reply_to_id,
+                        &shared_data_clone.rpc_queue,
+                    )
+                    .await
+                    .expect("Error publishing");
                 }
-                (None,true) => {
+                (None, true) => {
                     error!("Method {} is not found", &incomming_method);
+                    let payload = get_error_payload(
+                        GirolleError::MethodNotFound(format!(
+                            "Method {} is not found",
+                            &incomming_method,
+                        ))
+                        .convert(),
+                    );
+                    publish(
+                        &shared_data_clone.rpc_channel,
+                        payload,
+                        properties,
+                        reply_to_id,
+                        &shared_data_clone.rpc_queue,
+                    )
+                    .await
+                    .expect("Error publishing");
                 }
             };
             delivery.ack(BasicAckOptions::default()).await.expect("ack");

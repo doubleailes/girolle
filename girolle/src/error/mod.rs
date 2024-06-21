@@ -12,6 +12,7 @@ pub enum GirolleError {
     RemoteError(RemoteError),
     ServiceMissingError(String),
     SystemTimeError(std::time::SystemTimeError),
+    MissingHeader,
 }
 
 impl fmt::Display for GirolleError {
@@ -26,6 +27,7 @@ impl fmt::Display for GirolleError {
             GirolleError::ServiceMissingError(e) => write!(f, "Service missing error: {}", e),
             GirolleError::SystemTimeError(e) => write!(f, "System time error: {}", e),
             GirolleError::RemoteError(e) => write!(f, "Remote error: {:?}", e),
+            GirolleError::MissingHeader => write!(f, "Missing header"),
         }
     }
 }
@@ -42,6 +44,7 @@ impl fmt::Debug for GirolleError {
             GirolleError::ServiceMissingError(e) => write!(f, "Service missing error: {:?}", e),
             GirolleError::SystemTimeError(e) => write!(f, "System time error: {:?}", e),
             GirolleError::RemoteError(e) => write!(f, "Remote error: {:?}", e),
+            GirolleError::MissingHeader => write!(f, "Missing header"),
         }
     }
 }
