@@ -1,21 +1,17 @@
-use crate::config::Config;
-use crate::nameko_utils::{get_id, insert_new_id_to_call_id};
-use crate::queue::{create_service_channel, get_connection};
-use crate::rpc_task::RpcTask;
-use crate::types::GirolleError;
-use lapin::{
-    message::{Delivery, DeliveryResult},
-    options::*,
-    types::FieldTable,
-    BasicProperties, Channel,
+use crate::{
+    config::Config,
+    error::GirolleError,
+    nameko_utils::{
+        compute_deliver, delivery_to_message_properties, get_error_payload, get_id, publish,
+        DeliveryData,
+    },
+    queue::{create_service_channel, get_connection},
+    rpc_task::RpcTask,
 };
-use serde::Deserialize;
-use serde_json::{json, Value};
-use std::collections::HashMap;
-use std::sync::Arc;
+use lapin::{message::DeliveryResult, options::*, types::FieldTable, Channel};
+use std::{collections::HashMap, sync::Arc};
 use tokio::sync::Semaphore;
-use tracing::Level;
-use tracing::{debug, error, info, warn};
+use tracing::{debug, error, info, warn, Level};
 use uuid::Uuid;
 
 /// # RpcService
@@ -152,7 +148,7 @@ impl RpcService {
     ///    let mut services: RpcService = RpcService::new(Config::default_config(),"video");
     ///    services.register(hello).start();
     /// }
-    pub fn start(&self) -> lapin::Result<()> {
+    pub fn start(&self) -> Result<(), GirolleError> {
         if self.f.is_empty() {
             panic!("No function insert");
         }
@@ -228,201 +224,13 @@ impl RpcService {
     }
 }
 
-async fn publish(
-    rpc_channel: &Channel,
-    payload: String,
-    properties: BasicProperties,
-    reply_to_id: String,
-    rpc_exchange: &str,
-) -> lapin::Result<()> {
-    // Need to clone the rpc_channel to be able to use it in the tokio::spawn
-    let rpc_channel_clone = rpc_channel.clone();
-    let rpc_exchange_clone = rpc_exchange.to_string();
-    tokio::spawn(async move {
-        rpc_channel_clone
-            .basic_publish(
-                &rpc_exchange_clone,
-                &format!("{}", &reply_to_id),
-                BasicPublishOptions::default(),
-                payload.as_bytes(),
-                properties,
-            )
-            .await
-            .unwrap()
-            .await
-            .unwrap();
-    });
-    // The message was correctly published
-    Ok(())
-}
-
-fn push_values_to_result(
-    service_args: &[&str],
-    kwargs: &HashMap<String, Value>,
-    start: usize,
-    end: usize,
-) -> Result<Vec<Value>, GirolleError> {
-    let mut result: Vec<Value> = Vec::new();
-    let error_message = "Key is missing in kwargs".to_string();
-    for i in start..end {
-        result.push(kwargs.get(service_args[i]).ok_or_else(|| GirolleError::IncorrectSignature(error_message.clone()))?.clone());
-    }
-    Ok(result)
-}
-
-fn build_inputs_fn_service(
-    service_args: &Vec<&str>,
-    data_delivery: DeliveryData,
-) -> Result<Vec<Value>, GirolleError> {
-    let args_size: usize = data_delivery.args.len();
-    let kwargs_size: usize = data_delivery.kwargs.len();
-    let service_args_size: usize = service_args.len();
-
-    match (data_delivery.kwargs.is_empty(), data_delivery.args.is_empty(), service_args_size == args_size + kwargs_size) {
-        (true, _, _) if service_args_size == args_size => Ok(data_delivery.args),
-        (_, true, _) if service_args_size == kwargs_size => push_values_to_result(service_args, &data_delivery.kwargs, 0, kwargs_size),
-        (_, _, true) => {
-            let mut result = data_delivery.args;
-            result.extend(push_values_to_result(service_args, &data_delivery.kwargs, args_size, args_size + kwargs_size)?);
-            Ok(result)
-        },
-        _ => Err(GirolleError::IncorrectSignature(format!("takes {} positional arguments but {} were given",
-            service_args_size, args_size + kwargs_size))),
-    }
-}
-
-#[test]
-fn test_build_inputs_fn_service() {
-    let service_args = vec!["a", "b", "c"];
-    let data_delivery = DeliveryData {
-        args: vec![Value::String("1".to_string()), Value::String("2".to_string())],
-        kwargs: HashMap::from([("c".to_string(), Value::String("3".to_string()))]),
-    };
-    let result = build_inputs_fn_service(&service_args, data_delivery);
-    assert_eq!(result.is_ok(), true);
-    let result = result.unwrap();
-    assert_eq!(result.len(), 3);
-    assert_eq!(result[0], Value::String("1".to_string()));
-    assert_eq!(result[1], Value::String("2".to_string()));
-    assert_eq!(result[2], Value::String("3".to_string()));
-}
-
-fn get_result_paylaod(result: Value) -> String {
-    json!(
-        {
-            "result": result,
-            "error": null,
-        }
-    )
-    .to_string()
-}
-
-fn get_error_payload(error: GirolleError) -> String {
-    error!("Error: {}", &error);
-    let err_str = error.to_string();
-    let exc = HashMap::from([
-        ("exc_path", "builtins.Exception"),
-        ("exc_type", "Exception"),
-        ("exc_args", "Error"),
-        ("value", &err_str),
-    ]);
-    json!(
-        {
-            "result": null,
-            "error": exc,
-        }
-    )
-    .to_string()
-}
-#[derive(Debug, Deserialize)]
-struct DeliveryData{
-    args: Vec<Value>,
-    kwargs: HashMap<String, Value>,
-}
-/// Execute the delivery
-async fn execute_delivery(
-    delivery: Delivery,
-    id: &Uuid,
-    rpc_task_struct: &RpcTask,
-    rpc_channel: &Channel,
-    rpc_queue: &str,
-    rpc_exchange: &str,
-) {
-    let opt_routing_key = delivery.routing_key.to_string();
-    let incomming_data: DeliveryData = serde_json::from_slice(&delivery.data).expect("Can't deserialize incomming data");
-    // Get the correlation_id and reply_to_id
-    let correlation_id = get_id(delivery.properties.correlation_id(), "correlation_id");
-    let reply_to_id = get_id(delivery.properties.reply_to(), "reply_to_id");
-    //need to clone to modify the headers
-    let opt_headers = delivery.properties.headers();
-    let headers = match opt_headers {
-        Some(h) => insert_new_id_to_call_id(h.clone(), &opt_routing_key, &id.to_string()),
-        None => {
-            error!("No headers found in delivery properties");
-            return;
-        }
-    };
-    let properties = BasicProperties::default()
-        .with_correlation_id(correlation_id.into())
-        .with_content_type("application/json".into())
-        .with_reply_to(rpc_queue.into())
-        .with_content_encoding("utf-8".into())
-        .with_headers(headers)
-        .with_delivery_mode(2)
-        .with_priority(0);
-    // Publish the response
-    let fn_service = rpc_task_struct.inner_function;
-    let buildted_args = match build_inputs_fn_service(&rpc_task_struct.args, incomming_data) {
-        Ok(result) => result,
-        Err(error) => {
-            publish(
-                &rpc_channel,
-                get_error_payload(error),
-                properties,
-                reply_to_id,
-                rpc_exchange,
-            )
-            .await
-            .expect("Error publishing");
-            return;
-        }
-    };
-    match fn_service(&buildted_args) {
-        Ok(result) => {
-            publish(
-                &rpc_channel,
-                get_result_paylaod(result),
-                properties,
-                reply_to_id,
-                rpc_exchange,
-            )
-            .await
-            .expect("Error publishing");
-            return;
-        }
-        Err(error) => {
-            publish(
-                &rpc_channel,
-                get_error_payload(error),
-                properties,
-                reply_to_id,
-                rpc_exchange,
-            )
-            .await
-            .expect("Error publishing");
-            return;
-        }
-    };
-}
-
 struct SharedData {
     rpc_channel: Channel,
     f_task: HashMap<String, RpcTask>,
-    rpc_queue: String,
     rpc_exchange: String,
+    service_name: String,
     semaphore: Semaphore,
 }
-
 
 /// # rpc_service
 ///
@@ -440,7 +248,7 @@ async fn rpc_service(
     conf: &Config,
     service_name: &str,
     f_task: HashMap<String, RpcTask>,
-) -> lapin::Result<()> {
+) -> Result<(), GirolleError> {
     info!("Starting the service");
     // Define the queue name1
     let rpc_queue = format!("rpc-{}", service_name);
@@ -474,8 +282,8 @@ async fn rpc_service(
     let shared_data: Arc<SharedData> = Arc::new(SharedData {
         rpc_channel,
         f_task,
-        rpc_queue,
         rpc_exchange: conf.rpc_exchange().to_string(),
+        service_name: service_name.to_string(),
         semaphore: Semaphore::new(conf.max_workers() as usize),
     });
     consumer.set_delegate(move |delivery: DeliveryResult| {
@@ -495,23 +303,68 @@ async fn rpc_service(
             };
 
             let opt_routing_key = delivery.routing_key.to_string();
-            let rpc_task_struct: &RpcTask = match shared_data_clone.f_task.get(&opt_routing_key) {
-                Some(rpc_task_struct) => rpc_task_struct,
-                None => {
-                    warn!("fn_service: None for routing_key: {}", &opt_routing_key);
-                    return;
+            let reply_to_id = get_id(delivery.properties.reply_to(), "reply_to_id");
+            let properties = delivery_to_message_properties(&delivery, &id, &reply_to_id)
+                .expect("Error creating properties");
+            let (incommig_service, incomming_method) =
+                opt_routing_key.split_once('.').expect("Error splitting");
+            match (
+                shared_data_clone.f_task.get(&opt_routing_key),
+                incommig_service == &shared_data_clone.service_name,
+            ) {
+                (Some(rpc_task_struct), _) => {
+                    let incomming_data: DeliveryData = serde_json::from_slice(&delivery.data)
+                        .expect("Can't deserialize incomming data");
+                    compute_deliver(
+                        incomming_data,
+                        properties,
+                        rpc_task_struct,
+                        &shared_data_clone.rpc_channel,
+                        &shared_data_clone.rpc_exchange,
+                        reply_to_id,
+                    )
+                    .await
+                }
+                (None, false) => {
+                    warn!("Service {} is not found", &incommig_service);
+                    let payload = get_error_payload(
+                        GirolleError::UnknownService(format!(
+                            "Service {} is not found",
+                            &incommig_service,
+                        ))
+                        .convert(),
+                    );
+                    publish(
+                        &shared_data_clone.rpc_channel,
+                        payload,
+                        properties,
+                        reply_to_id,
+                        &shared_data_clone.rpc_exchange,
+                    )
+                    .await
+                    .expect("Error publishing");
+                }
+                (None, true) => {
+                    warn!("Method {} is not found", &incomming_method);
+                    let payload = get_error_payload(
+                        GirolleError::MethodNotFound(format!(
+                            "Method {} is not found",
+                            &incomming_method,
+                        ))
+                        .convert(),
+                    );
+                    publish(
+                        &shared_data_clone.rpc_channel,
+                        payload,
+                        properties,
+                        reply_to_id,
+                        &shared_data_clone.rpc_exchange,
+                    )
+                    .await
+                    .expect("Error publishing");
                 }
             };
             delivery.ack(BasicAckOptions::default()).await.expect("ack");
-            execute_delivery(
-                delivery,
-                &id,
-                rpc_task_struct,
-                &shared_data_clone.rpc_channel,
-                &shared_data_clone.rpc_queue,
-                &shared_data_clone.rpc_exchange,
-            )
-            .await;
         }
     });
     tokio::signal::ctrl_c()

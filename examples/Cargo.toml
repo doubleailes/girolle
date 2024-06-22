@@ -31,3 +31,7 @@ path = "simple_macro.rs"
 [[example]]
 name = "async_test"
 path = "async_test.rs"
+
+[[example]]
+name = "error_sender"
+path = "error_sender.rs"
