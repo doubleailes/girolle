@@ -10,7 +10,6 @@ use lapin::{
     types::{AMQPValue, FieldArray, FieldTable},
     BasicProperties, Connection,
 };
-use serde::de::value;
 use serde_json::Value;
 use std::collections::HashMap;
 use std::sync::Condvar;
