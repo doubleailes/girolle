@@ -10,8 +10,11 @@ use lapin::{
     types::{AMQPValue, FieldArray, FieldTable},
     BasicProperties, Connection,
 };
+use serde::de::value;
 use serde_json::Value;
 use std::collections::HashMap;
+use std::result;
+use std::sync::Condvar;
 use std::time::{Duration, SystemTime, SystemTimeError};
 use std::{
     collections::BTreeMap,
@@ -43,6 +46,7 @@ pub struct RpcClient {
     reply_channel: lapin::Channel,
     services: HashMap<String, TargetService>,
     replies: Arc<Mutex<HashMap<String, Value>>>,
+    not_empty: Arc<Condvar>,
 }
 impl RpcClient {
     /// # new
@@ -88,6 +92,7 @@ impl RpcClient {
             reply_channel,
             services: HashMap::new(),
             replies: Arc::new(Mutex::new(HashMap::new())),
+            not_empty: Arc::new(Condvar::new()),
         }
     }
     /// # start
@@ -120,9 +125,11 @@ impl RpcClient {
             .await?;
         let channel = self.reply_channel.clone();
         let replies = self.replies.clone();
+        let not_empty = self.not_empty.clone();
         consumer.set_delegate(move |delivery: DeliveryResult| {
             let channel = channel.clone();
             let replies = replies.clone();
+            let not_empty = not_empty.clone();
             async move {
                 if let Ok(Some(delivery)) = delivery {
                     let correlation_id = delivery.properties.correlation_id().clone();
@@ -130,6 +137,7 @@ impl RpcClient {
                     if let Ok(mut replies) = replies.lock() {
                         if let Some(correlation_id) = correlation_id {
                             replies.insert(correlation_id.to_string(), payload);
+                            not_empty.notify_one();
                         } else {
                             error!("Correlation id is missing");
                         }
@@ -282,39 +290,29 @@ impl RpcClient {
     }
     fn _result(&self, rpc_event: &RpcReply) -> GirolleResult<Value> {
         let incomming_id = rpc_event.get_correlation_id();
-        loop {
-            let result = {
-                let replies = self.replies.lock().unwrap();
-                if let Some(value) = replies.get(&incomming_id) {
-                    Some(value.clone())
-                } else {
-                    None
-                }
-            };
-
-            match result {
-                Some(value) => {
-                    let mut replies = self.replies.lock().unwrap();
-                    replies.remove(&incomming_id);
-                    match value["error"].as_object() {
-                        Some(_error) => {
-                            //error!("Error: {:?}", error);
-                            //eprintln!("Error: {:?}", error);
-                            let e: RemoteError =
-                                serde_json::from_value(value["error"].clone()).unwrap();
-                            return Err(e.convert_to_girolle_error());
-                        }
-                        None => {
-                            return Ok(value["result"].clone());
-                        }
-                    }
-                }
-                None => {
-                    std::thread::sleep(std::time::Duration::from_nanos(4));
-                }
+        let mut replies = self.replies.lock().unwrap();
+        let value_r = loop {
+            if let Some(value) = replies.get(&incomming_id) {
+                break value.clone();
+            } else {
+                replies = self.not_empty.wait(replies).unwrap();
             }
+        };
+        replies.remove(&incomming_id);
+        drop(replies);
+        match value_r["error"].as_object() {
+            Some(_error) => {
+                //error!("Error: {:?}", error);
+                //eprintln!("Error: {:?}", error);
+                let e: RemoteError =
+                    serde_json::from_value(value_r["error"].clone()).unwrap();
+                return Err(e.convert_to_girolle_error());
+            }
+            None => {
+                return Ok(value_r["result"].clone());
+            }
+            };
         }
-    }
     /// # send
     ///
     /// ## Description
