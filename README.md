@@ -1,6 +1,5 @@
 # girolle
 
-
 <div align="center">
 <img src="girolle.png"></img>
 </div>
@@ -22,7 +21,6 @@ section to see limitation.
 
 `cargo add girolle`
 
-
 ## Configuration
 
 There is two way to create a configuration. The first one is to use the `Config::with_yaml_defaults` function that will read a configuration from
@@ -41,6 +39,7 @@ parent_calls_tracked: 10
 ```
 
 In this example:
+
 * The `AMQP_URI` is the connection string to the RabbitMQ server.
 * The `rpc_exchange` is the exchange name for the rpc calls.
 * The `max_workers` is the max number of workers that will be created to handle the rpc calls.
@@ -196,16 +195,16 @@ Girolle use [lapin](https://github.com/amqp-rs/lapin) as an AMQP client/server l
 
 ## Supported features
 
-- [x] create a client
-    - [ ] create a proxy service in rust to interact with an other service
-- [x] Create a simple service
-    - [x] Handle the error
-    - [x] write test
-- [x] Add macro to simplify the creation of a service
-  - [x] Add basic macro
-  - [x] fix macro to handle `return`
-  - [x] fix macro to handle recursive function
-- [ ] listen to a pub/sub queue
+* [x] create a client
+  * [ ] create a proxy service in rust to interact with an other service
+* [x] Create a simple service
+  * [x] Handle the error
+  * [x] write test
+* [x] Add macro to simplify the creation of a service
+  * [x] Add basic macro
+  * [x] fix macro to handle `return`
+  * [x] fix macro to handle recursive function
+* [ ] listen to a pub/sub queue
 
 ### nameko-client
 
@@ -230,7 +229,6 @@ The PubSub service is not at all implemented. I dunno if that's something i'm in
 The web service is not implemented. I'm not sure if i will implement it. I need to rework the client
 to be make it 100% thread safe. It should be a commun subject with the proxy.
 
-
 ## Limitation
 
 The current code as been tested with the nameko and girolle examples in this
@@ -245,7 +243,7 @@ repository.
 
 |                    | nameko_test.py  | simple_sender.rs |
 |--------------------|-----------------|------------------|
-| nameko_service.py  |    15.587 s     |    17.754048ms   |
+| nameko_service.py  |    15.587 s     |      11.532 s    |
 | simple_macro.rs    |    15.654 s     |      8.078 s     |
 
 ### Client benchmark
@@ -259,7 +257,7 @@ hyperfine -N './target/release/examples/simple_sender'
 Benchmark 1: ./target/release/examples/simple_sender
   Time (mean ± σ):      9.995 s ±  0.116 s    [User: 0.163 s, System: 0.197 s]
   Range (min … max):    9.778 s … 10.176 s    10 runs
-```	
+```
 
 Nameko client ( with Girolle service )
 
@@ -269,6 +267,7 @@ Benchmark 1: python nameko_test.py
   Time (mean ± σ):     15.654 s ±  0.257 s    [User: 1.455 s, System: 0.407 s]
   Range (min … max):   15.202 s … 15.939 s    10 runs
 ```
+
 ### Service benchmark
 
 Girolle service ( with Girolle client )
