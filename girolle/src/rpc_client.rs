@@ -10,6 +10,7 @@ use lapin::{
     types::{AMQPValue, FieldArray, FieldTable},
     BasicProperties, Connection,
 };
+use serde::de::value;
 use serde_json::Value;
 use std::collections::HashMap;
 use std::sync::Condvar;
@@ -302,15 +303,14 @@ impl RpcClient {
             Some(_error) => {
                 //error!("Error: {:?}", error);
                 //eprintln!("Error: {:?}", error);
-                let e: RemoteError =
-                    serde_json::from_value(result_reply["error"].take()).unwrap();
+                let e: RemoteError = serde_json::from_value(result_reply["error"].take()).unwrap();
                 return Err(e.convert_to_girolle_error());
             }
             None => {
                 return Ok(result_reply["result"].take());
             }
-            };
-        }
+        };
+    }
     /// # send
     ///
     /// ## Description
