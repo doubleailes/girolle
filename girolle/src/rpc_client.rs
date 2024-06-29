@@ -10,10 +10,8 @@ use lapin::{
     types::{AMQPValue, FieldArray, FieldTable},
     BasicProperties, Connection,
 };
-use serde::de::value;
 use serde_json::Value;
 use std::collections::HashMap;
-use std::result;
 use std::sync::Condvar;
 use std::time::{Duration, SystemTime, SystemTimeError};
 use std::{
@@ -291,7 +289,7 @@ impl RpcClient {
     fn _result(&self, rpc_event: &RpcReply) -> GirolleResult<Value> {
         let incomming_id = rpc_event.get_correlation_id();
         let mut replies = self.replies.lock().unwrap();
-        let value_r = loop {
+        let mut result_reply = loop {
             if let Some(value) = replies.get(&incomming_id) {
                 break value.clone();
             } else {
@@ -300,16 +298,16 @@ impl RpcClient {
         };
         replies.remove(&incomming_id);
         drop(replies);
-        match value_r["error"].as_object() {
+        match result_reply["error"].as_object() {
             Some(_error) => {
                 //error!("Error: {:?}", error);
                 //eprintln!("Error: {:?}", error);
                 let e: RemoteError =
-                    serde_json::from_value(value_r["error"].clone()).unwrap();
+                    serde_json::from_value(result_reply["error"].take()).unwrap();
                 return Err(e.convert_to_girolle_error());
             }
             None => {
-                return Ok(value_r["result"].clone());
+                return Ok(result_reply["result"].take());
             }
             };
         }
