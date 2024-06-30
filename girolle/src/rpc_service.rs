@@ -3,10 +3,10 @@ use crate::{
     error::GirolleError,
     nameko_utils::{
         compute_deliver, delivery_to_message_properties, get_error_payload, get_id, publish,
-        DeliveryData,
     },
     queue::{create_service_channel, get_connection},
     rpc_task::RpcTask,
+    payload::Payload,
 };
 use lapin::{message::DeliveryResult, options::*, types::FieldTable, Channel};
 use std::{collections::HashMap, sync::Arc};
@@ -313,7 +313,7 @@ async fn rpc_service(
                 incommig_service == &shared_data_clone.service_name,
             ) {
                 (Some(rpc_task_struct), _) => {
-                    let incomming_data: DeliveryData = serde_json::from_slice(&delivery.data)
+                    let incomming_data: Payload = serde_json::from_slice(&delivery.data)
                         .expect("Can't deserialize incomming data");
                     compute_deliver(
                         incomming_data,

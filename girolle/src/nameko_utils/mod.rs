@@ -1,5 +1,6 @@
 use crate::error::{GirolleError, RemoteError};
 use crate::rpc_task::RpcTask;
+use crate::payload::Payload;
 use lapin::options::BasicPublishOptions;
 /// # nameko_utils
 ///
@@ -142,7 +143,7 @@ fn push_values_to_result(
 
 fn build_inputs_fn_service(
     service_args: &Vec<&str>,
-    data_delivery: DeliveryData,
+    data_delivery: Payload,
 ) -> Result<Vec<Value>, GirolleError> {
     let args_size: usize = data_delivery.args.len();
     let kwargs_size: usize = data_delivery.kwargs.len();
@@ -178,7 +179,7 @@ fn build_inputs_fn_service(
 #[test]
 fn test_build_inputs_fn_service() {
     let service_args = vec!["a", "b", "c"];
-    let data_delivery = DeliveryData {
+    let data_delivery = Payload {
         args: vec![
             Value::String("1".to_string()),
             Value::String("2".to_string()),
@@ -213,14 +214,9 @@ pub(crate) fn get_error_payload(error: RemoteError) -> String {
     )
     .to_string()
 }
-#[derive(Debug, Deserialize)]
-pub struct DeliveryData {
-    args: Vec<Value>,
-    kwargs: HashMap<String, Value>,
-}
 /// Execute the delivery
 pub(crate) async fn compute_deliver(
-    incomming_data: DeliveryData,
+    incomming_data: Payload,
     properties: BasicProperties,
     rpc_task_struct: &RpcTask,
     rpc_channel: &Channel,

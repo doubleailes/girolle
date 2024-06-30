@@ -5,8 +5,8 @@ use std::collections::HashMap;
 use crate::error::RemoteError;
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Payload {
-    args: Vec<Value>,
-    kwargs: HashMap<String, Value>,
+    pub (crate) args: Vec<Value>,
+    pub (crate) kwargs: HashMap<String, Value>,
 }
 impl Payload {
     /// # new
