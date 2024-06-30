@@ -1,4 +1,4 @@
-use crate::error::{GirolleError, RemoteError};
+use crate::error::GirolleError;
 use crate::rpc_task::RpcTask;
 use crate::payload::{Payload, PayloadResult};
 use lapin::options::BasicPublishOptions;
@@ -8,7 +8,7 @@ use lapin::options::BasicPublishOptions;
 use lapin::types::{AMQPValue, FieldTable, LongString, ShortString};
 use lapin::Channel;
 use lapin::{message::Delivery, BasicProperties};
-use serde_json::{json, Value};
+use serde_json::Value;
 use std::collections::HashMap;
 use tracing::error;
 use uuid::Uuid;
