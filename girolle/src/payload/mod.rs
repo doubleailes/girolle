@@ -1,6 +1,8 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
+
+use crate::error::RemoteError;
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Payload {
     args: Vec<Value>,
@@ -122,4 +124,10 @@ impl Payload {
     pub fn is_empty(&self) -> bool {
         self.args.is_empty() && self.kwargs.is_empty()
     }
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct PayloadResult{
+    result: Value,
+    error: Option<RemoteError>,
 }
