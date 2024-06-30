@@ -330,7 +330,7 @@ async fn rpc_service(
                         .convert();
                     publish(
                         &shared_data_clone.rpc_channel,
-                        PayloadResult::new(serde_json::Value::Null, Some(payload)),
+                        PayloadResult::from_error(payload),
                         properties,
                         reply_to_id,
                         &shared_data_clone.rpc_exchange,
@@ -348,7 +348,7 @@ async fn rpc_service(
                         .convert();
                     publish(
                         &shared_data_clone.rpc_channel,
-                        PayloadResult::new(serde_json::Value::Null, Some(payload)),
+                        PayloadResult::from_error(payload),
                         properties,
                         reply_to_id,
                         &shared_data_clone.rpc_exchange,

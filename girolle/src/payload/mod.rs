@@ -105,6 +105,11 @@ impl Payload {
         );
         self
     }
+    /// # to_string
+    /// 
+    /// ## Description
+    /// 
+    /// Serialize the Payload to a json string
     pub fn to_string(&self) -> String {
         serde_json::to_string(self).unwrap()
     }
@@ -126,25 +131,56 @@ impl Payload {
     }
 }
 
+/// # PayloadResult
+/// 
+/// ## Description
+/// 
+/// Struct to handle the result to send back to the client
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub (crate) struct PayloadResult{
     result: Value,
     error: Option<RemoteError>,
 }
 impl PayloadResult{
-    pub fn get_error(&self) -> Option<RemoteError> {
+    /// # get_error
+    /// 
+    /// ## Description
+    /// 
+    /// Get the error from the PayloadResult
+    pub (crate) fn get_error(&self) -> Option<RemoteError> {
         self.error.clone()
     }
-    pub fn get_result(&self) -> Value {
+    /// # get_result
+    /// 
+    /// ## Description
+    /// 
+    /// Get the result from the PayloadResult
+    pub (crate) fn get_result(&self) -> Value {
         self.result.clone()
     }
-    pub fn new(result: Value, error: Option<RemoteError>) -> Self {
+    /// # from_result_value
+    /// 
+    /// ## Description
+    /// 
+    /// Create a new PayloadResult from a Value
+    pub (crate) fn from_result_value(result: Value) -> Self {
         Self {
             result,
-            error,
+            error: None,
         }
     }
-    pub fn to_string(&self) -> String {
+    /// # from_error
+    /// 
+    /// ## Description
+    /// 
+    /// Create a new PayloadResult from a RemoteError
+    pub (crate) fn from_error(error: RemoteError) -> Self {
+        Self {
+            result: Value::Null,
+            error: Some(error),
+        }
+    }
+    pub (crate) fn to_string(&self) -> String {
         serde_json::to_string(self).unwrap()
     }
 }

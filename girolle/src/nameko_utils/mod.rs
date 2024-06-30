@@ -210,7 +210,7 @@ pub(crate) async fn compute_deliver(
         Err(error) => {
             publish(
                 &rpc_channel,
-                PayloadResult::new(Value::Null, Some(error.convert())),
+                PayloadResult::from_error(error.convert()),
                 properties,
                 reply_to_id,
                 rpc_exchange,
@@ -224,7 +224,7 @@ pub(crate) async fn compute_deliver(
         Ok(result) => {
             publish(
                 &rpc_channel,
-                PayloadResult::new(result, None),
+                PayloadResult::from_result_value(result),
                 properties,
                 reply_to_id,
                 rpc_exchange,
@@ -236,7 +236,7 @@ pub(crate) async fn compute_deliver(
         Err(error) => {
             publish(
                 &rpc_channel,
-                PayloadResult::new(Value::Null, Some(error.convert())),
+                PayloadResult::from_error(error.convert()),
                 properties,
                 reply_to_id,
                 rpc_exchange,
