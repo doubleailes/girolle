@@ -1,6 +1,6 @@
 use crate::error::{GirolleError, RemoteError};
 use crate::rpc_task::RpcTask;
-use crate::payload::Payload;
+use crate::payload::{Payload, PayloadResult};
 use lapin::options::BasicPublishOptions;
 /// # nameko_utils
 ///
@@ -8,7 +8,6 @@ use lapin::options::BasicPublishOptions;
 use lapin::types::{AMQPValue, FieldTable, LongString, ShortString};
 use lapin::Channel;
 use lapin::{message::Delivery, BasicProperties};
-use serde::Deserialize;
 use serde_json::{json, Value};
 use std::collections::HashMap;
 use tracing::error;
@@ -96,7 +95,7 @@ pub(crate) fn delivery_to_message_properties(
 
 pub(crate) async fn publish(
     rpc_channel: &Channel,
-    payload: String,
+    payload: PayloadResult,
     properties: BasicProperties,
     reply_to_id: String,
     rpc_exchange: &str,
@@ -110,7 +109,7 @@ pub(crate) async fn publish(
                 &rpc_exchange_clone,
                 &format!("{}", &reply_to_id),
                 BasicPublishOptions::default(),
-                payload.as_bytes(),
+                payload.to_string().as_bytes(),
                 properties,
             )
             .await
@@ -195,25 +194,6 @@ fn test_build_inputs_fn_service() {
     assert_eq!(result[2], Value::String("3".to_string()));
 }
 
-fn get_result_paylaod(result: Value) -> String {
-    json!(
-        {
-            "result": result,
-            "error": null,
-        }
-    )
-    .to_string()
-}
-
-pub(crate) fn get_error_payload(error: RemoteError) -> String {
-    json!(
-        {
-            "result": null,
-            "error": error,
-        }
-    )
-    .to_string()
-}
 /// Execute the delivery
 pub(crate) async fn compute_deliver(
     incomming_data: Payload,
@@ -230,7 +210,7 @@ pub(crate) async fn compute_deliver(
         Err(error) => {
             publish(
                 &rpc_channel,
-                get_error_payload(error.convert()),
+                PayloadResult::new(Value::Null, Some(error.convert())),
                 properties,
                 reply_to_id,
                 rpc_exchange,
@@ -244,7 +224,7 @@ pub(crate) async fn compute_deliver(
         Ok(result) => {
             publish(
                 &rpc_channel,
-                get_result_paylaod(result),
+                PayloadResult::new(result, None),
                 properties,
                 reply_to_id,
                 rpc_exchange,
@@ -256,7 +236,7 @@ pub(crate) async fn compute_deliver(
         Err(error) => {
             publish(
                 &rpc_channel,
-                get_error_payload(error.convert()),
+                PayloadResult::new(Value::Null, Some(error.convert())),
                 properties,
                 reply_to_id,
                 rpc_exchange,

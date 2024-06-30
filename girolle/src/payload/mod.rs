@@ -138,4 +138,13 @@ impl PayloadResult{
     pub fn get_result(&self) -> Value {
         self.result.clone()
     }
+    pub fn new(result: Value, error: Option<RemoteError>) -> Self {
+        Self {
+            result,
+            error,
+        }
+    }
+    pub fn to_string(&self) -> String {
+        serde_json::to_string(self).unwrap()
+    }
 }
