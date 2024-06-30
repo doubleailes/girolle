@@ -132,9 +132,6 @@ pub struct PayloadResult{
     error: Option<RemoteError>,
 }
 impl PayloadResult{
-    pub fn is_error(&self) -> bool {
-        self.error.is_some()
-    }
     pub fn get_error(&self) -> Option<RemoteError> {
         self.error.clone()
     }

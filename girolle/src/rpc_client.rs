@@ -1,5 +1,5 @@
 use crate::config::Config;
-use crate::error::{GirolleError, RemoteError};
+use crate::error::GirolleError;
 use crate::payload::{Payload, PayloadResult};
 use crate::queue::{create_message_channel, create_service_channel, get_connection};
 use crate::types::GirolleResult;
