@@ -127,7 +127,7 @@ impl Payload {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct PayloadResult{
+pub (crate) struct PayloadResult{
     result: Value,
     error: Option<RemoteError>,
 }
