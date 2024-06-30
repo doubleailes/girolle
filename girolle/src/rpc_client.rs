@@ -1,6 +1,6 @@
 use crate::config::Config;
 use crate::error::{GirolleError, RemoteError};
-use crate::payload::{Payload,PayloadResult};
+use crate::payload::{Payload, PayloadResult};
 use crate::queue::{create_message_channel, create_service_channel, get_connection};
 use crate::types::GirolleResult;
 use futures::executor;
@@ -289,7 +289,7 @@ impl RpcClient {
     fn _result(&self, rpc_event: &RpcReply) -> GirolleResult<Value> {
         let incomming_id = rpc_event.get_correlation_id();
         let mut replies = self.replies.lock().unwrap();
-        let mut result_reply = loop {
+        let result_reply = loop {
             if let Some(value) = replies.get(&incomming_id) {
                 break value.clone();
             } else {
@@ -298,15 +298,14 @@ impl RpcClient {
         };
         replies.remove(&incomming_id);
         drop(replies);
-        match result_reply["error"].as_object() {
-            Some(_error) => {
+        match result_reply.get_error() {
+            Some(result_error) => {
                 //error!("Error: {:?}", error);
                 //eprintln!("Error: {:?}", error);
-                let e: RemoteError = serde_json::from_value(result_reply["error"].take()).unwrap();
-                return Err(e.convert_to_girolle_error());
+                return Err(result_error.convert_to_girolle_error());
             }
             None => {
-                return Ok(result_reply["result"].take());
+                return Ok(result_reply.get_result());
             }
         };
     }
