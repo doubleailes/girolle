@@ -1,7 +1,10 @@
 use crate::{
-    config::Config, error::GirolleError, nameko_utils::{
-        compute_deliver, delivery_to_message_properties, get_id, publish,
-    }, payload::{Payload, PayloadResult}, queue::{create_service_channel, get_connection}, rpc_task::RpcTask
+    config::Config,
+    error::GirolleError,
+    nameko_utils::{compute_deliver, delivery_to_message_properties, get_id, publish},
+    payload::{Payload, PayloadResult},
+    queue::{create_service_channel, get_connection},
+    rpc_task::RpcTask,
 };
 use lapin::{message::DeliveryResult, options::*, types::FieldTable, Channel};
 use std::{collections::HashMap, sync::Arc};
@@ -322,12 +325,11 @@ async fn rpc_service(
                 }
                 (None, false) => {
                     warn!("Service {} is not found", &incommig_service);
-                    let payload = 
-                        GirolleError::UnknownService(format!(
-                            "Service {} is not found",
-                            &incommig_service,
-                        ))
-                        .convert();
+                    let payload = GirolleError::UnknownService(format!(
+                        "Service {} is not found",
+                        &incommig_service,
+                    ))
+                    .convert();
                     publish(
                         &shared_data_clone.rpc_channel,
                         PayloadResult::from_error(payload),
@@ -340,12 +342,11 @@ async fn rpc_service(
                 }
                 (None, true) => {
                     warn!("Method {} is not found", &incomming_method);
-                    let payload = 
-                        GirolleError::MethodNotFound(format!(
-                            "Method {} is not found",
-                            &incomming_method,
-                        ))
-                        .convert();
+                    let payload = GirolleError::MethodNotFound(format!(
+                        "Method {} is not found",
+                        &incomming_method,
+                    ))
+                    .convert();
                     publish(
                         &shared_data_clone.rpc_channel,
                         PayloadResult::from_error(payload),

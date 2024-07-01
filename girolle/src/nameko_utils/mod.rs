@@ -1,6 +1,6 @@
 use crate::error::GirolleError;
-use crate::rpc_task::RpcTask;
 use crate::payload::{Payload, PayloadResult};
+use crate::rpc_task::RpcTask;
 use lapin::options::BasicPublishOptions;
 /// # nameko_utils
 ///
