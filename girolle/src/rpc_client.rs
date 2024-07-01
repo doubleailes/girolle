@@ -1,6 +1,6 @@
 use crate::config::Config;
-use crate::error::{GirolleError, RemoteError};
-use crate::payload::Payload;
+use crate::error::GirolleError;
+use crate::payload::{Payload, PayloadResult};
 use crate::queue::{create_message_channel, create_service_channel, get_connection};
 use crate::types::GirolleResult;
 use futures::executor;
@@ -43,8 +43,8 @@ pub struct RpcClient {
     conn: Connection,
     reply_channel: lapin::Channel,
     services: HashMap<String, TargetService>,
-    replies: Arc<Mutex<HashMap<String, Value>>>,
     not_empty: Arc<Condvar>,
+    replies: Arc<Mutex<HashMap<String, PayloadResult>>>,
 }
 impl RpcClient {
     /// # new
@@ -130,8 +130,16 @@ impl RpcClient {
             let not_empty = not_empty.clone();
             async move {
                 if let Ok(Some(delivery)) = delivery {
-                    let correlation_id = delivery.properties.correlation_id().clone();
-                    let payload = serde_json::from_slice(&delivery.data).expect("json");
+                    let correlation_id: Option<lapin::types::ShortString> =
+                        delivery.properties.correlation_id().clone();
+                    let payload: PayloadResult = match serde_json::from_slice(&delivery.data) {
+                        Ok(payload) => payload,
+                        Err(e) => {
+                            error!(error = %e, "Deserialization failed");
+                            let error = GirolleError::SerdeJsonError(e);
+                            PayloadResult::from_error(error.convert())
+                        }
+                    };
                     if let Ok(mut replies) = replies.lock() {
                         if let Some(correlation_id) = correlation_id {
                             replies.insert(correlation_id.to_string(), payload);
@@ -289,7 +297,7 @@ impl RpcClient {
     fn _result(&self, rpc_event: &RpcReply) -> GirolleResult<Value> {
         let incomming_id = rpc_event.get_correlation_id();
         let mut replies = self.replies.lock().unwrap();
-        let mut result_reply = loop {
+        let result_reply = loop {
             if let Some(value) = replies.get(&incomming_id) {
                 break value.clone();
             } else {
@@ -298,19 +306,17 @@ impl RpcClient {
         };
         replies.remove(&incomming_id);
         drop(replies);
-        match result_reply["error"].as_object() {
-            Some(_error) => {
+        match result_reply.get_error() {
+            Some(result_error) => {
                 //error!("Error: {:?}", error);
                 //eprintln!("Error: {:?}", error);
-                let e: RemoteError =
-                    serde_json::from_value(result_reply["error"].take()).unwrap();
-                return Err(e.convert_to_girolle_error());
+                return Err(result_error.convert_to_girolle_error());
             }
             None => {
-                return Ok(result_reply["result"].take());
+                return Ok(result_reply.get_result());
             }
-            };
-        }
+        };
+    }
     /// # send
     ///
     /// ## Description

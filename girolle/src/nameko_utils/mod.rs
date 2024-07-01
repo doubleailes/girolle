@@ -1,4 +1,5 @@
-use crate::error::{GirolleError, RemoteError};
+use crate::error::GirolleError;
+use crate::payload::{Payload, PayloadResult};
 use crate::rpc_task::RpcTask;
 use lapin::options::BasicPublishOptions;
 /// # nameko_utils
@@ -7,8 +8,7 @@ use lapin::options::BasicPublishOptions;
 use lapin::types::{AMQPValue, FieldTable, LongString, ShortString};
 use lapin::Channel;
 use lapin::{message::Delivery, BasicProperties};
-use serde::Deserialize;
-use serde_json::{json, Value};
+use serde_json::Value;
 use std::collections::HashMap;
 use tracing::error;
 use uuid::Uuid;
@@ -95,7 +95,7 @@ pub(crate) fn delivery_to_message_properties(
 
 pub(crate) async fn publish(
     rpc_channel: &Channel,
-    payload: String,
+    payload: PayloadResult,
     properties: BasicProperties,
     reply_to_id: String,
     rpc_exchange: &str,
@@ -109,7 +109,10 @@ pub(crate) async fn publish(
                 &rpc_exchange_clone,
                 &format!("{}", &reply_to_id),
                 BasicPublishOptions::default(),
-                payload.as_bytes(),
+                payload
+                    .to_string()
+                    .expect("can't serialize payload")
+                    .as_bytes(),
                 properties,
             )
             .await
@@ -142,7 +145,7 @@ fn push_values_to_result(
 
 fn build_inputs_fn_service(
     service_args: &Vec<&str>,
-    data_delivery: DeliveryData,
+    data_delivery: Payload,
 ) -> Result<Vec<Value>, GirolleError> {
     let args_size: usize = data_delivery.args.len();
     let kwargs_size: usize = data_delivery.kwargs.len();
@@ -178,7 +181,7 @@ fn build_inputs_fn_service(
 #[test]
 fn test_build_inputs_fn_service() {
     let service_args = vec!["a", "b", "c"];
-    let data_delivery = DeliveryData {
+    let data_delivery = Payload {
         args: vec![
             Value::String("1".to_string()),
             Value::String("2".to_string()),
@@ -194,33 +197,9 @@ fn test_build_inputs_fn_service() {
     assert_eq!(result[2], Value::String("3".to_string()));
 }
 
-fn get_result_paylaod(result: Value) -> String {
-    json!(
-        {
-            "result": result,
-            "error": null,
-        }
-    )
-    .to_string()
-}
-
-pub(crate) fn get_error_payload(error: RemoteError) -> String {
-    json!(
-        {
-            "result": null,
-            "error": error,
-        }
-    )
-    .to_string()
-}
-#[derive(Debug, Deserialize)]
-pub struct DeliveryData {
-    args: Vec<Value>,
-    kwargs: HashMap<String, Value>,
-}
 /// Execute the delivery
 pub(crate) async fn compute_deliver(
-    incomming_data: DeliveryData,
+    incomming_data: Payload,
     properties: BasicProperties,
     rpc_task_struct: &RpcTask,
     rpc_channel: &Channel,
@@ -234,7 +213,7 @@ pub(crate) async fn compute_deliver(
         Err(error) => {
             publish(
                 &rpc_channel,
-                get_error_payload(error.convert()),
+                PayloadResult::from_error(error.convert()),
                 properties,
                 reply_to_id,
                 rpc_exchange,
@@ -248,7 +227,7 @@ pub(crate) async fn compute_deliver(
         Ok(result) => {
             publish(
                 &rpc_channel,
-                get_result_paylaod(result),
+                PayloadResult::from_result_value(result),
                 properties,
                 reply_to_id,
                 rpc_exchange,
@@ -260,7 +239,7 @@ pub(crate) async fn compute_deliver(
         Err(error) => {
             publish(
                 &rpc_channel,
-                get_error_payload(error.convert()),
+                PayloadResult::from_error(error.convert()),
                 properties,
                 reply_to_id,
                 rpc_exchange,

@@ -1,10 +1,8 @@
 use crate::{
     config::Config,
     error::GirolleError,
-    nameko_utils::{
-        compute_deliver, delivery_to_message_properties, get_error_payload, get_id, publish,
-        DeliveryData,
-    },
+    nameko_utils::{compute_deliver, delivery_to_message_properties, get_id, publish},
+    payload::{Payload, PayloadResult},
     queue::{create_service_channel, get_connection},
     rpc_task::RpcTask,
 };
@@ -313,7 +311,7 @@ async fn rpc_service(
                 incommig_service == &shared_data_clone.service_name,
             ) {
                 (Some(rpc_task_struct), _) => {
-                    let incomming_data: DeliveryData = serde_json::from_slice(&delivery.data)
+                    let incomming_data: Payload = serde_json::from_slice(&delivery.data)
                         .expect("Can't deserialize incomming data");
                     compute_deliver(
                         incomming_data,
@@ -327,16 +325,14 @@ async fn rpc_service(
                 }
                 (None, false) => {
                     warn!("Service {} is not found", &incommig_service);
-                    let payload = get_error_payload(
-                        GirolleError::UnknownService(format!(
-                            "Service {} is not found",
-                            &incommig_service,
-                        ))
-                        .convert(),
-                    );
+                    let payload = GirolleError::UnknownService(format!(
+                        "Service {} is not found",
+                        &incommig_service,
+                    ))
+                    .convert();
                     publish(
                         &shared_data_clone.rpc_channel,
-                        payload,
+                        PayloadResult::from_error(payload),
                         properties,
                         reply_to_id,
                         &shared_data_clone.rpc_exchange,
@@ -346,16 +342,14 @@ async fn rpc_service(
                 }
                 (None, true) => {
                     warn!("Method {} is not found", &incomming_method);
-                    let payload = get_error_payload(
-                        GirolleError::MethodNotFound(format!(
-                            "Method {} is not found",
-                            &incomming_method,
-                        ))
-                        .convert(),
-                    );
+                    let payload = GirolleError::MethodNotFound(format!(
+                        "Method {} is not found",
+                        &incomming_method,
+                    ))
+                    .convert();
                     publish(
                         &shared_data_clone.rpc_channel,
-                        payload,
+                        PayloadResult::from_error(payload),
                         properties,
                         reply_to_id,
                         &shared_data_clone.rpc_exchange,
