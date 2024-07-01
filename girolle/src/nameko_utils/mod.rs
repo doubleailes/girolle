@@ -109,7 +109,10 @@ pub(crate) async fn publish(
                 &rpc_exchange_clone,
                 &format!("{}", &reply_to_id),
                 BasicPublishOptions::default(),
-                payload.to_string().as_bytes(),
+                payload
+                    .to_string()
+                    .expect("can't serialize payload")
+                    .as_bytes(),
                 properties,
             )
             .await

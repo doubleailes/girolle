@@ -130,11 +130,12 @@ impl RpcClient {
             let not_empty = not_empty.clone();
             async move {
                 if let Ok(Some(delivery)) = delivery {
-                    let correlation_id = delivery.properties.correlation_id().clone();
+                    let correlation_id: Option<lapin::types::ShortString> =
+                        delivery.properties.correlation_id().clone();
                     let payload: PayloadResult = match serde_json::from_slice(&delivery.data) {
                         Ok(payload) => payload,
                         Err(e) => {
-                            error!("Error: {:?}", e);
+                            error!(error = %e, "Deserialization failed");
                             let error = GirolleError::SerdeJsonError(e);
                             PayloadResult::from_error(error.convert())
                         }

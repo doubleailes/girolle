@@ -180,7 +180,7 @@ impl PayloadResult {
             error: Some(error),
         }
     }
-    pub(crate) fn to_string(&self) -> String {
-        serde_json::to_string(self).unwrap()
+    pub(crate) fn to_string(&self) -> Result<String, serde_json::Error> {
+        serde_json::to_string(self)
     }
 }
