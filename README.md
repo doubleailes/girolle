@@ -241,6 +241,8 @@ repository.
 
 ## Benchmark
 
+### Simple message benchmark
+
 |                    | nameko_test.py  | simple_sender.rs |
 |--------------------|-----------------|------------------|
 | nameko_service.py  |    15.587 s     |      11.532 s    |
@@ -296,6 +298,15 @@ Benchmark 1: python nameko_test.py
   Time (mean ± σ):     15.587 s ±  0.325 s    [User: 1.443 s, System: 0.420 s]
   Range (min … max):   15.181 s … 16.034 s    10 runs
 ```
+
+### Fibonacci benchmark
+
+The benchmark use a static set of random int to compute fibonacci.
+
+|                    | nameko_fib_payload.py |
+|--------------------|-----------------------|
+| nameko_service.py  |         6.99   s      |
+| simple_macro.rs    | 03 min 58.11   s      |
 
 ### Macro-overhead benchmark
 
