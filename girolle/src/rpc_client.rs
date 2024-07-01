@@ -131,7 +131,14 @@ impl RpcClient {
             async move {
                 if let Ok(Some(delivery)) = delivery {
                     let correlation_id = delivery.properties.correlation_id().clone();
-                    let payload = serde_json::from_slice(&delivery.data).expect("json");
+                    let payload: PayloadResult = match serde_json::from_slice(&delivery.data) {
+                        Ok(payload) => payload,
+                        Err(e) => {
+                            error!("Error: {:?}", e);
+                            let error = GirolleError::SerdeJsonError(e);
+                            PayloadResult::from_error(error.convert())
+                        }
+                    };
                     if let Ok(mut replies) = replies.lock() {
                         if let Some(correlation_id) = correlation_id {
                             replies.insert(correlation_id.to_string(), payload);

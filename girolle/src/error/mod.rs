@@ -92,6 +92,12 @@ impl GirolleError {
                 value: e.clone(),
                 exc_args: vec![e.clone()],
             },
+            GirolleError::SerdeJsonError(e) => RemoteError {
+                exc_path: "nameko.exceptions.RemoteError".to_string(),
+                exc_type: "JsonError".to_string(),
+                value: e.to_string(),
+                exc_args: vec![e.to_string()],
+            },
             _ => RemoteError {
                 exc_path: "".to_string(),
                 exc_type: "".to_string(),
