@@ -46,7 +46,7 @@ pub(crate) fn insert_new_id_to_call_id(
         .unwrap()
         .as_slice();
     let mut call_id_stack = call_id_stack_slice.to_vec();
-    call_id_stack.push(set_current_call_id(function_name, &id.to_string()));
+    call_id_stack.push(set_current_call_id(function_name, id));
 
     // Keep only the last 10 elements in a simpler way
     if call_id_stack.len() > parent_calls_tracked {
