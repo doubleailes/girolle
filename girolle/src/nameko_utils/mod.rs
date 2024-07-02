@@ -116,7 +116,7 @@ pub(crate) async fn publish(
         rpc_channel_clone
             .basic_publish(
                 &rpc_exchange_clone,
-                &(&reply_to_id).to_string(),
+                &reply_to_id.to_string(),
                 BasicPublishOptions::default(),
                 payload
                     .to_string()
