@@ -1,4 +1,4 @@
-///! This module contains the most commonly used types, functions and macros.
+//! This module contains the most commonly used types, functions and macros.
 pub use crate::config::Config;
 pub use crate::payload::Payload;
 pub use crate::rpc_client::{RpcClient, RpcReply, RpcResult};

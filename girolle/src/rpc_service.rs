@@ -59,9 +59,9 @@ impl RpcService {
     /// ```rust
     /// use girolle::prelude::*;
     ///
-    /// fn main() {
-    ///     let services: RpcService = RpcService::new(Config::default_config(),"video");
-    /// }
+    /// 
+    /// let services: RpcService = RpcService::new(Config::default_config(),"video");
+    /// ```
     pub fn new(conf: Config, service_name: &'static str) -> Self {
         Self {
             conf,
@@ -84,10 +84,10 @@ impl RpcService {
     /// ```rust
     /// use girolle::prelude::*;
     ///
-    /// fn main() {
-    ///    let mut services: RpcService = RpcService::new(Config::default_config(),"video");
-    ///    services.set_service_name("other".to_string());
-    /// }
+    /// 
+    /// let mut services: RpcService = RpcService::new(Config::default_config(),"video");
+    /// services.set_service_name("other".to_string());
+    /// ```
     pub fn set_service_name(&mut self, service_name: String) {
         self.service_name = service_name;
     }
@@ -188,11 +188,11 @@ impl RpcService {
     /// ```rust
     /// use girolle::prelude::*;
     ///
-    /// fn main() {
-    ///    let services: RpcService = RpcService::new(Config::default_config(),"video");
-    ///    let conf = services.get_config();
-    ///    println!("{}", conf.AMQP_URI());
-    /// }
+    /// 
+    /// let services: RpcService = RpcService::new(Config::default_config(),"video");
+    /// let conf = services.get_config();
+    /// println!("{}", conf.AMQP_URI());
+    /// ```
     pub fn get_config(&self) -> &Config {
         &self.conf
     }
@@ -211,11 +211,11 @@ impl RpcService {
     /// ```rust
     /// use girolle::prelude::*;
     ///
-    /// fn main() {
-    ///    let mut services: RpcService = RpcService::new(Config::default_config(),"video");
-    ///    let conf = Config::default_config();
-    ///    services.set_config(conf);
-    /// }
+    /// 
+    /// let mut services: RpcService = RpcService::new(Config::default_config(),"video");
+    /// let conf = Config::default_config();
+    /// services.set_config(conf);
+    /// ```
     pub fn set_config(&mut self, config: Config) -> std::result::Result<(), std::string::String> {
         self.conf = config;
         Ok(())
@@ -310,7 +310,7 @@ async fn rpc_service(
                 opt_routing_key.split_once('.').expect("Error splitting");
             match (
                 shared_data.f_task.get(&opt_routing_key),
-                incommig_service == &shared_data.service_name,
+                incommig_service == shared_data.service_name,
             ) {
                 (Some(rpc_task_struct), _) => {
                     let incomming_data: Payload = serde_json::from_slice(&delivery.data)

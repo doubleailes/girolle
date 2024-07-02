@@ -31,25 +31,20 @@ impl Task {
     /// - `self` : &mut Task : The task to modify.
     fn add_input_serialize(&mut self) {
         let mut stmts: Vec<syn::Stmt> = Vec::new();
-        let mut i: usize = 0;
-        for arg in &self.args {
+        for (i, arg) in self.args.iter().enumerate() {
             let data_quote = quote! {
                 data[#i]
             };
-            match arg {
-                FnArg::Typed(pat_type) => {
-                    let pat = &pat_type.pat;
-                    let ty = &pat_type.ty;
-                    self.args_input_core.push(*pat.clone());
-                    stmts.push(
-                        parse_quote! {let #pat: #ty = serde_json::from_value(#data_quote.clone())?;},
-                    );
-                }
-                _ => {}
-            }
-            i += 1;
+            if let FnArg::Typed(pat_type) = arg {
+                             let pat = &pat_type.pat;
+                             let ty = &pat_type.ty;
+                             self.args_input_core.push(*pat.clone());
+                             stmts.push(
+                                parse_quote! {let #pat: #ty = serde_json::from_value(#data_quote.clone())?;},
+                             );
+                         }
         }
-        self.deser_wrapper = stmts.clone();
+        self.deser_wrapper.clone_from(&stmts);
     }
 }
 

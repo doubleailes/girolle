@@ -59,11 +59,9 @@ pub(crate) async fn create_service_channel(
     let routing_key = format!("{}.*", service_name);
     info!("{:?}", conn.status());
     let incomming_channel = conn.create_channel().await?;
-    let mut queue_declare_options = QueueDeclareOptions::default();
-    queue_declare_options.durable = true;
     let rpc_queue = format!("rpc-{}", service_name);
     let queue = incomming_channel
-        .queue_declare(&rpc_queue, queue_declare_options, FieldTable::default())
+        .queue_declare(&rpc_queue, QueueDeclareOptions { durable: true, ..Default::default() }, FieldTable::default())
         .await?;
     info!(?queue, "Declared queue");
     incomming_channel
@@ -107,13 +105,11 @@ pub(crate) async fn create_message_channel(
     let response_channel = conn.create_channel().await?;
     let mut response_arguments = FieldTable::default();
     response_arguments.insert("x-expires".into(), QUEUE_TTL.into());
-    let mut queue_declare_options = QueueDeclareOptions::default();
-    queue_declare_options.durable = true;
     // Need to clone the response_arguments because the queue_declare function takes ownership of the FieldTable
     response_channel
         .queue_declare(
             rpc_queue_reply,
-            queue_declare_options,
+            QueueDeclareOptions { durable: true, ..Default::default() },
             response_arguments.clone(),
         )
         .await?;

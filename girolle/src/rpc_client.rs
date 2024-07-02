@@ -373,10 +373,10 @@ impl RpcClient {
     /// ```rust,no_run
     /// use girolle::prelude::*;
     ///
-    /// fn main() {
-    ///    let rpc_client = RpcClient::new(Config::default_config());
-    ///    let conf = rpc_client.get_config();
-    /// }
+    /// 
+    /// let rpc_client = RpcClient::new(Config::default_config());
+    /// let conf = rpc_client.get_config();
+    /// ```
     pub fn get_config(&self) -> &Config {
         &self.conf
     }
@@ -395,11 +395,11 @@ impl RpcClient {
     /// ```rust,no_run
     /// use girolle::prelude::*;
     ///
-    /// fn main() {
-    ///    let mut rpc_client = RpcClient::new(Config::default_config());
-    ///    let conf = Config::default_config();
-    ///    rpc_client.set_config(conf);
-    /// }
+    /// 
+    /// let mut rpc_client = RpcClient::new(Config::default_config());
+    /// let conf = Config::default_config();
+    /// rpc_client.set_config(conf);
+    /// ```
     pub fn set_config(&mut self, config: Config) -> std::result::Result<(), std::string::String> {
         self.conf = config;
         Ok(())
