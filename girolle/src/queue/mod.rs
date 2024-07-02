@@ -61,7 +61,14 @@ pub(crate) async fn create_service_channel(
     let incomming_channel = conn.create_channel().await?;
     let rpc_queue = format!("rpc-{}", service_name);
     let queue = incomming_channel
-        .queue_declare(&rpc_queue, QueueDeclareOptions { durable: true, ..Default::default() }, FieldTable::default())
+        .queue_declare(
+            &rpc_queue,
+            QueueDeclareOptions {
+                durable: true,
+                ..Default::default()
+            },
+            FieldTable::default(),
+        )
         .await?;
     info!(?queue, "Declared queue");
     incomming_channel
@@ -109,7 +116,10 @@ pub(crate) async fn create_message_channel(
     response_channel
         .queue_declare(
             rpc_queue_reply,
-            QueueDeclareOptions { durable: true, ..Default::default() },
+            QueueDeclareOptions {
+                durable: true,
+                ..Default::default()
+            },
             response_arguments.clone(),
         )
         .await?;

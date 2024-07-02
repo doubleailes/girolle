@@ -312,9 +312,7 @@ impl RpcClient {
                 //eprintln!("Error: {:?}", error);
                 Err(result_error.convert_to_girolle_error())
             }
-            None => {
-                Ok(result_reply.get_result())
-            }
+            None => Ok(result_reply.get_result()),
         }
     }
     /// # send
@@ -373,7 +371,7 @@ impl RpcClient {
     /// ```rust,no_run
     /// use girolle::prelude::*;
     ///
-    /// 
+    ///
     /// let rpc_client = RpcClient::new(Config::default_config());
     /// let conf = rpc_client.get_config();
     /// ```
@@ -395,7 +393,7 @@ impl RpcClient {
     /// ```rust,no_run
     /// use girolle::prelude::*;
     ///
-    /// 
+    ///
     /// let mut rpc_client = RpcClient::new(Config::default_config());
     /// let conf = Config::default_config();
     /// rpc_client.set_config(conf);

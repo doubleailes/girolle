@@ -36,13 +36,13 @@ impl Task {
                 data[#i]
             };
             if let FnArg::Typed(pat_type) = arg {
-                             let pat = &pat_type.pat;
-                             let ty = &pat_type.ty;
-                             self.args_input_core.push(*pat.clone());
-                             stmts.push(
-                                parse_quote! {let #pat: #ty = serde_json::from_value(#data_quote.clone())?;},
-                             );
-                         }
+                let pat = &pat_type.pat;
+                let ty = &pat_type.ty;
+                self.args_input_core.push(*pat.clone());
+                stmts.push(
+                    parse_quote! {let #pat: #ty = serde_json::from_value(#data_quote.clone())?;},
+                );
+            }
         }
         self.deser_wrapper.clone_from(&stmts);
     }

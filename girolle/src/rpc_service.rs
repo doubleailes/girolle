@@ -59,7 +59,7 @@ impl RpcService {
     /// ```rust
     /// use girolle::prelude::*;
     ///
-    /// 
+    ///
     /// let services: RpcService = RpcService::new(Config::default_config(),"video");
     /// ```
     pub fn new(conf: Config, service_name: &'static str) -> Self {
@@ -84,7 +84,7 @@ impl RpcService {
     /// ```rust
     /// use girolle::prelude::*;
     ///
-    /// 
+    ///
     /// let mut services: RpcService = RpcService::new(Config::default_config(),"video");
     /// services.set_service_name("other".to_string());
     /// ```
@@ -188,7 +188,7 @@ impl RpcService {
     /// ```rust
     /// use girolle::prelude::*;
     ///
-    /// 
+    ///
     /// let services: RpcService = RpcService::new(Config::default_config(),"video");
     /// let conf = services.get_config();
     /// println!("{}", conf.AMQP_URI());
@@ -211,7 +211,7 @@ impl RpcService {
     /// ```rust
     /// use girolle::prelude::*;
     ///
-    /// 
+    ///
     /// let mut services: RpcService = RpcService::new(Config::default_config(),"video");
     /// let conf = Config::default_config();
     /// services.set_config(conf);
