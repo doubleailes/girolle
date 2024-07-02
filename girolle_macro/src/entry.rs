@@ -115,5 +115,5 @@ pub(crate) fn girolle_task(input: TokenStream) -> TokenStream {
             girolle::RpcTask::new(#name_fn,vec![#(#args_str),*], #fn_wrap_name)
         }
     };
-    TokenStream::from(expanded)
+    expanded
 }
