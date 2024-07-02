@@ -228,6 +228,7 @@ struct SharedData {
     rpc_exchange: String,
     service_name: String,
     semaphore: Semaphore,
+    parent_calls_tracked: usize,
 }
 
 /// # rpc_service
@@ -283,11 +284,12 @@ async fn rpc_service(
         rpc_exchange: conf.rpc_exchange().to_string(),
         service_name: service_name.to_string(),
         semaphore: Semaphore::new(conf.max_workers() as usize),
+        parent_calls_tracked: conf.parent_calls_tracked() as usize,
     });
     consumer.set_delegate(move |delivery: DeliveryResult| {
-        let shared_data_clone = Arc::clone(&shared_data);
+        let shared_data = Arc::clone(&shared_data);
         async move {
-            let _permit = shared_data_clone.semaphore.acquire().await;
+            let _permit = shared_data.semaphore.acquire().await;
             let delivery = match delivery {
                 // Carries the delivery alongside its channel
                 Ok(Some(delivery)) => delivery,
@@ -302,13 +304,13 @@ async fn rpc_service(
 
             let opt_routing_key = delivery.routing_key.to_string();
             let reply_to_id = get_id(delivery.properties.reply_to(), "reply_to_id");
-            let properties = delivery_to_message_properties(&delivery, &id, &reply_to_id)
+            let properties = delivery_to_message_properties(&delivery, &id, &reply_to_id, shared_data.parent_calls_tracked)
                 .expect("Error creating properties");
             let (incommig_service, incomming_method) =
                 opt_routing_key.split_once('.').expect("Error splitting");
             match (
-                shared_data_clone.f_task.get(&opt_routing_key),
-                incommig_service == &shared_data_clone.service_name,
+                shared_data.f_task.get(&opt_routing_key),
+                incommig_service == &shared_data.service_name,
             ) {
                 (Some(rpc_task_struct), _) => {
                     let incomming_data: Payload = serde_json::from_slice(&delivery.data)
@@ -317,8 +319,8 @@ async fn rpc_service(
                         incomming_data,
                         properties,
                         rpc_task_struct,
-                        &shared_data_clone.rpc_channel,
-                        &shared_data_clone.rpc_exchange,
+                        &shared_data.rpc_channel,
+                        &shared_data.rpc_exchange,
                         reply_to_id,
                     )
                     .await
@@ -331,11 +333,11 @@ async fn rpc_service(
                     ))
                     .convert();
                     publish(
-                        &shared_data_clone.rpc_channel,
+                        &shared_data.rpc_channel,
                         PayloadResult::from_error(payload),
                         properties,
                         reply_to_id,
-                        &shared_data_clone.rpc_exchange,
+                        &shared_data.rpc_exchange,
                     )
                     .await
                     .expect("Error publishing");
@@ -348,11 +350,11 @@ async fn rpc_service(
                     ))
                     .convert();
                     publish(
-                        &shared_data_clone.rpc_channel,
+                        &shared_data.rpc_channel,
                         PayloadResult::from_error(payload),
                         properties,
                         reply_to_id,
-                        &shared_data_clone.rpc_exchange,
+                        &shared_data.rpc_exchange,
                     )
                     .await
                     .expect("Error publishing");

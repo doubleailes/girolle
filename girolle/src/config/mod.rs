@@ -218,6 +218,9 @@ impl Config {
     pub fn max_workers(&self) -> u32 {
         self.max_workers.unwrap()
     }
+    pub fn parent_calls_tracked(&self) -> u32 {
+        self.parent_calls_tracked.unwrap()
+    }
     /// # with_amqp_uri
     ///
     /// ## Description
