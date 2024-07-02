@@ -301,12 +301,12 @@ Benchmark 1: python nameko_test.py
 
 ### Fibonacci benchmark
 
-The benchmark use a static set of random int to compute fibonacci.
+The benchmark use a [static set of random int](examples/data_set.json) to compute fibonacci.
 
 |                    | nameko_fib_payload.py |
 |--------------------|-----------------------|
-| nameko_service.py  |         6.99   s      |
-| simple_macro.rs    | 03 min 58.11   s      |
+| nameko_service.py  | 03 min 58.11   s      |
+| simple_macro.rs    |       6.99   s        |
 
 ### Macro-overhead benchmark
 
