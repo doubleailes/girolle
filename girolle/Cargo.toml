@@ -14,15 +14,15 @@ bench = false
 
 [dependencies]
 lapin = "2.3.4"
-serde_json = { workspace = true }
 serde = { version = "1.0.203", features = ["derive", "rc"] }
 futures = "0.3.30"
 girolle_macro = { path = "../girolle_macro", version = "1.8" }
-tokio = { workspace = true }
 tokio-executor-trait = "2.1.1"
 tokio-reactor-trait = "1.1.0"
 serde_yaml = "0.9"
-regex = "1.10.4"
+regex = "1.10.5"
+serde_json = { workspace = true }
+tokio = { workspace = true }
 
 [dependencies.tracing]
 version = "0.1.40"
@@ -33,7 +33,7 @@ version = "0.3.18"
 features = ["fmt"]
 
 [dependencies.uuid]
-version = "1.7.0"
+version = "1.9.1"
 features = [
     "v4",       # Lets you generate random UUIDs
     "fast-rng", # Use a faster (but still sufficiently random) RNG
