@@ -211,7 +211,7 @@ impl RpcClient {
         method_name: &str,
         payload: Payload,
     ) -> Result<RpcReply, GirolleError> {
-        if self.service_exist(target_service) == false {
+        if !self.service_exist(target_service) {
             return Err(GirolleError::ServiceMissingError(format!(
                 "Service {} is missing",
                 target_service
@@ -310,12 +310,12 @@ impl RpcClient {
             Some(result_error) => {
                 //error!("Error: {:?}", error);
                 //eprintln!("Error: {:?}", error);
-                return Err(result_error.convert_to_girolle_error());
+                Err(result_error.convert_to_girolle_error())
             }
             None => {
-                return Ok(result_reply.get_result());
+                Ok(result_reply.get_result())
             }
-        };
+        }
     }
     /// # send
     ///
@@ -431,9 +431,9 @@ impl RpcClient {
     pub async fn register_service(&mut self, service_name: &str) -> Result<(), lapin::Error> {
         let channel = create_service_channel(
             &self.conn,
-            &service_name,
+            service_name,
             self.conf.prefetch_count(),
-            &self.conf.rpc_exchange(),
+            self.conf.rpc_exchange(),
         )
         .await?;
         self.services

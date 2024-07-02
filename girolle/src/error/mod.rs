@@ -1,4 +1,3 @@
-use lapin;
 use serde::{Deserialize, Serialize};
 use std::fmt;
 

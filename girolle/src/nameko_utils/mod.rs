@@ -15,7 +15,7 @@ use uuid::Uuid;
 
 fn set_current_call_id(function_name: &str, id: &str) -> AMQPValue {
     // package_cg_asset.get_filepaths_from_tags.4c5615e2-9367-46aa-8f90-b87e89723fa0
-    let rpc_id = format!("{}.{}", function_name.to_string(), id.to_string());
+    let rpc_id = format!("{}.{}", function_name, id);
     AMQPValue::LongString(LongString::from(rpc_id.as_bytes()))
 }
 #[test]
@@ -116,7 +116,7 @@ pub(crate) async fn publish(
         rpc_channel_clone
             .basic_publish(
                 &rpc_exchange_clone,
-                &format!("{}", &reply_to_id),
+                &(&reply_to_id).to_string(),
                 BasicPublishOptions::default(),
                 payload
                     .to_string()
@@ -221,7 +221,7 @@ pub(crate) async fn compute_deliver(
         Ok(result) => result,
         Err(error) => {
             publish(
-                &rpc_channel,
+                rpc_channel,
                 PayloadResult::from_error(error.convert()),
                 properties,
                 reply_to_id,
@@ -235,7 +235,7 @@ pub(crate) async fn compute_deliver(
     match fn_service(&buildted_args) {
         Ok(result) => {
             publish(
-                &rpc_channel,
+                rpc_channel,
                 PayloadResult::from_result_value(result),
                 properties,
                 reply_to_id,
@@ -243,11 +243,10 @@ pub(crate) async fn compute_deliver(
             )
             .await
             .expect("Error publishing");
-            return;
         }
         Err(error) => {
             publish(
-                &rpc_channel,
+                rpc_channel,
                 PayloadResult::from_error(error.convert()),
                 properties,
                 reply_to_id,
@@ -255,7 +254,6 @@ pub(crate) async fn compute_deliver(
             )
             .await
             .expect("Error publishing");
-            return;
         }
-    };
+    }
 }

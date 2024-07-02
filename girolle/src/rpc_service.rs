@@ -119,7 +119,7 @@ impl RpcService {
     /// }
     pub fn register(mut self, fn_macro: fn() -> RpcTask) -> Self {
         let rpc_task = fn_macro();
-        self.insert(&rpc_task.name, rpc_task);
+        self.insert(rpc_task.name, rpc_task);
         self
     }
     fn insert(&mut self, method_name: &'static str, f: RpcTask) {
@@ -266,7 +266,7 @@ async fn rpc_service(
         &conn,
         service_name,
         conf.prefetch_count(),
-        &conf.rpc_exchange(),
+        conf.rpc_exchange(),
     )
     .await?;
     // Start a consumer.

@@ -69,7 +69,7 @@ pub(crate) async fn create_service_channel(
     incomming_channel
         .basic_qos(prefetch_count, BasicQosOptions::default())
         .await?;
-    let _incomming_queue = incomming_channel
+    incomming_channel
         .queue_bind(
             &rpc_queue,
             rpc_exchange,
@@ -116,11 +116,7 @@ pub(crate) async fn create_message_channel(
             queue_declare_options,
             response_arguments.clone(),
         )
-        .await
-        .map_err(|e| {
-            // Handle or log the error
-            e
-        })?;
+        .await?;
     response_channel
         .basic_qos(prefetch_count, BasicQosOptions::default())
         .await?;

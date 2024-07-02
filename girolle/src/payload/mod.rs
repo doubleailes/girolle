@@ -8,6 +8,12 @@ pub struct Payload {
     pub(crate) args: Vec<Value>,
     pub(crate) kwargs: HashMap<String, Value>,
 }
+impl Default for Payload {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Payload {
     /// # new
     ///
