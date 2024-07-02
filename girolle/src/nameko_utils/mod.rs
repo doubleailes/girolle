@@ -36,16 +36,24 @@ pub(crate) fn insert_new_id_to_call_id(
     mut headers: FieldTable,
     function_name: &str,
     id: &str,
+    parent_calls_tracked: usize,
 ) -> FieldTable {
     let inner_headers = headers.inner();
-    let mut call_id_stack = inner_headers
+    let call_id_stack_slice = inner_headers
         .get("nameko.call_id_stack")
         .unwrap()
         .as_array()
         .unwrap()
-        .clone();
+        .as_slice();
+    let mut call_id_stack = call_id_stack_slice.to_vec();
     call_id_stack.push(set_current_call_id(function_name, &id.to_string()));
-    let to_amqp = AMQPValue::FieldArray(call_id_stack);
+
+    // Keep only the last 10 elements in a simpler way
+    if call_id_stack.len() > parent_calls_tracked {
+        call_id_stack = call_id_stack[call_id_stack.len() - parent_calls_tracked..].to_vec();
+    }
+
+    let to_amqp = AMQPValue::FieldArray(call_id_stack.into());
     let key_field = ShortString::from("nameko.call_id_stack");
     headers.insert(key_field, to_amqp);
     headers
@@ -70,6 +78,7 @@ pub(crate) fn delivery_to_message_properties(
     delivery: &Delivery,
     id: &Uuid,
     rpc_queue: &str,
+    parent_calls_tracked: usize,
 ) -> Result<lapin::protocol::basic::AMQPProperties, GirolleError> {
     let opt_routing_key = delivery.routing_key.to_string();
     // Get the correlation_id and reply_to_id
@@ -77,7 +86,7 @@ pub(crate) fn delivery_to_message_properties(
     //need to clone to modify the headers
     let opt_headers = delivery.properties.headers();
     let headers = match opt_headers {
-        Some(h) => insert_new_id_to_call_id(h.clone(), &opt_routing_key, &id.to_string()),
+        Some(h) => insert_new_id_to_call_id(h.clone(), &opt_routing_key, &id.to_string(),parent_calls_tracked),
         None => {
             error!("No headers found in delivery properties");
             return Err(GirolleError::MissingHeader);
