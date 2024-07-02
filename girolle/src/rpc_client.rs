@@ -187,7 +187,7 @@ impl RpcClient {
     ///
     /// * `service_name` - The name of the service in the Nameko microservice
     /// * `method_name` - The name of the function to call
-    /// * `args` - The arguments of the function as Vec<T>
+    /// * `args` - The arguments of the function as `Vec<T>`
     ///
     /// ## Example
     ///
