@@ -187,7 +187,7 @@ impl RpcClient {
     ///
     /// * `service_name` - The name of the service in the Nameko microservice
     /// * `method_name` - The name of the function to call
-    /// * `args` - The arguments of the function as Vec<T>
+    /// * `args` - The arguments of the function as `Vec<T>`
     ///
     /// ## Example
     ///
@@ -211,7 +211,7 @@ impl RpcClient {
         method_name: &str,
         payload: Payload,
     ) -> Result<RpcReply, GirolleError> {
-        if self.service_exist(target_service) == false {
+        if !self.service_exist(target_service) {
             return Err(GirolleError::ServiceMissingError(format!(
                 "Service {} is missing",
                 target_service
@@ -310,12 +310,10 @@ impl RpcClient {
             Some(result_error) => {
                 //error!("Error: {:?}", error);
                 //eprintln!("Error: {:?}", error);
-                return Err(result_error.convert_to_girolle_error());
+                Err(result_error.convert_to_girolle_error())
             }
-            None => {
-                return Ok(result_reply.get_result());
-            }
-        };
+            None => Ok(result_reply.get_result()),
+        }
     }
     /// # send
     ///
@@ -373,10 +371,10 @@ impl RpcClient {
     /// ```rust,no_run
     /// use girolle::prelude::*;
     ///
-    /// fn main() {
-    ///    let rpc_client = RpcClient::new(Config::default_config());
-    ///    let conf = rpc_client.get_config();
-    /// }
+    ///
+    /// let rpc_client = RpcClient::new(Config::default_config());
+    /// let conf = rpc_client.get_config();
+    /// ```
     pub fn get_config(&self) -> &Config {
         &self.conf
     }
@@ -395,11 +393,11 @@ impl RpcClient {
     /// ```rust,no_run
     /// use girolle::prelude::*;
     ///
-    /// fn main() {
-    ///    let mut rpc_client = RpcClient::new(Config::default_config());
-    ///    let conf = Config::default_config();
-    ///    rpc_client.set_config(conf);
-    /// }
+    ///
+    /// let mut rpc_client = RpcClient::new(Config::default_config());
+    /// let conf = Config::default_config();
+    /// rpc_client.set_config(conf);
+    /// ```
     pub fn set_config(&mut self, config: Config) -> std::result::Result<(), std::string::String> {
         self.conf = config;
         Ok(())
@@ -431,9 +429,9 @@ impl RpcClient {
     pub async fn register_service(&mut self, service_name: &str) -> Result<(), lapin::Error> {
         let channel = create_service_channel(
             &self.conn,
-            &service_name,
+            service_name,
             self.conf.prefetch_count(),
-            &self.conf.rpc_exchange(),
+            self.conf.rpc_exchange(),
         )
         .await?;
         self.services

@@ -1,7 +1,6 @@
 use regex::Captures;
 use regex::Regex;
 use serde::Deserialize;
-use serde_yaml;
 use std::borrow::Cow;
 use std::collections::HashMap;
 use std::env;
@@ -312,9 +311,9 @@ impl Config {
 // quick function to expand var in slice string
 fn expand_var(raw_config: &str) -> Cow<str> {
     let re = Regex::new(r"\$\{([a-zA-Z_][0-9a-zA-Z_]*)\}").unwrap();
-    re.replace_all(&raw_config, |caps: &Captures| match env::var(&caps[1]) {
+    re.replace_all(raw_config, |caps: &Captures| match env::var(&caps[1]) {
         Ok(val) => val,
-        Err(_) => (&caps[0]).to_string(),
+        Err(_) => caps[0].to_string(),
     })
 }
 

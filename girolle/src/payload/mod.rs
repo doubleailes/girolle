@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
+use std::fmt;
 
 use crate::error::RemoteError;
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -8,6 +9,12 @@ pub struct Payload {
     pub(crate) args: Vec<Value>,
     pub(crate) kwargs: HashMap<String, Value>,
 }
+impl Default for Payload {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Payload {
     /// # new
     ///
@@ -105,14 +112,6 @@ impl Payload {
         );
         self
     }
-    /// # to_string
-    ///
-    /// ## Description
-    ///
-    /// Serialize the Payload to a json string
-    pub fn to_string(&self) -> String {
-        serde_json::to_string(self).unwrap()
-    }
     /// # is_empty
     ///
     /// ## Description
@@ -128,6 +127,15 @@ impl Payload {
     /// ```
     pub fn is_empty(&self) -> bool {
         self.args.is_empty() && self.kwargs.is_empty()
+    }
+}
+
+impl fmt::Display for Payload {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match serde_json::to_string(self) {
+            Ok(json_str) => write!(f, "{}", json_str),
+            Err(e) => write!(f, "Error serializing to JSON: {}", e),
+        }
     }
 }
 

@@ -15,7 +15,7 @@ use uuid::Uuid;
 
 fn set_current_call_id(function_name: &str, id: &str) -> AMQPValue {
     // package_cg_asset.get_filepaths_from_tags.4c5615e2-9367-46aa-8f90-b87e89723fa0
-    let rpc_id = format!("{}.{}", function_name.to_string(), id.to_string());
+    let rpc_id = format!("{}.{}", function_name, id);
     AMQPValue::LongString(LongString::from(rpc_id.as_bytes()))
 }
 #[test]
@@ -46,7 +46,7 @@ pub(crate) fn insert_new_id_to_call_id(
         .unwrap()
         .as_slice();
     let mut call_id_stack = call_id_stack_slice.to_vec();
-    call_id_stack.push(set_current_call_id(function_name, &id.to_string()));
+    call_id_stack.push(set_current_call_id(function_name, id));
 
     // Keep only the last 10 elements in a simpler way
     if call_id_stack.len() > parent_calls_tracked {
@@ -116,7 +116,7 @@ pub(crate) async fn publish(
         rpc_channel_clone
             .basic_publish(
                 &rpc_exchange_clone,
-                &format!("{}", &reply_to_id),
+                &reply_to_id.to_string(),
                 BasicPublishOptions::default(),
                 payload
                     .to_string()
@@ -139,21 +139,62 @@ fn push_values_to_result(
     start: usize,
     end: usize,
 ) -> Result<Vec<Value>, GirolleError> {
-    let mut result: Vec<Value> = Vec::new();
-    let error_message = "Key is missing in kwargs".to_string();
-    for i in start..end {
-        result.push(
-            kwargs
-                .get(service_args[i])
-                .ok_or_else(|| GirolleError::IncorrectSignature(error_message.clone()))?
-                .clone(),
+    service_args
+        .iter()
+        .take(end)
+        .skip(start)
+        .map(|arg| {
+            kwargs.get(&arg.to_string()).cloned().ok_or_else(|| {
+                GirolleError::IncorrectSignature("Key is missing in kwargs".to_string())
+            })
+        })
+        .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::Value;
+    use std::collections::HashMap;
+
+    #[test]
+    fn test_push_values_to_result_success() {
+        let service_args = vec!["arg1", "arg2"];
+        let mut kwargs = HashMap::new();
+        kwargs.insert("arg1".to_string(), Value::String("value1".to_string()));
+        kwargs.insert("arg2".to_string(), Value::String("value2".to_string()));
+
+        let result = push_values_to_result(&service_args, &kwargs, 0, 2);
+        assert!(result.is_ok());
+        let values = result.unwrap();
+        assert_eq!(
+            values,
+            vec![
+                Value::String("value1".to_string()),
+                Value::String("value2".to_string())
+            ]
         );
     }
-    Ok(result)
+
+    #[test]
+    fn test_push_values_to_result_missing_key() {
+        let service_args = vec!["arg1", "arg3"]; // arg3 does not exist in kwargs
+        let mut kwargs = HashMap::new();
+        kwargs.insert("arg1".to_string(), Value::String("value1".to_string()));
+
+        let result = push_values_to_result(&service_args, &kwargs, 0, 2);
+        assert!(result.is_err());
+        match result {
+            Err(GirolleError::IncorrectSignature(msg)) => {
+                assert_eq!(msg, "Key is missing in kwargs".to_string());
+            }
+            _ => panic!("Expected GirolleError::IncorrectSignature"),
+        }
+    }
 }
 
 fn build_inputs_fn_service(
-    service_args: &Vec<&str>,
+    service_args: &[&str],
     data_delivery: Payload,
 ) -> Result<Vec<Value>, GirolleError> {
     let args_size: usize = data_delivery.args.len();
@@ -221,7 +262,7 @@ pub(crate) async fn compute_deliver(
         Ok(result) => result,
         Err(error) => {
             publish(
-                &rpc_channel,
+                rpc_channel,
                 PayloadResult::from_error(error.convert()),
                 properties,
                 reply_to_id,
@@ -235,7 +276,7 @@ pub(crate) async fn compute_deliver(
     match fn_service(&buildted_args) {
         Ok(result) => {
             publish(
-                &rpc_channel,
+                rpc_channel,
                 PayloadResult::from_result_value(result),
                 properties,
                 reply_to_id,
@@ -243,11 +284,10 @@ pub(crate) async fn compute_deliver(
             )
             .await
             .expect("Error publishing");
-            return;
         }
         Err(error) => {
             publish(
-                &rpc_channel,
+                rpc_channel,
                 PayloadResult::from_error(error.convert()),
                 properties,
                 reply_to_id,
@@ -255,7 +295,6 @@ pub(crate) async fn compute_deliver(
             )
             .await
             .expect("Error publishing");
-            return;
         }
-    };
+    }
 }

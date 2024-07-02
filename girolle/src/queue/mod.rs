@@ -25,11 +25,11 @@ pub(crate) async fn get_connection(
     match Connection::connect(&amqp_uri, connection_options).await {
         Ok(connection) => {
             info!("Connected to RabbitMQ");
-            return Ok(connection);
+            Ok(connection)
         }
         Err(e) => {
             error!("Failed to connect to RabbitMQ with error:{}", e);
-            return Err(e);
+            Err(e)
         }
     }
 }
@@ -59,17 +59,22 @@ pub(crate) async fn create_service_channel(
     let routing_key = format!("{}.*", service_name);
     info!("{:?}", conn.status());
     let incomming_channel = conn.create_channel().await?;
-    let mut queue_declare_options = QueueDeclareOptions::default();
-    queue_declare_options.durable = true;
     let rpc_queue = format!("rpc-{}", service_name);
     let queue = incomming_channel
-        .queue_declare(&rpc_queue, queue_declare_options, FieldTable::default())
+        .queue_declare(
+            &rpc_queue,
+            QueueDeclareOptions {
+                durable: true,
+                ..Default::default()
+            },
+            FieldTable::default(),
+        )
         .await?;
     info!(?queue, "Declared queue");
     incomming_channel
         .basic_qos(prefetch_count, BasicQosOptions::default())
         .await?;
-    let _incomming_queue = incomming_channel
+    incomming_channel
         .queue_bind(
             &rpc_queue,
             rpc_exchange,
@@ -107,20 +112,17 @@ pub(crate) async fn create_message_channel(
     let response_channel = conn.create_channel().await?;
     let mut response_arguments = FieldTable::default();
     response_arguments.insert("x-expires".into(), QUEUE_TTL.into());
-    let mut queue_declare_options = QueueDeclareOptions::default();
-    queue_declare_options.durable = true;
     // Need to clone the response_arguments because the queue_declare function takes ownership of the FieldTable
     response_channel
         .queue_declare(
             rpc_queue_reply,
-            queue_declare_options,
+            QueueDeclareOptions {
+                durable: true,
+                ..Default::default()
+            },
             response_arguments.clone(),
         )
-        .await
-        .map_err(|e| {
-            // Handle or log the error
-            e
-        })?;
+        .await?;
     response_channel
         .basic_qos(prefetch_count, BasicQosOptions::default())
         .await?;
