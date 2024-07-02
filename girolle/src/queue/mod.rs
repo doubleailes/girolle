@@ -25,11 +25,11 @@ pub(crate) async fn get_connection(
     match Connection::connect(&amqp_uri, connection_options).await {
         Ok(connection) => {
             info!("Connected to RabbitMQ");
-            return Ok(connection);
+            Ok(connection)
         }
         Err(e) => {
             error!("Failed to connect to RabbitMQ with error:{}", e);
-            return Err(e);
+            Err(e)
         }
     }
 }
