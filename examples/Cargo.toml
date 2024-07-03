@@ -15,7 +15,8 @@ features = ["fmt"]
 [dev-dependencies]
 girolle = { path = "../girolle" }
 tokio = { workspace = true }
-serde = {workspace = true}
+serde = { workspace = true }
+rocket = { version = "0.5.1" }
 
 [[example]]
 name = "simple_sender"
@@ -40,3 +41,7 @@ path = "error_sender.rs"
 [[example]]
 name = "simple_fib"
 path = "simple_fib.rs"
+
+[[example]]
+name = "rocket_front"
+path = "rocket_front.rs"
