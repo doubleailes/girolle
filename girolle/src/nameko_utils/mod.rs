@@ -86,7 +86,12 @@ pub(crate) fn delivery_to_message_properties(
     //need to clone to modify the headers
     let opt_headers = delivery.properties.headers();
     let headers = match opt_headers {
-        Some(h) => insert_new_id_to_call_id(h.clone(), &opt_routing_key, &id.to_string(),parent_calls_tracked),
+        Some(h) => insert_new_id_to_call_id(
+            h.clone(),
+            &opt_routing_key,
+            &id.to_string(),
+            parent_calls_tracked,
+        ),
         None => {
             error!("No headers found in delivery properties");
             return Err(GirolleError::MissingHeader);
