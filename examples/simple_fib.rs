@@ -22,6 +22,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .unwrap()
         })
         .collect();
-    let _r: Vec<f64>= res.into_iter().map(|reply| rpc_client.result(&reply).unwrap().get_value()).map(|v| serde_json::from_value(v).unwrap()).collect();
+    let _r: Vec<f64> = res
+        .into_iter()
+        .map(|reply| rpc_client.result(&reply).unwrap().get_value())
+        .map(|v| serde_json::from_value(v).unwrap())
+        .collect();
     Ok(())
 }

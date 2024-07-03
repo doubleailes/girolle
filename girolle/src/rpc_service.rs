@@ -304,8 +304,13 @@ async fn rpc_service(
 
             let opt_routing_key = delivery.routing_key.to_string();
             let reply_to_id = get_id(delivery.properties.reply_to(), "reply_to_id");
-            let properties = delivery_to_message_properties(&delivery, &id, &reply_to_id, shared_data.parent_calls_tracked)
-                .expect("Error creating properties");
+            let properties = delivery_to_message_properties(
+                &delivery,
+                &id,
+                &reply_to_id,
+                shared_data.parent_calls_tracked,
+            )
+            .expect("Error creating properties");
             let (incommig_service, incomming_method) =
                 opt_routing_key.split_once('.').expect("Error splitting");
             match (
