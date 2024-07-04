@@ -144,12 +144,10 @@ fn push_values_to_result(
     start: usize,
     end: usize,
 ) -> Result<Vec<Value>, GirolleError> {
-    service_args
+    service_args[start..end]
         .iter()
-        .take(end)
-        .skip(start)
-        .map(|arg| {
-            kwargs.get(&arg.to_string()).cloned().ok_or_else(|| {
+        .map(|&arg| {
+            kwargs.get(arg).cloned().ok_or_else(|| {
                 GirolleError::IncorrectSignature("Key is missing in kwargs".to_string())
             })
         })
@@ -198,38 +196,36 @@ mod tests {
     }
 }
 
-fn build_inputs_fn_service(
+pub fn build_inputs_fn_service(
     service_args: &[&str],
     data_delivery: Payload,
 ) -> Result<Vec<Value>, GirolleError> {
-    let args_size: usize = data_delivery.args.len();
-    let kwargs_size: usize = data_delivery.kwargs.len();
-    let service_args_size: usize = service_args.len();
+    let args_size = data_delivery.args.len();
+    let kwargs_size = data_delivery.kwargs.len();
+    let service_args_size = service_args.len();
 
-    match (
-        data_delivery.kwargs.is_empty(),
-        data_delivery.args.is_empty(),
-        service_args_size == args_size + kwargs_size,
-    ) {
-        (true, _, _) if service_args_size == args_size => Ok(data_delivery.args),
-        (_, true, _) if service_args_size == kwargs_size => {
-            push_values_to_result(service_args, &data_delivery.kwargs, 0, kwargs_size)
+    // Directly check if the total size matches the expected size.
+    if service_args_size == args_size + kwargs_size {
+        // If only args are provided.
+        if kwargs_size == 0 {
+            return Ok(data_delivery.args);
         }
-        (_, _, true) => {
-            let mut result = data_delivery.args;
-            result.extend(push_values_to_result(
-                service_args,
-                &data_delivery.kwargs,
-                args_size,
-                args_size + kwargs_size,
-            )?);
-            Ok(result)
-        }
-        _ => Err(GirolleError::IncorrectSignature(format!(
+        // If both args and kwargs are provided.
+        let mut result = Vec::with_capacity(service_args_size);
+        result.extend(data_delivery.args);
+        result.extend(push_values_to_result(
+            service_args,
+            &data_delivery.kwargs,
+            args_size,
+            service_args_size,
+        )?);
+        Ok(result)
+    } else {
+        Err(GirolleError::IncorrectSignature(format!(
             "takes {} positional arguments but {} were given",
             service_args_size,
             args_size + kwargs_size
-        ))),
+        )))
     }
 }
 
