@@ -1,6 +1,7 @@
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 
 use girolle::prelude::*;
+use girolle::nameko_utils::build_inputs_fn_service;
 use serde_json::Value;
 
 fn fibonacci_fast(n: u64) -> u64 {
@@ -39,5 +40,20 @@ fn bench_macro(c: &mut Criterion) {
     group.finish();
 }
 
-criterion_group!(benches, bench_macro);
+
+
+fn bench_build_inputs_fn_service(c: &mut Criterion) {
+    let mut group = c.benchmark_group("build_inputs_fn_service");
+    let service_args = vec!["a", "b", "c"];
+    let data_delivery = Payload::new()
+        .arg("1")
+        .arg("2")
+        .kwarg("c", "3");
+    group.bench_function("build_inputs_fn_service", |b| {
+        b.iter(|| build_inputs_fn_service(&service_args, data_delivery.clone()))
+    });
+    group.finish();
+}
+
+criterion_group!(name = benches;config = Criterion::default(); targets= bench_macro, bench_build_inputs_fn_service);
 criterion_main!(benches);

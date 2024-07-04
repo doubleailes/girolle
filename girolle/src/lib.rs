@@ -50,7 +50,8 @@ mod config;
 mod queue;
 pub mod types;
 pub use config::Config;
-mod nameko_utils;
+// Public for bench purpose
+pub mod nameko_utils;
 pub mod prelude;
 mod rpc_client;
 pub use rpc_client::RpcClient;
