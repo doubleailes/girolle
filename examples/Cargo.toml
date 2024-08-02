@@ -15,28 +15,28 @@ features = ["fmt"]
 [dev-dependencies]
 girolle = { path = "../girolle" }
 tokio = { workspace = true }
-serde = {workspace = true}
+serde = { workspace = true }
 
 [[example]]
 name = "simple_sender"
-path = "simple_sender.rs"
+path = "src/simple_sender.rs"
 
 [[example]]
 name = "simple_service"
-path = "simple_service.rs"
+path = "src/simple_service.rs"
 
 [[example]]
 name = "simple_macro"
-path = "simple_macro.rs"
+path = "src/simple_macro.rs"
 
 [[example]]
 name = "async_test"
-path = "async_test.rs"
+path = "src/async_test.rs"
 
 [[example]]
 name = "error_sender"
-path = "error_sender.rs"
+path = "src/error_sender.rs"
 
 [[example]]
 name = "simple_fib"
-path = "simple_fib.rs"
+path = "src/simple_fib.rs"
