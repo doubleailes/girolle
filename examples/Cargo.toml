@@ -3,6 +3,8 @@ name = "examples"
 version = "0.0.0"
 publish = false
 edition = "2021"
+# https://github.com/dependabot/dependabot-core/issues/1156
+autobins = false
 
 [dependencies.tracing]
 version = "0.1.40"
