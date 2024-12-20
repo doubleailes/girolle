@@ -1,6 +1,6 @@
 [package]
 name = "girolle"
-version = "1.8.3"
+version = "1.8.4"
 edition = "2021"
 authors = ["Philippe Llerena <philippe.llerena@gmail.com>"]
 description = "A nameko like lib in rust"
@@ -14,26 +14,26 @@ bench = false
 
 [dependencies]
 lapin = "2.5.0"
-futures = "0.3.30"
+futures = "0.3.31"
 girolle_macro = { path = "../girolle_macro", version = "1.8" }
-tokio-executor-trait = "2.1.1"
+tokio-executor-trait = "2.1.3"
 tokio-reactor-trait = "1.1.0"
 serde_yaml = "0.9.33"
-regex = "1.10.6"
+regex = "1.11.0"
 serde = { workspace = true }
 serde_json = { workspace = true }
 tokio = { workspace = true }
 
 [dependencies.tracing]
-version = "0.1.40"
+version = "0.1.41"
 default-features = false
 
 [dependencies.tracing-subscriber]
-version = "0.3.18"
+version = "0.3.19"
 features = ["fmt"]
 
 [dependencies.uuid]
-version = "1.10.0"
+version = "1.11.0"
 features = [
     "v4",       # Lets you generate random UUIDs
     "fast-rng", # Use a faster (but still sufficiently random) RNG
