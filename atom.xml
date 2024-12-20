@@ -1,0 +1,339 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en">
+    <title>girolle</title>
+    <subtitle>girolle is lib to interact with nameko-rpc services</subtitle>
+    <link rel="self" type="application/atom+xml" href="https://doubleailes.github.io/girolle/atom.xml"/>
+    <link rel="alternate" type="text/html" href="https://doubleailes.github.io/girolle"/>
+    <generator uri="https://www.getzola.org/">Zola</generator>
+    <updated>2024-06-14T00:00:00+00:00</updated>
+    <id>https://doubleailes.github.io/girolle/atom.xml</id>
+    <entry xml:lang="en">
+        <title>Service</title>
+        <published>2024-06-14T00:00:00+00:00</published>
+        <updated>2024-06-14T00:00:00+00:00</updated>
+        
+        <author>
+          <name>
+            
+              Unknown
+            
+          </name>
+        </author>
+        
+        <link rel="alternate" type="text/html" href="https://doubleailes.github.io/girolle/docs/getting-started/client/"/>
+        <id>https://doubleailes.github.io/girolle/docs/getting-started/client/</id>
+        
+        <content type="html" xml:base="https://doubleailes.github.io/girolle/docs/getting-started/client/">&lt;h2 id=&quot;introduction&quot;&gt;Introduction&lt;&#x2F;h2&gt;
+&lt;p&gt;The client is a standalone client to be use with Nameko or Girolle service. It is
+made to be fast and to be able to handle a lot of request. The client is made to
+be used with the &lt;code&gt;tokio&lt;&#x2F;code&gt; runtime.
+The client in Girolle try to mimic the Nameko client. It is made to be easy to use
+with the sync method &lt;code&gt;send()&lt;&#x2F;code&gt; and the async method &lt;code&gt;call_async()&lt;&#x2F;code&gt; and &lt;code&gt;result()&lt;&#x2F;code&gt;&lt;&#x2F;p&gt;
+</content>
+        
+    </entry>
+    <entry xml:lang="en">
+        <title>Introduction</title>
+        <published>2024-06-14T00:00:00+00:00</published>
+        <updated>2024-06-14T00:00:00+00:00</updated>
+        
+        <author>
+          <name>
+            
+              Unknown
+            
+          </name>
+        </author>
+        
+        <link rel="alternate" type="text/html" href="https://doubleailes.github.io/girolle/docs/getting-started/introduction/"/>
+        <id>https://doubleailes.github.io/girolle/docs/getting-started/introduction/</id>
+        
+        <content type="html" xml:base="https://doubleailes.github.io/girolle/docs/getting-started/introduction/">&lt;h2 id=&quot;description&quot;&gt;Description&lt;&#x2F;h2&gt;
+&lt;p&gt;A &lt;a href=&quot;https:&#x2F;&#x2F;github.com&#x2F;nameko&#x2F;nameko&quot;&gt;nameko-rpc&lt;&#x2F;a&gt; like lib in rust. Check the To-Do
+section to see limitation.&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;strong&gt;Do not use in production!&lt;&#x2F;strong&gt;&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;strong&gt;Girolle&lt;&#x2F;strong&gt; use &lt;strong&gt;Nameko&lt;&#x2F;strong&gt; architecture to send request and get response.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;stack&quot;&gt;Stack&lt;&#x2F;h2&gt;
+&lt;p&gt;Girolle use &lt;a href=&quot;https:&#x2F;&#x2F;github.com&#x2F;amqp-rs&#x2F;lapin&quot;&gt;lapin&lt;&#x2F;a&gt; as an AMQP client&#x2F;server library.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;how-to-use-it&quot;&gt;How to use it&lt;&#x2F;h2&gt;
+&lt;p&gt;The core concept is to remove the pain of the queue creation and reply by
+mokcing the &lt;strong&gt;Nameko&lt;&#x2F;strong&gt; architecture, and to use an abstract type
+&lt;code&gt;serde_json::Value&lt;&#x2F;code&gt; to manipulate a serializable data.&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;macro-procedural&quot;&gt;macro procedural&lt;&#x2F;h3&gt;
+&lt;p&gt;The lib offer a procedural macro &lt;code&gt;#[girolle]&lt;&#x2F;code&gt; to create a Task like this:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;rust&quot; style=&quot;background-color:#2b303b;color:#c0c5ce;&quot; class=&quot;language-rust &quot;&gt;&lt;code class=&quot;language-rust&quot; data-lang=&quot;rust&quot;&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;use &lt;&#x2F;span&gt;&lt;span&gt;girolle::prelude::*;
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;#[&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;girolle&lt;&#x2F;span&gt;&lt;span&gt;]
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;fn &lt;&#x2F;span&gt;&lt;span style=&quot;color:#8fa1b3;&quot;&gt;hello&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;s&lt;&#x2F;span&gt;&lt;span&gt;: String) -&amp;gt; String {
+&lt;&#x2F;span&gt;&lt;span&gt;    format!(&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a3be8c;&quot;&gt;Hello, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;{}&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a3be8c;&quot;&gt;!&lt;&#x2F;span&gt;&lt;span&gt;&amp;quot;, s)
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;The macro do a real complexe job. It transform the function into three functions:&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;The first function is a copy of the original function with a suffix &lt;code&gt;_core&lt;&#x2F;code&gt;.&lt;&#x2F;li&gt;
+&lt;li&gt;The second one is just a wrapper to deserialize the input and serialize the output with serde_json.&lt;&#x2F;li&gt;
+&lt;li&gt;The thrid one is the creation of the RpcTask.&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;It returns a &lt;code&gt;fn()-&amp;gt;RpcTask&lt;&#x2F;code&gt; that can be used to register to the RpcService.&lt;&#x2F;p&gt;
+&lt;p&gt;The macro is set to replace recursively the function call in the function body to
+call the &lt;code&gt;_core&lt;&#x2F;code&gt; function.
+It may result in a issue with the &lt;code&gt;#[girolle]&lt;&#x2F;code&gt; macro. For example:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;rust&quot; style=&quot;background-color:#2b303b;color:#c0c5ce;&quot; class=&quot;language-rust &quot;&gt;&lt;code class=&quot;language-rust&quot; data-lang=&quot;rust&quot;&gt;&lt;span&gt;#[&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;girolle&lt;&#x2F;span&gt;&lt;span&gt;]
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;fn &lt;&#x2F;span&gt;&lt;span style=&quot;color:#8fa1b3;&quot;&gt;sleep&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;n&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;u64&lt;&#x2F;span&gt;&lt;span&gt;) -&amp;gt; String {
+&lt;&#x2F;span&gt;&lt;span&gt;    thread::sleep(time::Duration::from_secs(n));
+&lt;&#x2F;span&gt;&lt;span&gt;    format!(&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a3be8c;&quot;&gt;Slept for &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;{}&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a3be8c;&quot;&gt; seconds&lt;&#x2F;span&gt;&lt;span&gt;&amp;quot;, n)
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;The &lt;code&gt;thread::sleep&lt;&#x2F;code&gt; will be replace by the &lt;code&gt;thread::sleep_core&lt;&#x2F;code&gt; function call
+and the function will not sleep.&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;hand-made-deserialization-and-serialization&quot;&gt;hand made deserialization and serialization&lt;&#x2F;h3&gt;
+&lt;p&gt;if you do not use the macro &lt;code&gt;#[girolle]&lt;&#x2F;code&gt; you need to create a function that
+extract the data from the a &lt;code&gt;&amp;amp;[Value]&lt;&#x2F;code&gt; like this and return a &lt;code&gt;Result&amp;lt;Value&amp;gt;&lt;&#x2F;code&gt;:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;rust&quot; style=&quot;background-color:#2b303b;color:#c0c5ce;&quot; class=&quot;language-rust &quot;&gt;&lt;code class=&quot;language-rust&quot; data-lang=&quot;rust&quot;&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;fn &lt;&#x2F;span&gt;&lt;span style=&quot;color:#8fa1b3;&quot;&gt;fibonacci&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;n&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;u64&lt;&#x2F;span&gt;&lt;span&gt;) -&amp;gt; &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;u64 &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;if&lt;&#x2F;span&gt;&lt;span&gt; n &amp;lt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;1 &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;return&lt;&#x2F;span&gt;&lt;span&gt; n;
+&lt;&#x2F;span&gt;&lt;span&gt;    }
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;return &lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;fibonacci&lt;&#x2F;span&gt;&lt;span&gt;(n - &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;1&lt;&#x2F;span&gt;&lt;span&gt;) + &lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;fibonacci&lt;&#x2F;span&gt;&lt;span&gt;(n - &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;2&lt;&#x2F;span&gt;&lt;span&gt;);
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;fn &lt;&#x2F;span&gt;&lt;span style=&quot;color:#8fa1b3;&quot;&gt;fibonacci_wrap&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;s&lt;&#x2F;span&gt;&lt;span&gt;: &amp;amp;[Value]) -&amp;gt; Result&amp;lt;Value&amp;gt; {
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#65737e;&quot;&gt;&#x2F;&#x2F; extract the data from the Value
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;let&lt;&#x2F;span&gt;&lt;span&gt; n: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;u64 &lt;&#x2F;span&gt;&lt;span&gt;= serde_json::from_value(s[&lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;0&lt;&#x2F;span&gt;&lt;span&gt;].&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;clone&lt;&#x2F;span&gt;&lt;span&gt;())?;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#65737e;&quot;&gt;&#x2F;&#x2F; create the result
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;let&lt;&#x2F;span&gt;&lt;span&gt; result: Value = serde_json::to_value(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;fibonacci&lt;&#x2F;span&gt;&lt;span&gt;(n))?;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#65737e;&quot;&gt;&#x2F;&#x2F; return the result in a Result
+&lt;&#x2F;span&gt;&lt;span&gt;    Ok(result)
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;fn &lt;&#x2F;span&gt;&lt;span style=&quot;color:#8fa1b3;&quot;&gt;fibonacci_task&lt;&#x2F;span&gt;&lt;span&gt;() -&amp;gt; RpcTask {
+&lt;&#x2F;span&gt;&lt;span&gt;    RpcTask::new(&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a3be8c;&quot;&gt;fibonacci&lt;&#x2F;span&gt;&lt;span&gt;&amp;quot;, vec![&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a3be8c;&quot;&gt;n&lt;&#x2F;span&gt;&lt;span&gt;&amp;quot;], fibonacci)
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;As you can see it is little bit more complexe than the macro. To create the RpcTask we need to
+set the name of the method, the list of the argument and the function that will be called. With this breabdown
+workflow you get more control to like the method register in the AMQP server.&lt;&#x2F;p&gt;
+</content>
+        
+    </entry>
+    <entry xml:lang="en">
+        <title>Service</title>
+        <published>2024-06-14T00:00:00+00:00</published>
+        <updated>2024-06-14T00:00:00+00:00</updated>
+        
+        <author>
+          <name>
+            
+              Unknown
+            
+          </name>
+        </author>
+        
+        <link rel="alternate" type="text/html" href="https://doubleailes.github.io/girolle/docs/getting-started/service/"/>
+        <id>https://doubleailes.github.io/girolle/docs/getting-started/service/</id>
+        
+        <content type="html" xml:base="https://doubleailes.github.io/girolle/docs/getting-started/service/">&lt;h2 id=&quot;introduction&quot;&gt;Introduction&lt;&#x2F;h2&gt;
+&lt;p&gt;The service is the core of the lib. It is the place where the magic happen. The
+core rely on the &lt;code&gt;lapin&lt;&#x2F;code&gt; lib to handle the AMQP protocol and tokio to handle the
+async and spawn part.
+Tokio spawn one delagate per vCPU to handle the request and the response. As an
+optimisation for heavy load, the lib use an async spawn to publish the response
+so if a vCPU is free, it can handle to publish the response.&lt;&#x2F;p&gt;
+</content>
+        
+    </entry>
+    <entry xml:lang="en">
+        <title>Performances</title>
+        <published>2021-05-01T08:20:00+00:00</published>
+        <updated>2021-05-01T08:20:00+00:00</updated>
+        
+        <author>
+          <name>
+            
+              Unknown
+            
+          </name>
+        </author>
+        
+        <link rel="alternate" type="text/html" href="https://doubleailes.github.io/girolle/docs/getting-started/performances/"/>
+        <id>https://doubleailes.github.io/girolle/docs/getting-started/performances/</id>
+        
+        <content type="html" xml:base="https://doubleailes.github.io/girolle/docs/getting-started/performances/">&lt;h2 id=&quot;introduction&quot;&gt;Introduction&lt;&#x2F;h2&gt;
+&lt;p&gt;The performance of Girolle is a really important matter. The lib is made to be fast and
+to be able to handle a lot of request.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;cost-of-the-serialization-deserialization&quot;&gt;Cost of the serialization &amp;amp; deserialization&lt;&#x2F;h2&gt;
+&lt;p&gt;The cost of the serialization and deserialization is really low. The lib use
+&lt;code&gt;serde_json&lt;&#x2F;code&gt; to serialize and deserialize the data.&lt;&#x2F;p&gt;
+&lt;img alt=&quot;serde performance&quot; src=&quot;https:&#x2F;&#x2F;github.com&#x2F;doubleailes&#x2F;girolle&#x2F;blob&#x2F;main&#x2F;girolle&#x2F;benches&#x2F;lines.svg&quot; width=&quot;30px&quot; height=&quot;30px&quot;&gt;
+&lt;p&gt;The average overhead of the serialization and deserialization is around 39 ns per call.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;benchmark&quot;&gt;Benchmark&lt;&#x2F;h2&gt;
+&lt;table&gt;&lt;thead&gt;&lt;tr&gt;&lt;th&gt;&lt;&#x2F;th&gt;&lt;th&gt;nameko_test.py&lt;&#x2F;th&gt;&lt;th&gt;simple_sender.rs&lt;&#x2F;th&gt;&lt;&#x2F;tr&gt;&lt;&#x2F;thead&gt;&lt;tbody&gt;
+&lt;tr&gt;&lt;td&gt;nameko_service.py&lt;&#x2F;td&gt;&lt;td&gt;15.587 s&lt;&#x2F;td&gt;&lt;td&gt;11.532 s&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td&gt;simple_macro.rs&lt;&#x2F;td&gt;&lt;td&gt;15.654 s&lt;&#x2F;td&gt;&lt;td&gt;9.995 s&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;&#x2F;tbody&gt;&lt;&#x2F;table&gt;
+&lt;h3 id=&quot;client-benchmark&quot;&gt;Client benchmark&lt;&#x2F;h3&gt;
+&lt;p&gt;Using hyperfine to test the client benchmark.&lt;&#x2F;p&gt;
+&lt;p&gt;Girolle client ( with Girolle service )&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;bash&quot; style=&quot;background-color:#2b303b;color:#c0c5ce;&quot; class=&quot;language-bash &quot;&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;hyperfine -N &lt;&#x2F;span&gt;&lt;span&gt;&amp;#39;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a3be8c;&quot;&gt;.&#x2F;target&#x2F;release&#x2F;examples&#x2F;simple_sender&lt;&#x2F;span&gt;&lt;span&gt;&amp;#39;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;Benchmark&lt;&#x2F;span&gt;&lt;span&gt; 1: .&#x2F;target&#x2F;release&#x2F;examples&#x2F;simple_sender
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;Time&lt;&#x2F;span&gt;&lt;span&gt; (mean ± σ)&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;:&lt;&#x2F;span&gt;&lt;span&gt;      9.995 s ±  0.116 s    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;[&lt;&#x2F;span&gt;&lt;span&gt;User: 0.163 s, System: 0.197 s&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;]
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;Range&lt;&#x2F;span&gt;&lt;span&gt; (min … max)&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;:&lt;&#x2F;span&gt;&lt;span&gt;    9.778 s … 10.176 s    10 runs
+&lt;&#x2F;span&gt;&lt;span&gt;```	
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;Nameko&lt;&#x2F;span&gt;&lt;span&gt; client ( with Girolle service )
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;```bash
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;hyperfine -N --warmup&lt;&#x2F;span&gt;&lt;span&gt; 3 &amp;#39;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a3be8c;&quot;&gt;python nameko_test.py&lt;&#x2F;span&gt;&lt;span&gt;&amp;#39;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;Benchmark&lt;&#x2F;span&gt;&lt;span&gt; 1: python nameko_test.py
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;Time&lt;&#x2F;span&gt;&lt;span&gt; (mean ± σ)&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;:&lt;&#x2F;span&gt;&lt;span&gt;     15.654 s ±  0.257 s    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;[&lt;&#x2F;span&gt;&lt;span&gt;User: 1.455 s, System: 0.407 s&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;]
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;Range&lt;&#x2F;span&gt;&lt;span&gt; (min … max)&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;:&lt;&#x2F;span&gt;&lt;span&gt;   15.202 s … 15.939 s    10 runs
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;h3 id=&quot;service-benchmark&quot;&gt;Service benchmark&lt;&#x2F;h3&gt;
+&lt;p&gt;Girolle service ( with Girolle client )&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;bash&quot; style=&quot;background-color:#2b303b;color:#c0c5ce;&quot; class=&quot;language-bash &quot;&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;hyperfine -N &lt;&#x2F;span&gt;&lt;span&gt;&amp;#39;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a3be8c;&quot;&gt;.&#x2F;target&#x2F;release&#x2F;examples&#x2F;simple_sender&lt;&#x2F;span&gt;&lt;span&gt;&amp;#39;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;Benchmark&lt;&#x2F;span&gt;&lt;span&gt; 1: .&#x2F;target&#x2F;release&#x2F;examples&#x2F;simple_sender
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;Time&lt;&#x2F;span&gt;&lt;span&gt; (mean ± σ)&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;:&lt;&#x2F;span&gt;&lt;span&gt;      9.995 s ±  0.116 s    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;[&lt;&#x2F;span&gt;&lt;span&gt;User: 0.163 s, System: 0.197 s&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;]
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;Range&lt;&#x2F;span&gt;&lt;span&gt; (min … max)&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;:&lt;&#x2F;span&gt;&lt;span&gt;    9.778 s … 10.176 s    10 runs
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;Nameko service running python 3.9.15 ( with Girolle client )&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;bash&quot; style=&quot;background-color:#2b303b;color:#c0c5ce;&quot; class=&quot;language-bash &quot;&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;hyperfine -N --warmup&lt;&#x2F;span&gt;&lt;span&gt; 3 &amp;#39;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a3be8c;&quot;&gt;target&#x2F;release&#x2F;examples&#x2F;simple_sender&lt;&#x2F;span&gt;&lt;span&gt;&amp;#39;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;Benchmark&lt;&#x2F;span&gt;&lt;span&gt; 1: target&#x2F;release&#x2F;examples&#x2F;simple_sender
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;Time&lt;&#x2F;span&gt;&lt;span&gt; (mean ± σ)&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;:&lt;&#x2F;span&gt;&lt;span&gt;     11.532 s ±  0.091 s    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;[&lt;&#x2F;span&gt;&lt;span&gt;User: 0.199 s, System: 0.213 s&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;]
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;Range&lt;&#x2F;span&gt;&lt;span&gt; (min … max)&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;:&lt;&#x2F;span&gt;&lt;span&gt;   11.396 s … 11.670 s    10 runs
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;Nameko service running python 3.9.15 ( with Nameko client )&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;bash&quot; style=&quot;background-color:#2b303b;color:#c0c5ce;&quot; class=&quot;language-bash &quot;&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;hyperfine -N --warmup&lt;&#x2F;span&gt;&lt;span&gt; 3 &amp;#39;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a3be8c;&quot;&gt;python nameko_test.py&lt;&#x2F;span&gt;&lt;span&gt;&amp;#39;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;Benchmark&lt;&#x2F;span&gt;&lt;span&gt; 1: python nameko_test.py
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;Time&lt;&#x2F;span&gt;&lt;span&gt; (mean ± σ)&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;:&lt;&#x2F;span&gt;&lt;span&gt;     15.587 s ±  0.325 s    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;[&lt;&#x2F;span&gt;&lt;span&gt;User: 1.443 s, System: 0.420 s&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;]
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;Range&lt;&#x2F;span&gt;&lt;span&gt; (min … max)&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;:&lt;&#x2F;span&gt;&lt;span&gt;   15.181 s … 16.034 s    10 runs
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+</content>
+        
+    </entry>
+    <entry xml:lang="en">
+        <title>Quick Start</title>
+        <published>2021-05-01T08:20:00+00:00</published>
+        <updated>2021-05-01T08:20:00+00:00</updated>
+        
+        <author>
+          <name>
+            
+              Unknown
+            
+          </name>
+        </author>
+        
+        <link rel="alternate" type="text/html" href="https://doubleailes.github.io/girolle/docs/getting-started/quick-start/"/>
+        <id>https://doubleailes.github.io/girolle/docs/getting-started/quick-start/</id>
+        
+        <content type="html" xml:base="https://doubleailes.github.io/girolle/docs/getting-started/quick-start/">&lt;h2 id=&quot;installation&quot;&gt;Installation&lt;&#x2F;h2&gt;
+&lt;pre data-lang=&quot;bash&quot; style=&quot;background-color:#2b303b;color:#c0c5ce;&quot; class=&quot;language-bash &quot;&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;cargo&lt;&#x2F;span&gt;&lt;span&gt; add girolle
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;h2 id=&quot;configuration&quot;&gt;Configuration&lt;&#x2F;h2&gt;
+&lt;p&gt;There is two way to create a configuration. The first one is to use the &lt;code&gt;Config::with_yaml_defaults&lt;&#x2F;code&gt; function that will read a configuration from
+a YAML file, &lt;a href=&quot;https:&#x2F;&#x2F;github.com&#x2F;doubleailes&#x2F;girolle&#x2F;blob&#x2F;main&#x2F;examples&#x2F;config.yml&quot;&gt;see example&lt;&#x2F;a&gt;. The second one is to create a configuration by hand.&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;create-a-configuration-from-a-yaml-file&quot;&gt;Create a configuration from a yaml file&lt;&#x2F;h3&gt;
+&lt;p&gt;The configuration is done by a yaml file. It should be compliant with a Nameko one.
+The file should look like this:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;yaml&quot; style=&quot;background-color:#2b303b;color:#c0c5ce;&quot; class=&quot;language-yaml &quot;&gt;&lt;code class=&quot;language-yaml&quot; data-lang=&quot;yaml&quot;&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;AMQP_URI&lt;&#x2F;span&gt;&lt;span&gt;: &amp;#39;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a3be8c;&quot;&gt;amqp:&#x2F;&#x2F;toto:super@$172.16.1.1:5672&#x2F;&#x2F;&lt;&#x2F;span&gt;&lt;span&gt;&amp;#39;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;rpc_exchange&lt;&#x2F;span&gt;&lt;span&gt;: &amp;#39;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a3be8c;&quot;&gt;nameko-rpc&lt;&#x2F;span&gt;&lt;span&gt;&amp;#39;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;max_workers&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;10
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;parent_calls_tracked&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;10
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;In this example:&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;The &lt;code&gt;AMQP_URI&lt;&#x2F;code&gt; is the connection string to the RabbitMQ server.&lt;&#x2F;li&gt;
+&lt;li&gt;The &lt;code&gt;rpc_exchange&lt;&#x2F;code&gt; is the exchange name for the rpc calls.&lt;&#x2F;li&gt;
+&lt;li&gt;The &lt;code&gt;max_workers&lt;&#x2F;code&gt; is the max number of workers that will be created to handle the rpc calls.&lt;&#x2F;li&gt;
+&lt;li&gt;The &lt;code&gt;parent_calls_tracked&lt;&#x2F;code&gt; is the number of parent calls that will be tracked by the service.&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;h3 id=&quot;create-a-configuration-by-hand&quot;&gt;Create a configuration by hand&lt;&#x2F;h3&gt;
+&lt;pre data-lang=&quot;rust&quot; style=&quot;background-color:#2b303b;color:#c0c5ce;&quot; class=&quot;language-rust &quot;&gt;&lt;code class=&quot;language-rust&quot; data-lang=&quot;rust&quot;&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;let&lt;&#x2F;span&gt;&lt;span&gt; conf = Config::default_config();
+&lt;&#x2F;span&gt;&lt;span&gt;conf.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;with_amqp_uri&lt;&#x2F;span&gt;&lt;span&gt;(&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a3be8c;&quot;&gt;amqp:&#x2F;&#x2F;toto:super@localhost:5672&#x2F;&lt;&#x2F;span&gt;&lt;span&gt;&amp;quot;)
+&lt;&#x2F;span&gt;&lt;span&gt;    .&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;with_rpc_exchange&lt;&#x2F;span&gt;&lt;span&gt;(&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a3be8c;&quot;&gt;nameko-rpc&lt;&#x2F;span&gt;&lt;span&gt;&amp;quot;)
+&lt;&#x2F;span&gt;&lt;span&gt;    .&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;with_max_workers&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;10&lt;&#x2F;span&gt;&lt;span&gt;)
+&lt;&#x2F;span&gt;&lt;span&gt;    .&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;with_parent_calls_tracked&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;10&lt;&#x2F;span&gt;&lt;span&gt;);
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;h4 id=&quot;environment-variables&quot;&gt;Environment variables&lt;&#x2F;h4&gt;
+&lt;p&gt;The configuration support the expension of the environment variables with the
+following syntax &lt;code&gt;${VAR_NAME}&lt;&#x2F;code&gt;. Like in this example:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;yaml&quot; style=&quot;background-color:#2b303b;color:#c0c5ce;&quot; class=&quot;language-yaml &quot;&gt;&lt;code class=&quot;language-yaml&quot; data-lang=&quot;yaml&quot;&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;AMQP_URI&lt;&#x2F;span&gt;&lt;span&gt;: &amp;#39;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a3be8c;&quot;&gt;amqp:&#x2F;&#x2F;${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@${RABBITMQ_HOST}:${RABBITMQ_PORT}&#x2F;%2f&lt;&#x2F;span&gt;&lt;span&gt;&amp;#39;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;rpc_exchange&lt;&#x2F;span&gt;&lt;span&gt;: &amp;#39;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a3be8c;&quot;&gt;nameko-rpc&lt;&#x2F;span&gt;&lt;span&gt;&amp;#39;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;max_workers&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;10
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;parent_calls_tracked&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;10
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;h2 id=&quot;create-a-simple-service&quot;&gt;Create a simple service&lt;&#x2F;h2&gt;
+&lt;pre data-lang=&quot;rust&quot; style=&quot;background-color:#2b303b;color:#c0c5ce;&quot; class=&quot;language-rust &quot;&gt;&lt;code class=&quot;language-rust&quot; data-lang=&quot;rust&quot;&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;use &lt;&#x2F;span&gt;&lt;span&gt;girolle::prelude::*;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;use &lt;&#x2F;span&gt;&lt;span&gt;std::{thread, time};
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;#[&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;girolle&lt;&#x2F;span&gt;&lt;span&gt;]
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;fn &lt;&#x2F;span&gt;&lt;span style=&quot;color:#8fa1b3;&quot;&gt;hello&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;s&lt;&#x2F;span&gt;&lt;span&gt;: String) -&amp;gt; String {
+&lt;&#x2F;span&gt;&lt;span&gt;    format!(&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a3be8c;&quot;&gt;Hello, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;{}&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a3be8c;&quot;&gt;!&lt;&#x2F;span&gt;&lt;span&gt;&amp;quot;, s)
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;#[&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;girolle&lt;&#x2F;span&gt;&lt;span&gt;]
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;fn &lt;&#x2F;span&gt;&lt;span style=&quot;color:#8fa1b3;&quot;&gt;sub&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;a&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;i64&lt;&#x2F;span&gt;&lt;span&gt;, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;b&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;i64&lt;&#x2F;span&gt;&lt;span&gt;) -&amp;gt; &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;i64 &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;    a - b
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;#[&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;girolle&lt;&#x2F;span&gt;&lt;span&gt;]
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;fn &lt;&#x2F;span&gt;&lt;span style=&quot;color:#8fa1b3;&quot;&gt;slip&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;n&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;u64&lt;&#x2F;span&gt;&lt;span&gt;) -&amp;gt; String {
+&lt;&#x2F;span&gt;&lt;span&gt;    thread::sleep(time::Duration::from_secs(n));
+&lt;&#x2F;span&gt;&lt;span&gt;    format!(&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a3be8c;&quot;&gt;Slept for &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;{}&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a3be8c;&quot;&gt; seconds&lt;&#x2F;span&gt;&lt;span&gt;&amp;quot;, n)
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;#[&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;girolle&lt;&#x2F;span&gt;&lt;span&gt;]
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;fn &lt;&#x2F;span&gt;&lt;span style=&quot;color:#8fa1b3;&quot;&gt;fibonacci&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;n&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;u64&lt;&#x2F;span&gt;&lt;span&gt;) -&amp;gt; &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;u64 &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;if&lt;&#x2F;span&gt;&lt;span&gt; n &amp;lt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;1 &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;return&lt;&#x2F;span&gt;&lt;span&gt; n;
+&lt;&#x2F;span&gt;&lt;span&gt;    }
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;return &lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;fibonacci&lt;&#x2F;span&gt;&lt;span&gt;(n - &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;1&lt;&#x2F;span&gt;&lt;span&gt;) + &lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;fibonacci&lt;&#x2F;span&gt;&lt;span&gt;(n - &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;2&lt;&#x2F;span&gt;&lt;span&gt;);
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;fn &lt;&#x2F;span&gt;&lt;span style=&quot;color:#8fa1b3;&quot;&gt;main&lt;&#x2F;span&gt;&lt;span&gt;() {
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;let&lt;&#x2F;span&gt;&lt;span&gt; conf: Config = Config::with_yaml_defaults(&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a3be8c;&quot;&gt;staging&#x2F;config.yml&lt;&#x2F;span&gt;&lt;span&gt;&amp;quot;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;to_string&lt;&#x2F;span&gt;&lt;span&gt;()).&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;unwrap&lt;&#x2F;span&gt;&lt;span&gt;();
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;let &lt;&#x2F;span&gt;&lt;span&gt;_ = RpcService::new(conf, &amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a3be8c;&quot;&gt;video&lt;&#x2F;span&gt;&lt;span&gt;&amp;quot;)
+&lt;&#x2F;span&gt;&lt;span&gt;        .&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;register&lt;&#x2F;span&gt;&lt;span&gt;(hello)
+&lt;&#x2F;span&gt;&lt;span&gt;        .&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;register&lt;&#x2F;span&gt;&lt;span&gt;(sub)
+&lt;&#x2F;span&gt;&lt;span&gt;        .&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;register&lt;&#x2F;span&gt;&lt;span&gt;(slip)
+&lt;&#x2F;span&gt;&lt;span&gt;        .&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;register&lt;&#x2F;span&gt;&lt;span&gt;(fibonacci)
+&lt;&#x2F;span&gt;&lt;span&gt;        .&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;start&lt;&#x2F;span&gt;&lt;span&gt;();
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;This service video should be able to respond to the following requests from
+a nameko client:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;python&quot; style=&quot;background-color:#2b303b;color:#c0c5ce;&quot; class=&quot;language-python &quot;&gt;&lt;code class=&quot;language-python&quot; data-lang=&quot;python&quot;&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;def &lt;&#x2F;span&gt;&lt;span style=&quot;color:#8fa1b3;&quot;&gt;send_simple_message&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;name&lt;&#x2F;span&gt;&lt;span&gt;: str) -&amp;gt; str:
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#65737e;&quot;&gt;&amp;quot;&amp;quot;&amp;quot;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#65737e;&quot;&gt;    send_simple_message send a message to the queue
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#65737e;&quot;&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#65737e;&quot;&gt;    :param name: name of the person
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#65737e;&quot;&gt;    :type name: str
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#65737e;&quot;&gt;    &amp;quot;&amp;quot;&amp;quot;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;with &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;rpc_proxy&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;CONFIG&lt;&#x2F;span&gt;&lt;span&gt;) &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;as &lt;&#x2F;span&gt;&lt;span&gt;rpc:
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;return &lt;&#x2F;span&gt;&lt;span&gt;rpc.video.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;hello&lt;&#x2F;span&gt;&lt;span&gt;(name)
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;For more details please check the nameko documentation about &lt;a href=&quot;https:&#x2F;&#x2F;nameko.readthedocs.io&#x2F;en&#x2F;v3.0.0-rc&#x2F;api.html#module-nameko.standalone&quot;&gt;standalone&lt;&#x2F;a&gt; and &lt;a href=&quot;https:&#x2F;&#x2F;nameko.readthedocs.io&#x2F;en&#x2F;v3.0.0-rc&#x2F;rpc.html&quot;&gt;rpc&lt;&#x2F;a&gt; services.&lt;&#x2F;p&gt;
+</content>
+        
+    </entry>
+    <entry xml:lang="en">
+        <title>Philippe Llerena</title>
+        <published>2021-04-01T08:50:45+00:00</published>
+        <updated>2021-04-01T08:50:45+00:00</updated>
+        
+        <author>
+          <name>
+            
+              Unknown
+            
+          </name>
+        </author>
+        
+        <link rel="alternate" type="text/html" href="https://doubleailes.github.io/girolle/authors/doubleailes/"/>
+        <id>https://doubleailes.github.io/girolle/authors/doubleailes/</id>
+        
+        <content type="html" xml:base="https://doubleailes.github.io/girolle/authors/doubleailes/">&lt;p&gt;Creator of &lt;strong&gt;Girolle&lt;&#x2F;strong&gt;.&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;a href=&quot;https:&#x2F;&#x2F;github.com&#x2F;doubleailes&quot;&gt;@doubleailes&lt;&#x2F;a&gt;&lt;&#x2F;p&gt;
+</content>
+        
+    </entry>
+</feed>
