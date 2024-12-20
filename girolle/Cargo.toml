@@ -18,7 +18,7 @@ futures = "0.3.31"
 girolle_macro = { path = "../girolle_macro", version = "1.8" }
 tokio-executor-trait = "2.1.3"
 tokio-reactor-trait = "1.1.0"
-serde_yaml = "0.9.33+deprecated"
+serde_yaml = "0.9.33"
 regex = "1.11.0"
 serde = { workspace = true }
 serde_json = { workspace = true }
