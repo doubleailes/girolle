@@ -1,7 +1,6 @@
 use std::vec;
 
 use girolle::prelude::*;
-use serde_json;
 
 fn hello_core(s: &[Value]) -> GirolleResult<Value> {
     // Parse the incomming data

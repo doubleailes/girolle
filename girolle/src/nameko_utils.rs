@@ -240,7 +240,7 @@ fn test_build_inputs_fn_service() {
         kwargs: HashMap::from([("c".to_string(), Value::String("3".to_string()))]),
     };
     let result = build_inputs_fn_service(&service_args, data_delivery);
-    assert_eq!(result.is_ok(), true);
+    assert!(result.is_ok());
     let result = result.unwrap();
     assert_eq!(result.len(), 3);
     assert_eq!(result[0], Value::String("1".to_string()));
