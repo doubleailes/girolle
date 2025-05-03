@@ -108,14 +108,12 @@ impl Config {
     ///
     /// * `file_path` - A String that holds the path of the file.
     pub fn with_yaml_defaults(file_path: String) -> Result<Self, Box<dyn std::error::Error>> {
-        let default_config = Config::default_config();
-
-        let mut file = File::open(file_path)?;
-        let mut contents = String::new();
+        let mut file: File = File::open(file_path)?;
+        let mut contents: String = String::new();
         file.read_to_string(&mut contents)?;
         contents = expand_var(&contents).to_string();
         let overrides: Config = serde_yaml::from_str(&contents)?;
-        Ok(default_config.merge(overrides))
+        Ok(Config::default_config().merge(overrides))
     }
 
     /// # merge
