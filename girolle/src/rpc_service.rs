@@ -30,7 +30,7 @@ use uuid::Uuid;
 /// }
 ///
 /// fn main() {
-///     let mut services: RpcService = RpcService::new(Config::default_config(),"video");
+///     let mut services: RpcService = RpcService::new(Config::default(),"video");
 ///     services.register(hello).start();
 /// }
 pub struct RpcService {
@@ -60,7 +60,7 @@ impl RpcService {
     /// use girolle::prelude::*;
     ///
     ///
-    /// let services: RpcService = RpcService::new(Config::default_config(),"video");
+    /// let services: RpcService = RpcService::new(Config::default(),"video");
     /// ```
     pub fn new(conf: Config, service_name: &'static str) -> Self {
         Self {
@@ -85,7 +85,7 @@ impl RpcService {
     /// use girolle::prelude::*;
     ///
     ///
-    /// let mut services: RpcService = RpcService::new(Config::default_config(),"video");
+    /// let mut services: RpcService = RpcService::new(Config::default(),"video");
     /// services.set_service_name("other".to_string());
     /// ```
     pub fn set_service_name(&mut self, service_name: String) {
@@ -114,7 +114,7 @@ impl RpcService {
     /// }
     ///
     /// fn main() {
-    ///   let mut services: RpcService = RpcService::new(Config::default_config(),"video");
+    ///   let mut services: RpcService = RpcService::new(Config::default(),"video");
     ///   services.register(hello);
     /// }
     pub fn register(mut self, fn_macro: fn() -> RpcTask) -> Self {
@@ -143,7 +143,7 @@ impl RpcService {
     /// }
     ///
     /// fn main() {
-    ///    let mut services: RpcService = RpcService::new(Config::default_config(),"video");
+    ///    let mut services: RpcService = RpcService::new(Config::default(),"video");
     ///    services.register(hello).start();
     /// }
     pub fn start(&self) -> Result<(), GirolleError> {
@@ -171,7 +171,7 @@ impl RpcService {
     /// }
     ///
     /// fn main() {
-    ///    let mut services: RpcService = RpcService::new(Config::default_config(),"video");
+    ///    let mut services: RpcService = RpcService::new(Config::default(),"video");
     ///    let routing_keys = services.register(hello).get_routing_keys();
     /// }
     pub fn get_routing_keys(&self) -> Vec<String> {
@@ -189,7 +189,7 @@ impl RpcService {
     /// use girolle::prelude::*;
     ///
     ///
-    /// let services: RpcService = RpcService::new(Config::default_config(),"video");
+    /// let services: RpcService = RpcService::new(Config::default(),"video");
     /// let conf = services.get_config();
     /// println!("{}", conf.AMQP_URI());
     /// ```
@@ -212,8 +212,8 @@ impl RpcService {
     /// use girolle::prelude::*;
     ///
     ///
-    /// let mut services: RpcService = RpcService::new(Config::default_config(),"video");
-    /// let conf = Config::default_config();
+    /// let mut services: RpcService = RpcService::new(Config::default(),"video");
+    /// let conf = Config::default();
     /// services.set_config(conf);
     /// ```
     pub fn set_config(&mut self, config: Config) -> std::result::Result<(), std::string::String> {

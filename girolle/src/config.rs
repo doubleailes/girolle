@@ -59,7 +59,7 @@ pub struct Config {
     persistent: Option<u8>,
 }
 
-impl Config {
+impl Default for Config {
     /// # Create a default config
     ///
     /// This function creates a default configuration.
@@ -67,7 +67,7 @@ impl Config {
     /// ## Returns
     ///
     /// A Config that holds the default configuration.
-    pub fn default_config() -> Self {
+    fn default() -> Self {
         Self {
             AMQP_URI: Some("amqp://guest:guest@localhost/".to_string()),
             web_server_address: Some("".to_string()),
@@ -97,7 +97,9 @@ impl Config {
             persistent: Some(2),
         }
     }
+}
 
+impl Config {
     /// # with_yaml_defaults
     ///
     /// ## Description
@@ -113,7 +115,7 @@ impl Config {
         file.read_to_string(&mut contents)?;
         contents = expand_var(&contents).to_string();
         let overrides: Config = serde_yaml::from_str(&contents)?;
-        Ok(Config::default_config().merge(overrides))
+        Ok(Config::default().merge(overrides))
     }
 
     /// # merge
@@ -325,7 +327,7 @@ fn test_expand_var() {
 
 #[test]
 fn test_config_default() {
-    let config = Config::default_config();
+    let config = Config::default();
     assert_eq!(config.AMQP_URI(), "amqp://guest:guest@localhost/");
     assert_eq!(config.prefetch_count(), 10);
 }

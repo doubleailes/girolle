@@ -35,7 +35,7 @@ use uuid::Uuid;
 ///
 /// #[tokio::main]
 /// async fn main() {
-///    let rpc_client = RpcClient::new(Config::default_config());
+///    let rpc_client = RpcClient::new(Config::default());
 /// }
 pub struct RpcClient {
     conf: Config,
@@ -68,7 +68,7 @@ impl RpcClient {
     ///
     /// #[tokio::main]
     /// async fn main() {
-    ///   let target_service = RpcClient::new(Config::default_config());
+    ///   let target_service = RpcClient::new(Config::default());
     /// }
     pub fn new(conf: Config) -> Self {
         let identifier = Uuid::new_v4();
@@ -107,7 +107,7 @@ impl RpcClient {
     ///
     /// #[tokio::main]
     /// async fn main() {
-    ///    let mut rpc_client = RpcClient::new(Config::default_config());
+    ///    let mut rpc_client = RpcClient::new(Config::default());
     ///    rpc_client.start().await.expect("call");
     /// }
     pub async fn start(&mut self) -> GirolleResult<()> {
@@ -170,7 +170,7 @@ impl RpcClient {
     ///
     /// #[tokio::main]
     /// async fn main() {
-    ///     let rpc_client = RpcClient::new(Config::default_config());
+    ///     let rpc_client = RpcClient::new(Config::default());
     ///     let identifier = rpc_client.get_identifier();
     /// }
     pub fn get_identifier(&self) -> String {
@@ -372,7 +372,7 @@ impl RpcClient {
     /// use girolle::prelude::*;
     ///
     ///
-    /// let rpc_client = RpcClient::new(Config::default_config());
+    /// let rpc_client = RpcClient::new(Config::default());
     /// let conf = rpc_client.get_config();
     /// ```
     pub fn get_config(&self) -> &Config {
@@ -394,8 +394,8 @@ impl RpcClient {
     /// use girolle::prelude::*;
     ///
     ///
-    /// let mut rpc_client = RpcClient::new(Config::default_config());
-    /// let conf = Config::default_config();
+    /// let mut rpc_client = RpcClient::new(Config::default());
+    /// let conf = Config::default();
     /// rpc_client.set_config(conf);
     /// ```
     pub fn set_config(&mut self, config: Config) -> std::result::Result<(), std::string::String> {
@@ -423,7 +423,7 @@ impl RpcClient {
     ///
     /// #[tokio::main]
     /// async fn main() {
-    ///    let mut rpc_client = RpcClient::new(Config::default_config());
+    ///    let mut rpc_client = RpcClient::new(Config::default());
     ///    rpc_client.register_service("video").await.expect("call");
     /// }
     pub async fn register_service(&mut self, service_name: &str) -> Result<(), lapin::Error> {
@@ -459,7 +459,7 @@ impl RpcClient {
     ///
     /// #[tokio::main]
     /// async fn main() {
-    ///    let mut rpc_client = RpcClient::new(Config::default_config());
+    ///    let mut rpc_client = RpcClient::new(Config::default());
     ///    rpc_client.register_service("video").await.expect("call");
     ///    rpc_client.unregister_service("video").expect("call");
     /// }
@@ -482,7 +482,7 @@ impl RpcClient {
     ///
     /// #[tokio::main]
     /// async fn main() {
-    ///   let rpc_client = RpcClient::new(Config::default_config());
+    ///   let rpc_client = RpcClient::new(Config::default());
     ///   rpc_client.close().await.expect("close");
     /// }
     pub async fn close(&self) -> Result<(), lapin::Error> {
@@ -506,7 +506,7 @@ impl RpcClient {
 ///
 /// #[tokio::main]
 /// async fn main() {
-///      let mut rpc_client = RpcClient::new(Config::default_config());
+///      let mut rpc_client = RpcClient::new(Config::default());
 ///      rpc_client.register_service("video").await.expect("call");
 /// }
 struct TargetService {
