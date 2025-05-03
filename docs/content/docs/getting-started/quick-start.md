@@ -46,7 +46,7 @@ In this example:
 ### Create a configuration by hand
 
 ```rust
-let conf = Config::default_config();
+let conf = Config::default();
 conf.with_amqp_uri("amqp://toto:super@localhost:5672/")
     .with_rpc_exchange("nameko-rpc")
     .with_max_workers(10)

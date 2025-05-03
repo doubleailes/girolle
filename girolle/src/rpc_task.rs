@@ -21,7 +21,7 @@ use crate::types::NamekoFunction;
 ///  
 ///
 /// fn main() {
-///     let mut services: RpcService = RpcService::new(Config::default_config(),"video");
+///     let mut services: RpcService = RpcService::new(Config::default(),"video");
 ///     let rpc_task = RpcTask::new("hello", vec!["s"], hello);
 /// }
 ///
@@ -61,7 +61,7 @@ impl RpcTask {
     /// }
     ///
     /// fn main() {
-    ///     let mut services: RpcService = RpcService::new(Config::default_config(),"video");
+    ///     let mut services: RpcService = RpcService::new(Config::default(),"video");
     ///     let rpc_task = RpcTask::new("hello", vec!["s"], hello);
     /// }
     ///
