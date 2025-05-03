@@ -8,7 +8,7 @@ mod entry;
 /// girolle macro is used to generate a complexe tree function.
 /// - The first function is a copy of the original function with a suffix `_core`.
 /// - The second one is just a wrapper to deserialize the input and serialize the output
-/// with serde_json.
+///   with serde_json.
 /// - The thrid one is the creation of the RpcTask.
 ///
 /// `type NamekoFunction = fn(&[Value]) -> Result<Value>`
@@ -27,7 +27,6 @@ mod entry;
 ///}
 /// ```
 /// The function must be deterministic, which means that it must always return a serializable result.
-
 #[proc_macro_attribute]
 pub fn girolle(_metadata: TokenStream, input: TokenStream) -> TokenStream {
     entry::girolle_task(input.into()).into()
