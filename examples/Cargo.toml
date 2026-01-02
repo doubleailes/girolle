@@ -42,3 +42,7 @@ path = "src/error_sender.rs"
 [[example]]
 name = "simple_fib"
 path = "src/simple_fib.rs"
+
+[[example]]
+name = "async_service_with_context"
+path = "src/async_service_with_context.rs"
