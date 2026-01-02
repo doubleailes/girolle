@@ -256,9 +256,11 @@ pub(crate) async fn compute_deliver(
     rpc_channel: &Channel,
     rpc_exchange: &str,
     reply_to_id: String,
+    rpc_context: Option<std::sync::Arc<crate::rpc_context::RpcContext>>,
 ) {
-    // Publish the response
-    let fn_service = rpc_task_struct.inner_function;
+    use crate::rpc_task::RpcTaskHandler;
+
+    // Build the arguments
     let buildted_args = match build_inputs_fn_service(&rpc_task_struct.args, incomming_data) {
         Ok(result) => result,
         Err(error) => {
@@ -274,11 +276,26 @@ pub(crate) async fn compute_deliver(
             return;
         }
     };
-    match fn_service(&buildted_args) {
-        Ok(result) => {
+
+    // Execute handler based on type
+    let result = match &rpc_task_struct.handler {
+        RpcTaskHandler::Sync(fn_service) => {
+            // Execute synchronous handler
+            fn_service(&buildted_args)
+        }
+        RpcTaskHandler::Async(async_fn) => {
+            // Execute async handler with context
+            let ctx = rpc_context.expect("RpcContext required for async handlers");
+            async_fn(ctx, buildted_args).await
+        }
+    };
+
+    // Publish the response
+    match result {
+        Ok(result_value) => {
             publish(
                 rpc_channel,
-                PayloadResult::from_result_value(result),
+                PayloadResult::from_result_value(result_value),
                 properties,
                 reply_to_id,
                 rpc_exchange,

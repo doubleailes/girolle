@@ -1,4 +1,4 @@
-use crate::types::NamekoFunction;
+use crate::types::{AsyncNamekoFunction, NamekoFunction};
 /// # RpcTask
 ///
 /// ## Description
@@ -29,14 +29,24 @@ use crate::types::NamekoFunction;
 pub struct RpcTask {
     pub name: &'static str,
     pub args: Vec<&'static str>,
-    pub inner_function: NamekoFunction,
+    pub handler: RpcTaskHandler,
 }
+
+/// Handler types for RpcTask - either sync or async
+#[derive(Clone)]
+pub enum RpcTaskHandler {
+    /// Legacy synchronous handler
+    Sync(NamekoFunction),
+    /// New async handler with RpcContext
+    Async(AsyncNamekoFunction),
+}
+
 impl RpcTask {
     /// # new
     ///
     /// ## Description
     ///
-    /// This function create a new RpcTask struct
+    /// This function create a new RpcTask struct with a synchronous handler
     ///
     /// ## Arguments
     ///
@@ -73,7 +83,34 @@ impl RpcTask {
         Self {
             name,
             args,
-            inner_function,
+            handler: RpcTaskHandler::Sync(inner_function),
+        }
+    }
+
+    /// # new_async
+    ///
+    /// ## Description
+    ///
+    /// Create a new RpcTask with an async handler that receives RpcContext
+    ///
+    /// ## Arguments
+    ///
+    /// * `name` - The name of the function to call
+    /// * `args` - The argument names
+    /// * `async_function` - The async function to call
+    ///
+    /// ## Returns
+    ///
+    /// This function return a girolle::RpcTask struct
+    pub fn new_async(
+        name: &'static str,
+        args: Vec<&'static str>,
+        async_function: AsyncNamekoFunction,
+    ) -> Self {
+        Self {
+            name,
+            args,
+            handler: RpcTaskHandler::Async(async_function),
         }
     }
 }

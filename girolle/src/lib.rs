@@ -65,3 +65,5 @@ pub use serde_json;
 pub use serde_json::{json, Value};
 mod error;
 pub use error::GirolleError;
+mod rpc_context;
+pub use rpc_context::{EventDispatcher, RpcCaller, RpcContext};
