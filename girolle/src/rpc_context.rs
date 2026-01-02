@@ -1,0 +1,373 @@
+use crate::{
+    config::Config,
+    error::GirolleError,
+    payload::{Payload, PayloadResult},
+    queue::{create_service_channel, get_connection},
+    types::GirolleResult,
+};
+use lapin::{
+    options::*,
+    types::{AMQPValue, FieldArray, FieldTable, LongString, ShortString},
+    BasicProperties, Channel, Connection,
+};
+use serde_json::Value;
+use std::{
+    collections::{BTreeMap, HashMap},
+    sync::{Arc, Condvar, Mutex},
+};
+use uuid::Uuid;
+
+/// # RpcContext
+///
+/// ## Description
+///
+/// Context object passed to async service handlers containing:
+/// - AMQP metadata (correlation_id, headers, reply_to)
+/// - Capabilities for calling other services (RpcCaller)
+/// - Capabilities for emitting events (EventDispatcher)
+#[derive(Clone)]
+pub struct RpcContext {
+    /// The correlation ID from the inbound message
+    pub correlation_id: String,
+    /// The reply-to queue from the inbound message
+    pub reply_to: String,
+    /// The headers from the inbound message
+    pub headers: FieldTable,
+    /// The routing key from the inbound message
+    pub routing_key: String,
+    /// RPC caller for making calls to other services
+    pub rpc: Arc<RpcCaller>,
+    /// Event dispatcher for emitting events
+    pub events: Arc<EventDispatcher>,
+}
+
+impl RpcContext {
+    /// Create a new RpcContext from AMQP delivery metadata
+    pub(crate) fn new(
+        correlation_id: String,
+        reply_to: String,
+        headers: FieldTable,
+        routing_key: String,
+        config: Config,
+        identifier: Uuid,
+    ) -> Self {
+        let rpc = Arc::new(RpcCaller::new(config.clone(), identifier));
+        let events = Arc::new(EventDispatcher::new(config));
+
+        Self {
+            correlation_id,
+            reply_to,
+            headers,
+            routing_key,
+            rpc,
+            events,
+        }
+    }
+
+    /// Get the call_id_stack from the headers
+    pub fn get_call_id_stack(&self) -> Option<Vec<String>> {
+        self.headers
+            .inner()
+            .get("nameko.call_id_stack")
+            .and_then(|v| v.as_array())
+            .map(|arr| {
+                arr.as_slice()
+                    .iter()
+                    .filter_map(|v| {
+                        if let AMQPValue::LongString(s) = v {
+                            Some(String::from_utf8_lossy(s.as_bytes()).to_string())
+                        } else {
+                            None
+                        }
+                    })
+                    .collect()
+            })
+    }
+}
+
+/// # RpcCaller
+///
+/// ## Description
+///
+/// Capability for making async RPC calls to other services from within a handler
+pub struct RpcCaller {
+    config: Config,
+    identifier: Uuid,
+    conn: Option<Arc<Connection>>,
+    #[allow(dead_code)]
+    reply_channel: Option<Arc<Channel>>,
+    services: Arc<Mutex<HashMap<String, Arc<Channel>>>>,
+    replies: Arc<Mutex<HashMap<String, PayloadResult>>>,
+    not_empty: Arc<Condvar>,
+}
+
+impl RpcCaller {
+    fn new(config: Config, identifier: Uuid) -> Self {
+        Self {
+            config,
+            identifier,
+            conn: None,
+            reply_channel: None,
+            services: Arc::new(Mutex::new(HashMap::new())),
+            replies: Arc::new(Mutex::new(HashMap::new())),
+            not_empty: Arc::new(Condvar::new()),
+        }
+    }
+
+    /// Initialize the RPC caller (connect to AMQP)
+    /// 
+    /// Note: This method is reserved for future use when RPC caller needs
+    /// to establish its own connection pool. Currently, RPC operations
+    /// use the service's existing connection.
+    #[allow(dead_code)]
+    async fn initialize(&mut self) -> GirolleResult<()> {
+        let conn = get_connection(self.config.AMQP_URI(), self.config.heartbeat()).await?;
+        let reply_queue_name = format!("rpc.listener-{}", self.identifier);
+        
+        let reply_channel = crate::queue::create_message_channel(
+            &conn,
+            &reply_queue_name,
+            self.config.prefetch_count(),
+            &self.identifier,
+            self.config.rpc_exchange(),
+        )
+        .await?;
+
+        self.conn = Some(Arc::new(conn));
+        self.reply_channel = Some(Arc::new(reply_channel));
+        Ok(())
+    }
+
+    /// Register a service for RPC calls
+    pub async fn register_service(&self, service_name: &str) -> GirolleResult<()> {
+        if let Some(conn) = &self.conn {
+            let channel = create_service_channel(
+                conn,
+                service_name,
+                self.config.prefetch_count(),
+                self.config.rpc_exchange(),
+            )
+            .await?;
+            
+            let mut services = self.services.lock().unwrap();
+            services.insert(service_name.to_string(), Arc::new(channel));
+            Ok(())
+        } else {
+            Err(GirolleError::ArgumentsError(
+                "RpcCaller not initialized".to_string(),
+            ))
+        }
+    }
+
+    /// Call another service asynchronously
+    /// 
+    /// Note: The target service must be registered first using `register_service()`.
+    /// This is a foundation implementation for RPC proxy patterns.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `service_name` - Name of the target service
+    /// * `method_name` - Name of the method to call
+    /// * `payload` - Arguments to pass to the method
+    /// 
+    /// # Returns
+    /// 
+    /// Returns the result from the called service
+    /// 
+    /// # Errors
+    /// 
+    /// Returns `GirolleError::ServiceMissingError` if the service is not registered
+    pub async fn call(
+        &self,
+        service_name: &str,
+        method_name: &str,
+        payload: Payload,
+    ) -> GirolleResult<Value> {
+        // Clone the channel before the async operations to avoid holding lock across await
+        let channel = {
+            let services = self.services.lock().unwrap();
+            services
+                .get(service_name)
+                .ok_or_else(|| {
+                    GirolleError::ServiceMissingError(format!("Service {} not registered", service_name))
+                })?
+                .clone()
+        };
+
+        let routing_key = format!("{}.{}", service_name, method_name);
+        let correlation_id = Uuid::new_v4();
+
+        let mut headers: BTreeMap<ShortString, AMQPValue> = BTreeMap::new();
+        headers.insert(
+            "nameko.AMQP_URI".into(),
+            AMQPValue::LongString(self.config.AMQP_URI().into()),
+        );
+        headers.insert(
+            "nameko.call_id_stack".into(),
+            AMQPValue::FieldArray(FieldArray::from(vec![AMQPValue::LongString(
+                LongString::from(self.identifier.to_string().as_bytes()),
+            )])),
+        );
+
+        let properties = BasicProperties::default()
+            .with_reply_to(self.identifier.to_string().into())
+            .with_correlation_id(correlation_id.to_string().into())
+            .with_content_type("application/json".into())
+            .with_content_encoding("utf-8".into())
+            .with_headers(FieldTable::from(headers))
+            .with_priority(0);
+
+        channel
+            .basic_publish(
+                self.config.rpc_exchange(),
+                &routing_key,
+                BasicPublishOptions {
+                    mandatory: false,
+                    immediate: false,
+                },
+                payload.to_string().as_bytes(),
+                properties,
+            )
+            .await?
+            .await?;
+
+        // Wait for reply
+        self.wait_for_reply(&correlation_id.to_string()).await
+    }
+
+    async fn wait_for_reply(&self, correlation_id: &str) -> GirolleResult<Value> {
+        let mut replies = self.replies.lock().unwrap();
+        let result_reply = loop {
+            if let Some(value) = replies.get(correlation_id) {
+                break value.clone();
+            } else {
+                replies = self.not_empty.wait(replies).unwrap();
+            }
+        };
+        replies.remove(correlation_id);
+        drop(replies);
+
+        match result_reply.get_error() {
+            Some(error) => Err(error.convert_to_girolle_error()),
+            None => Ok(result_reply.get_result()),
+        }
+    }
+}
+
+/// # EventDispatcher
+///
+/// ## Description
+///
+/// Capability for dispatching events from within a handler
+pub struct EventDispatcher {
+    #[allow(dead_code)]
+    config: Config,
+}
+
+impl EventDispatcher {
+    fn new(config: Config) -> Self {
+        Self { config }
+    }
+
+    /// Dispatch an event
+    /// 
+    /// Note: This is a foundation implementation. Full event dispatching
+    /// functionality needs to be implemented by connecting to an event exchange.
+    pub async fn dispatch(
+        &self,
+        _event_type: &str,
+        _payload: Value,
+    ) -> GirolleResult<()> {
+        // TODO: Implement event dispatching
+        // This would publish to an event exchange
+        tracing::warn!("EventDispatcher::dispatch is not yet fully implemented");
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use lapin::types::{AMQPValue, FieldArray, FieldTable, LongString, ShortString};
+
+    #[test]
+    fn test_rpc_context_creation() {
+        let config = Config::default();
+        let identifier = Uuid::new_v4();
+        let correlation_id = "test-correlation-id".to_string();
+        let reply_to = "test-reply-to".to_string();
+        let routing_key = "service.method".to_string();
+        let headers = FieldTable::default();
+
+        let ctx = RpcContext::new(
+            correlation_id.clone(),
+            reply_to.clone(),
+            headers,
+            routing_key.clone(),
+            config,
+            identifier,
+        );
+
+        assert_eq!(ctx.correlation_id, correlation_id);
+        assert_eq!(ctx.reply_to, reply_to);
+        assert_eq!(ctx.routing_key, routing_key);
+    }
+
+    #[test]
+    fn test_rpc_context_call_id_stack() {
+        let config = Config::default();
+        let identifier = Uuid::new_v4();
+        let correlation_id = "test-correlation-id".to_string();
+        let reply_to = "test-reply-to".to_string();
+        let routing_key = "service.method".to_string();
+
+        // Create headers with call_id_stack
+        let mut headers = FieldTable::default();
+        let call_id_stack = vec![
+            AMQPValue::LongString(LongString::from("call1".as_bytes())),
+            AMQPValue::LongString(LongString::from("call2".as_bytes())),
+        ];
+        headers.insert(
+            ShortString::from("nameko.call_id_stack"),
+            AMQPValue::FieldArray(FieldArray::from(call_id_stack)),
+        );
+
+        let ctx = RpcContext::new(
+            correlation_id,
+            reply_to,
+            headers,
+            routing_key,
+            config,
+            identifier,
+        );
+
+        let stack = ctx.get_call_id_stack();
+        assert!(stack.is_some());
+        let stack = stack.unwrap();
+        assert_eq!(stack.len(), 2);
+        assert_eq!(stack[0], "call1");
+        assert_eq!(stack[1], "call2");
+    }
+
+    #[test]
+    fn test_rpc_context_empty_call_id_stack() {
+        let config = Config::default();
+        let identifier = Uuid::new_v4();
+        let correlation_id = "test-correlation-id".to_string();
+        let reply_to = "test-reply-to".to_string();
+        let routing_key = "service.method".to_string();
+        let headers = FieldTable::default();
+
+        let ctx = RpcContext::new(
+            correlation_id,
+            reply_to,
+            headers,
+            routing_key,
+            config,
+            identifier,
+        );
+
+        let stack = ctx.get_call_id_stack();
+        assert!(stack.is_none());
+    }
+}

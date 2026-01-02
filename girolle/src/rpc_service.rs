@@ -229,6 +229,8 @@ struct SharedData {
     service_name: String,
     semaphore: Semaphore,
     parent_calls_tracked: usize,
+    config: Config,
+    service_id: Uuid,
 }
 
 /// # rpc_service
@@ -285,6 +287,8 @@ async fn rpc_service(
         service_name: service_name.to_string(),
         semaphore: Semaphore::new(conf.max_workers() as usize),
         parent_calls_tracked: conf.parent_calls_tracked() as usize,
+        config: conf.clone(),
+        service_id: id,
     });
     consumer.set_delegate(move |delivery: DeliveryResult| {
         let shared_data = Arc::clone(&shared_data);
@@ -304,13 +308,26 @@ async fn rpc_service(
 
             let opt_routing_key = delivery.routing_key.to_string();
             let reply_to_id = get_id(delivery.properties.reply_to(), "reply_to_id");
+            let correlation_id = get_id(delivery.properties.correlation_id(), "correlation_id");
             let properties = delivery_to_message_properties(
                 &delivery,
-                &id,
+                &shared_data.service_id,
                 &reply_to_id,
                 shared_data.parent_calls_tracked,
             )
             .expect("Error creating properties");
+            
+            // Build RpcContext for async handlers
+            let headers = delivery.properties.headers().clone().unwrap_or_default();
+            let rpc_context = Arc::new(crate::rpc_context::RpcContext::new(
+                correlation_id,
+                reply_to_id.clone(),
+                headers,
+                opt_routing_key.clone(),
+                shared_data.config.clone(),
+                shared_data.service_id,
+            ));
+            
             let (incommig_service, incomming_method) =
                 opt_routing_key.split_once('.').expect("Error splitting");
             match (
@@ -327,6 +344,7 @@ async fn rpc_service(
                         &shared_data.rpc_channel,
                         &shared_data.rpc_exchange,
                         reply_to_id,
+                        Some(rpc_context),
                     )
                     .await
                 }
