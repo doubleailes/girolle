@@ -89,13 +89,9 @@ pub(crate) fn girolle_task(input: TokenStream) -> TokenStream {
     let is_async = item_fn.sig.asyncness.is_some();
     
     // Check if first argument is RpcContext - use more robust type checking
-    let has_context = if let Some(first_arg) = item_fn.sig.inputs.first() {
-        if let FnArg::Typed(pat_type) = first_arg {
-            // Check the type more robustly
-            matches_rpc_context_type(&pat_type.ty)
-        } else {
-            false
-        }
+    let has_context = if let Some(FnArg::Typed(pat_type)) = item_fn.sig.inputs.first() {
+        // Check the type more robustly
+        matches_rpc_context_type(&pat_type.ty)
     } else {
         false
     };

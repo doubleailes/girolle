@@ -183,14 +183,16 @@ impl RpcCaller {
         method_name: &str,
         payload: Payload,
     ) -> GirolleResult<Value> {
-        let services = self.services.lock().unwrap();
-        let channel = services
-            .get(service_name)
-            .ok_or_else(|| {
-                GirolleError::ServiceMissingError(format!("Service {} not registered", service_name))
-            })?
-            .clone();
-        drop(services);
+        // Clone the channel before the async operations to avoid holding lock across await
+        let channel = {
+            let services = self.services.lock().unwrap();
+            services
+                .get(service_name)
+                .ok_or_else(|| {
+                    GirolleError::ServiceMissingError(format!("Service {} not registered", service_name))
+                })?
+                .clone()
+        };
 
         let routing_key = format!("{}.{}", service_name, method_name);
         let correlation_id = Uuid::new_v4();
