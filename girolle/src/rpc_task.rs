@@ -114,3 +114,48 @@ impl RpcTask {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::{json, Value};
+    use std::pin::Pin;
+    use std::sync::Arc;
+
+    #[test]
+    fn test_rpc_task_new_sync() {
+        fn test_fn(_args: &[Value]) -> crate::types::GirolleResult<Value> {
+            Ok(json!("test"))
+        }
+
+        let task = RpcTask::new("test", vec!["arg1"], test_fn);
+        assert_eq!(task.name, "test");
+        assert_eq!(task.args, vec!["arg1"]);
+        match task.handler {
+            RpcTaskHandler::Sync(_) => {}
+            _ => panic!("Expected Sync handler"),
+        }
+    }
+
+    #[test]
+    fn test_rpc_task_new_async() {
+        use crate::rpc_context::RpcContext;
+
+        let async_fn = Arc::new(
+            |_ctx: Arc<RpcContext>,
+             _data: Vec<Value>|
+             -> Pin<Box<dyn std::future::Future<Output = crate::types::GirolleResult<Value>> + Send>>
+            {
+                Box::pin(async { Ok(json!("async_test")) })
+            },
+        );
+
+        let task = RpcTask::new_async("test_async", vec!["arg1"], async_fn);
+        assert_eq!(task.name, "test_async");
+        assert_eq!(task.args, vec!["arg1"]);
+        match task.handler {
+            RpcTaskHandler::Async(_) => {}
+            _ => panic!("Expected Async handler"),
+        }
+    }
+}

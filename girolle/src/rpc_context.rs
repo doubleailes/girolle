@@ -257,3 +257,90 @@ impl EventDispatcher {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use lapin::types::{AMQPValue, FieldArray, FieldTable, LongString, ShortString};
+
+    #[test]
+    fn test_rpc_context_creation() {
+        let config = Config::default();
+        let identifier = Uuid::new_v4();
+        let correlation_id = "test-correlation-id".to_string();
+        let reply_to = "test-reply-to".to_string();
+        let routing_key = "service.method".to_string();
+        let headers = FieldTable::default();
+
+        let ctx = RpcContext::new(
+            correlation_id.clone(),
+            reply_to.clone(),
+            headers,
+            routing_key.clone(),
+            config,
+            identifier,
+        );
+
+        assert_eq!(ctx.correlation_id, correlation_id);
+        assert_eq!(ctx.reply_to, reply_to);
+        assert_eq!(ctx.routing_key, routing_key);
+    }
+
+    #[test]
+    fn test_rpc_context_call_id_stack() {
+        let config = Config::default();
+        let identifier = Uuid::new_v4();
+        let correlation_id = "test-correlation-id".to_string();
+        let reply_to = "test-reply-to".to_string();
+        let routing_key = "service.method".to_string();
+
+        // Create headers with call_id_stack
+        let mut headers = FieldTable::default();
+        let call_id_stack = vec![
+            AMQPValue::LongString(LongString::from("call1".as_bytes())),
+            AMQPValue::LongString(LongString::from("call2".as_bytes())),
+        ];
+        headers.insert(
+            ShortString::from("nameko.call_id_stack"),
+            AMQPValue::FieldArray(FieldArray::from(call_id_stack)),
+        );
+
+        let ctx = RpcContext::new(
+            correlation_id,
+            reply_to,
+            headers,
+            routing_key,
+            config,
+            identifier,
+        );
+
+        let stack = ctx.get_call_id_stack();
+        assert!(stack.is_some());
+        let stack = stack.unwrap();
+        assert_eq!(stack.len(), 2);
+        assert_eq!(stack[0], "call1");
+        assert_eq!(stack[1], "call2");
+    }
+
+    #[test]
+    fn test_rpc_context_empty_call_id_stack() {
+        let config = Config::default();
+        let identifier = Uuid::new_v4();
+        let correlation_id = "test-correlation-id".to_string();
+        let reply_to = "test-reply-to".to_string();
+        let routing_key = "service.method".to_string();
+        let headers = FieldTable::default();
+
+        let ctx = RpcContext::new(
+            correlation_id,
+            reply_to,
+            headers,
+            routing_key,
+            config,
+            identifier,
+        );
+
+        let stack = ctx.get_call_id_stack();
+        assert!(stack.is_none());
+    }
+}

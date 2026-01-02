@@ -46,3 +46,7 @@ path = "src/simple_fib.rs"
 [[example]]
 name = "async_service_with_context"
 path = "src/async_service_with_context.rs"
+
+[[example]]
+name = "rpc_proxy_demo"
+path = "src/rpc_proxy_demo.rs"
