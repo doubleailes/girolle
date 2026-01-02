@@ -115,6 +115,10 @@ impl RpcCaller {
     }
 
     /// Initialize the RPC caller (connect to AMQP)
+    /// 
+    /// Note: This method is reserved for future use when RPC caller needs
+    /// to establish its own connection pool. Currently, RPC operations
+    /// use the service's existing connection.
     #[allow(dead_code)]
     async fn initialize(&mut self) -> GirolleResult<()> {
         let conn = get_connection(self.config.AMQP_URI(), self.config.heartbeat()).await?;
@@ -156,6 +160,23 @@ impl RpcCaller {
     }
 
     /// Call another service asynchronously
+    /// 
+    /// Note: The target service must be registered first using `register_service()`.
+    /// This is a foundation implementation for RPC proxy patterns.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `service_name` - Name of the target service
+    /// * `method_name` - Name of the method to call
+    /// * `payload` - Arguments to pass to the method
+    /// 
+    /// # Returns
+    /// 
+    /// Returns the result from the called service
+    /// 
+    /// # Errors
+    /// 
+    /// Returns `GirolleError::ServiceMissingError` if the service is not registered
     pub async fn call(
         &self,
         service_name: &str,
@@ -247,6 +268,9 @@ impl EventDispatcher {
     }
 
     /// Dispatch an event
+    /// 
+    /// Note: This is a foundation implementation. Full event dispatching
+    /// functionality needs to be implemented by connecting to an event exchange.
     pub async fn dispatch(
         &self,
         _event_type: &str,
@@ -254,6 +278,7 @@ impl EventDispatcher {
     ) -> GirolleResult<()> {
         // TODO: Implement event dispatching
         // This would publish to an event exchange
+        tracing::warn!("EventDispatcher::dispatch is not yet fully implemented");
         Ok(())
     }
 }

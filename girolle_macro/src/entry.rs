@@ -88,11 +88,11 @@ pub(crate) fn girolle_task(input: TokenStream) -> TokenStream {
     let name = item_fn.sig.ident.clone();
     let is_async = item_fn.sig.asyncness.is_some();
     
-    // Check if first argument is RpcContext
+    // Check if first argument is RpcContext - use more robust type checking
     let has_context = if let Some(first_arg) = item_fn.sig.inputs.first() {
         if let FnArg::Typed(pat_type) = first_arg {
-            let ty_str = quote! {#pat_type.ty}.to_string();
-            ty_str.contains("RpcContext") || ty_str.contains("Arc") && ty_str.contains("RpcContext")
+            // Check the type more robustly
+            matches_rpc_context_type(&pat_type.ty)
         } else {
             false
         }
@@ -160,4 +160,31 @@ pub(crate) fn girolle_task(input: TokenStream) -> TokenStream {
         }
     };
     expanded
+}
+
+/// Check if a type matches RpcContext more robustly
+fn matches_rpc_context_type(ty: &syn::Type) -> bool {
+    use syn::{GenericArgument, PathArguments, Type};
+    
+    match ty {
+        // Check for Arc<RpcContext>
+        Type::Path(type_path) => {
+            // Check if last segment is Arc
+            if let Some(last_seg) = type_path.path.segments.last() {
+                if last_seg.ident == "Arc" {
+                    // Check the generic argument
+                    if let PathArguments::AngleBracketed(args) = &last_seg.arguments {
+                        if let Some(GenericArgument::Type(Type::Path(inner_path))) = args.args.first() {
+                            // Check if inner type ends with RpcContext
+                            if let Some(inner_seg) = inner_path.path.segments.last() {
+                                return inner_seg.ident == "RpcContext";
+                            }
+                        }
+                    }
+                }
+            }
+            false
+        }
+        _ => false,
+    }
 }
