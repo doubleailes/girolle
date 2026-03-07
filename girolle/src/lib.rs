@@ -40,8 +40,8 @@
 //!
 //! #[tokio::main]
 //! async fn main() {
-//!    let mut rpc_client = RpcClient::new(Config::default());
-//!    rpc_client.register_service("video");
+//!    let mut rpc_client = RpcClient::new(Config::default()).await;
+//!    rpc_client.register_service("video").await;
 //!    
 //!    let result = rpc_client.send("video", "hello", Payload::new().arg("Girolle")).unwrap();
 //! }

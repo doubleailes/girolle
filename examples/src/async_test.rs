@@ -30,7 +30,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
     let duration = start.elapsed() - tempo;
     println!("Time elapsed in expensive_function() is: {:?}", duration);
-    rpc_client.unregister_service("video")?;
+    rpc_client.unregister_service("video").await?;
     rpc_client.close().await?;
     Ok(())
 }
