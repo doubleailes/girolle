@@ -8,7 +8,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let conf: Config = Config::with_yaml_defaults("staging/config.yml".to_string())?;
     let service_name = "video";
     // Create the rpc call struct
-    let mut rpc_client = RpcClient::new(conf);
+    let mut rpc_client = RpcClient::new(conf).await;
     rpc_client.register_service(service_name).await?;
     rpc_client.start().await?;
     let tempo: time::Duration = time::Duration::from_secs(2);
@@ -30,7 +30,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
     let duration = start.elapsed() - tempo;
     println!("Time elapsed in expensive_function() is: {:?}", duration);
-    rpc_client.unregister_service("video")?;
+    rpc_client.unregister_service("video").await?;
     rpc_client.close().await?;
     Ok(())
 }
