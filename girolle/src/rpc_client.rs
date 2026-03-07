@@ -3,7 +3,7 @@ use crate::error::GirolleError;
 use crate::payload::{Payload, PayloadResult};
 use crate::queue::{create_message_channel, create_service_channel, get_connection};
 use crate::types::GirolleResult;
-use futures::executor;
+
 use lapin::{
     message::DeliveryResult,
     options::*,
@@ -35,7 +35,7 @@ use uuid::Uuid;
 ///
 /// #[tokio::main]
 /// async fn main() {
-///    let rpc_client = RpcClient::new(Config::default());
+///    let rpc_client = RpcClient::new(Config::default()).await;
 /// }
 pub struct RpcClient {
     conf: Config,
@@ -68,20 +68,21 @@ impl RpcClient {
     ///
     /// #[tokio::main]
     /// async fn main() {
-    ///   let target_service = RpcClient::new(Config::default());
+    ///   let target_service = RpcClient::new(Config::default()).await;
     /// }
-    pub fn new(conf: Config) -> Self {
+    pub async fn new(conf: Config) -> Self {
         let identifier = Uuid::new_v4();
-        let conn = executor::block_on(get_connection(conf.AMQP_URI(), conf.heartbeat()))
+        let conn = get_connection(conf.AMQP_URI(), conf.heartbeat()).await
             .expect("Can't init connection");
         let reply_queue_name = format!("rpc.listener-{}", identifier);
-        let reply_channel = executor::block_on(create_message_channel(
+        let reply_channel = create_message_channel(
             &conn,
             &reply_queue_name,
             conf.prefetch_count(),
             &identifier,
             conf.rpc_exchange(),
-        ))
+        )
+        .await
         .expect("Can't create reply channel");
         Self {
             conf,
@@ -107,7 +108,7 @@ impl RpcClient {
     ///
     /// #[tokio::main]
     /// async fn main() {
-    ///    let mut rpc_client = RpcClient::new(Config::default());
+    ///    let mut rpc_client = RpcClient::new(Config::default()).await;
     ///    rpc_client.start().await.expect("call");
     /// }
     pub async fn start(&mut self) -> GirolleResult<()> {
@@ -170,7 +171,7 @@ impl RpcClient {
     ///
     /// #[tokio::main]
     /// async fn main() {
-    ///     let rpc_client = RpcClient::new(Config::default());
+    ///     let rpc_client = RpcClient::new(Config::default()).await;
     ///     let identifier = rpc_client.get_identifier();
     /// }
     pub fn get_identifier(&self) -> String {
@@ -199,7 +200,7 @@ impl RpcClient {
     /// #[tokio::main]
     /// async fn main() {
     ///    let conf = Config::with_yaml_defaults("config.yml".to_string()).unwrap();
-    ///    let mut rpc_client = RpcClient::new(conf);
+    ///    let mut rpc_client = RpcClient::new(conf).await;
     ///    rpc_client.register_service("video").await.expect("call");
     ///    let method_name = "hello";
     ///    let consumer = rpc_client.call_async("video", method_name, Payload::new().arg("John Doe"));
@@ -281,7 +282,7 @@ impl RpcClient {
     /// #[tokio::main]
     /// async fn main() -> Result<(), Box<dyn std::error::Error>> {
     ///    let conf = Config::with_yaml_defaults("config.yml".to_string()).unwrap();
-    ///    let mut rpc_client = RpcClient::new(conf);
+    ///    let mut rpc_client = RpcClient::new(conf).await;
     ///    rpc_client.register_service("video").await.expect("call");
     ///    let method_name = "hello";
     ///    let rpc_event = rpc_client.call_async("video", method_name, Payload::new().arg("John Doe"))?;
@@ -339,7 +340,7 @@ impl RpcClient {
     /// #[tokio::main]
     /// async fn main() {
     ///    let conf = Config::with_yaml_defaults("config.yml".to_string()).unwrap();
-    ///    let mut rpc_client = RpcClient::new(conf);
+    ///    let mut rpc_client = RpcClient::new(conf).await;
     ///    rpc_client.register_service("video").await.expect("call");
     ///    let method_name = "hello";
     ///     let result = rpc_client.send("video", method_name, Payload::new().arg("John Doe")).expect("call");
@@ -372,7 +373,7 @@ impl RpcClient {
     /// use girolle::prelude::*;
     ///
     ///
-    /// let rpc_client = RpcClient::new(Config::default());
+    /// let rpc_client = RpcClient::new(Config::default()).await;
     /// let conf = rpc_client.get_config();
     /// ```
     pub fn get_config(&self) -> &Config {
@@ -394,7 +395,7 @@ impl RpcClient {
     /// use girolle::prelude::*;
     ///
     ///
-    /// let mut rpc_client = RpcClient::new(Config::default());
+    /// let mut rpc_client = RpcClient::new(Config::default()).await;
     /// let conf = Config::default();
     /// rpc_client.set_config(conf);
     /// ```
@@ -423,7 +424,7 @@ impl RpcClient {
     ///
     /// #[tokio::main]
     /// async fn main() {
-    ///    let mut rpc_client = RpcClient::new(Config::default());
+    ///    let mut rpc_client = RpcClient::new(Config::default()).await;
     ///    rpc_client.register_service("video").await.expect("call");
     /// }
     pub async fn register_service(&mut self, service_name: &str) -> Result<(), lapin::Error> {
@@ -459,13 +460,13 @@ impl RpcClient {
     ///
     /// #[tokio::main]
     /// async fn main() {
-    ///    let mut rpc_client = RpcClient::new(Config::default());
+    ///    let mut rpc_client = RpcClient::new(Config::default()).await;
     ///    rpc_client.register_service("video").await.expect("call");
-    ///    rpc_client.unregister_service("video").expect("call");
+    ///    rpc_client.unregister_service("video").await.expect("call");
     /// }
-    pub fn unregister_service(&mut self, service_name: &str) -> Result<(), lapin::Error> {
+    pub async fn unregister_service(&mut self, service_name: &str) -> Result<(), lapin::Error> {
         let target_service = self.services.get(service_name).unwrap();
-        target_service.close()?;
+        target_service.close().await?;
         self.services.remove(service_name);
         Ok(())
     }
@@ -482,7 +483,7 @@ impl RpcClient {
     ///
     /// #[tokio::main]
     /// async fn main() {
-    ///   let rpc_client = RpcClient::new(Config::default());
+    ///   let rpc_client = RpcClient::new(Config::default()).await;
     ///   rpc_client.close().await.expect("close");
     /// }
     pub async fn close(&self) -> Result<(), lapin::Error> {
@@ -506,7 +507,7 @@ impl RpcClient {
 ///
 /// #[tokio::main]
 /// async fn main() {
-///      let mut rpc_client = RpcClient::new(Config::default());
+///      let mut rpc_client = RpcClient::new(Config::default()).await;
 ///      rpc_client.register_service("video").await.expect("call");
 /// }
 struct TargetService {
@@ -517,8 +518,8 @@ impl TargetService {
         Self { channel }
     }
     #[allow(dead_code)]
-    fn close(&self) -> Result<(), lapin::Error> {
-        executor::block_on(self.channel.close(200, "Goodbye"))?;
+    async fn close(&self) -> Result<(), lapin::Error> {
+        self.channel.close(200, "Goodbye").await?;
         Ok(())
     }
     #[allow(dead_code)]
