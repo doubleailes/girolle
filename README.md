@@ -69,22 +69,53 @@ parent_calls_tracked: 10
 
 ## How to use it
 
-The core concept is to remove the pain of the queue creation and reply by
-mokcing the **Nameko** architecture with a `RpcService` or `RpcClient`, and to
-use an abstract type `serde_json::Value` to manipulate a serializable data.
+The core concept is to remove the pain of queue creation and replies by
+mirroring the **Nameko** architecture with a `RpcService` or `RpcClient`, and
+to use an abstract type `serde_json::Value` to carry serializable data.
 
-if you do not use the macro `#[girolle]` you need to create a function that
-extract the data from the a `&[Value]` like this:
+Service handlers run as `async` futures and receive an [`RpcContext`] giving
+access to inbound headers and two capability handles:
+
+* `ctx.rpc.call(service, method, payload).await` — call any other service.
+* `ctx.events.dispatch(source, event_type, &payload).await` — emit a
+  Nameko-compatible event on `<source>.events`.
+
+The `#[girolle]` attribute generates a handler from a sync or async function.
+An optional first `ctx: RpcContext` argument is detected automatically.
+
+If you'd rather skip the macro you can build an [`RpcTask`] by hand from an
+[`RpcHandler`] closure:
 
 ```rust
-fn fibonacci_reccursive(s: &[Value]) -> Result<Value> {
-    let n: u64 = serde_json::from_value(s[0].clone())?;
-    let result: Value = serde_json::to_value(fibonacci(n))?;
-    Ok(result)
+use girolle::prelude::*;
+use std::sync::Arc;
+
+fn fibonacci() -> RpcTask {
+    RpcTask::new(
+        "fibonacci",
+        Arc::new(|_ctx: RpcContext, payload: Payload| -> BoxFuture<GirolleResult<Value>> {
+            Box::pin(async move {
+                let n: u64 = serde_json::from_value(payload.args()[0].clone())?;
+                Ok(serde_json::to_value(fibonacci_core(n))?)
+            })
+        }),
+    )
 }
 ```
 
-## Exemple
+## Examples
+
+The [`examples/`](./examples) crate contains runnable services and senders:
+
+| example | what it shows |
+|---|---|
+| [`simple_macro`](./examples/src/simple_macro.rs) | basic `#[girolle]` service with sync handlers |
+| [`simple_service`](./examples/src/simple_service.rs) | hand-rolled `RpcTask::new` with an async closure |
+| [`proxy_service`](./examples/src/proxy_service.rs) | `ctx.rpc.call` from inside a handler |
+| [`event_emitter`](./examples/src/event_emitter.rs) | `ctx.events.dispatch` from inside a handler |
+| [`event_observer`](./examples/src/event_observer.rs) | `RpcService::subscribe` to consume events |
+| [`cli_sender`](./examples/src/cli_sender.rs) | generic CLI sender — `<service> <method> [arg…]` |
+| [`simple_sender`](./examples/src/simple_sender.rs) | `RpcClient` round-trip with sync + async calls |
 
 ### Create a simple service
 
@@ -127,6 +158,67 @@ fn main() {
 }
 ```
 
+### Call another service from a handler
+
+```rust
+use girolle::prelude::*;
+
+#[girolle]
+async fn proxy_hello(ctx: RpcContext, name: String) -> String {
+    let result = ctx
+        .rpc
+        .call("video", "hello", Payload::new().arg(name))
+        .await
+        .expect("rpc call failed");
+    serde_json::from_value(result).expect("video.hello did not return a String")
+}
+```
+
+### Emit an event from a handler
+
+```rust
+use girolle::prelude::*;
+use serde::Serialize;
+
+#[derive(Serialize)]
+struct UserCreated { name: String }
+
+#[girolle]
+async fn create_user(ctx: RpcContext, name: String) -> String {
+    ctx.events
+        .dispatch("users", "user_created", &UserCreated { name: name.clone() })
+        .await
+        .expect("event dispatch failed");
+    format!("User {} created", name)
+}
+```
+
+### Subscribe to events
+
+```rust
+use girolle::prelude::*;
+use std::sync::Arc;
+
+fn main() {
+    let conf = Config::with_yaml_defaults("staging/config.yml".to_string()).unwrap();
+    let _ = RpcService::new(conf, "event-observer")
+        .subscribe(
+            "users",
+            "user_created",
+            Arc::new(|_ctx: RpcContext, payload: Value| -> BoxFuture<GirolleResult<()>> {
+                Box::pin(async move {
+                    println!("[users.user_created] {}", payload);
+                    Ok(())
+                })
+            }),
+        )
+        .start();
+}
+```
+
+A service can mix RPC methods (`register(...)`) and event subscriptions
+(`subscribe(...)`) freely; either one alone is also valid.
+
 ### Create multiple calls to service of methods, sync and async
 
 ```rust
@@ -168,34 +260,42 @@ Girolle use [lapin](https://github.com/amqp-rs/lapin) as an AMQP client/server l
 
 ## Supported features
 
-* [x] create a client
-  * [ ] create a proxy service in rust to interact with an other service
-* [x] Create a simple service
-  * [x] Handle the error
-  * [x] write test
-* [x] Add macro to simplify the creation of a service
-  * [x] Add basic macro
-  * [x] fix macro to handle `return`
-  * [x] fix macro to handle recursive function
-* [ ] listen to a pub/sub queue
+* [x] standalone client (sync and async)
+* [x] simple service with `#[girolle]`
+  * [x] error handling
+  * [x] tests
+* [x] macro
+  * [x] basic
+  * [x] handle `return`
+  * [x] handle recursive functions
+  * [x] support `async fn` and an optional `ctx: RpcContext` first argument
+* [x] in-service RPC client — `ctx.rpc.call(...)` from inside a handler
+* [x] event publishing — `ctx.events.dispatch(...)` (Nameko `{source}.events`)
+* [x] event subscriptions — `RpcService::subscribe(source, event_type, handler)`
+* [ ] `#[girolle_event]` macro for ergonomic subscription handlers
+* [ ] HTTP / web service entrypoint
 
 ### nameko-client
 
-The Girolle client got the basic features to send sync request and async resquest.
-I'm not really happy about the way it need to interact with. I would like to find a
-more elegant way like in the nameko. But it works, and it is not really painfull to
-use.
+The Girolle client provides sync and async sends. There's also a
+[`cli_sender`](./examples/src/cli_sender.rs) example for poking at any service
+from a terminal without hand-editing a sender file.
 
 ### nameko-rpc
 
-The RpcService and the macro procedural are the core of the lib. It does not
-suppport **proxy**, i know that's one of the most important feature of the
-**Nameko** lib. I will try to implement it in the future. But i think i need a bit refactor
-the non-oriented object aspect of Rust make it harder.
+`RpcService` plus the `#[girolle]` macro is the core. Handlers are async,
+receive an `RpcContext`, and can call other services from inside the handler
+via `ctx.rpc.call(...)` — the in-service RPC core handles the reply queue,
+correlation map, and `nameko.call_id_stack` propagation transparently.
 
 ### nameko-pubsub
 
-The PubSub service is not at all implemented. I dunno if that's something i'm interested in.
+Both sides are supported: handlers can publish events with
+`ctx.events.dispatch(source, event_type, &payload)` and services can
+subscribe to events with `RpcService::subscribe(source, event_type, handler)`.
+Exchanges follow the Nameko `{source}.events` topic convention, so a Girolle
+service can publish events that a Python Nameko service subscribes to (and
+vice versa).
 
 ### nameko-web
 

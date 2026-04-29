@@ -123,4 +123,72 @@ def send_simple_message(name: str) -> str:
 
 For more details please check the nameko documentation about [standalone](https://nameko.readthedocs.io/en/v3.0.0-rc/api.html#module-nameko.standalone) and [rpc](https://nameko.readthedocs.io/en/v3.0.0-rc/rpc.html) services.
 
+## Use the request context
+
+Adding `ctx: RpcContext` as the first argument of a handler gives access to
+the inbound delivery's metadata and two capability handles:
+
+* `ctx.rpc.call(service, method, payload).await` — call any other service.
+* `ctx.events.dispatch(source, event_type, &payload).await` — emit a
+  Nameko-compatible event on the `<source>.events` topic exchange.
+
+```rust
+use girolle::prelude::*;
+use serde::Serialize;
+
+#[derive(Serialize)]
+struct UserCreated { name: String }
+
+#[girolle]
+async fn create_user(ctx: RpcContext, name: String) -> String {
+    ctx.events
+        .dispatch("users", "user_created", &UserCreated { name: name.clone() })
+        .await
+        .expect("event dispatch failed");
+    format!("User {} created", name)
+}
+```
+
+## Subscribe to events
+
+A service can also subscribe to events emitted by other services. Use
+`RpcService::subscribe(source, event_type, handler)`. Subscriptions can
+coexist with `register(...)` on the same service, and a service consisting
+only of subscriptions is also valid.
+
+```rust
+use girolle::prelude::*;
+use std::sync::Arc;
+
+fn main() {
+    let conf = Config::with_yaml_defaults("staging/config.yml".to_string()).unwrap();
+    let _ = RpcService::new(conf, "event-observer")
+        .subscribe(
+            "users",
+            "user_created",
+            Arc::new(|_ctx: RpcContext, payload: Value| -> BoxFuture<GirolleResult<()>> {
+                Box::pin(async move {
+                    println!("[users.user_created] {}", payload);
+                    Ok(())
+                })
+            }),
+        )
+        .start();
+}
+```
+
+## Runnable examples
+
+The `examples/` crate has a runnable example for each capability. Pick one,
+adapt it, and `cargo run --example <name>` from the repository root:
+
+| example | what it shows |
+|---|---|
+| `simple_macro` | basic `#[girolle]` service with sync handlers |
+| `simple_service` | hand-rolled `RpcTask::new` with an async closure |
+| `proxy_service` | `ctx.rpc.call` from inside a handler |
+| `event_emitter` | `ctx.events.dispatch` from inside a handler |
+| `event_observer` | `RpcService::subscribe` to consume events |
+| `cli_sender` | generic CLI sender — `<service> <method> [arg…]` |
+| `simple_sender` | `RpcClient` round-trip with sync + async calls |
 
