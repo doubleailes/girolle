@@ -46,3 +46,7 @@ path = "src/simple_fib.rs"
 [[example]]
 name = "proxy_service"
 path = "src/proxy_service.rs"
+
+[[example]]
+name = "event_emitter"
+path = "src/event_emitter.rs"
