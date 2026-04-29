@@ -67,4 +67,6 @@ pub use serde_json;
 pub use serde_json::{json, Value};
 mod error;
 pub use error::GirolleError;
-pub use types::{BoxFuture, EventDispatcher, GirolleResult, RpcCaller, RpcContext, RpcHandler};
+pub use types::{
+    BoxFuture, EventDispatcher, EventHandler, GirolleResult, RpcCaller, RpcContext, RpcHandler,
+};

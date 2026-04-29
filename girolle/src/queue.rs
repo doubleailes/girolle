@@ -2,9 +2,9 @@
 ///
 /// This module contains functions to create queues and channels for the RPC communication.
 use lapin::{
-    options::{BasicQosOptions, QueueBindOptions, QueueDeclareOptions},
+    options::{BasicQosOptions, ExchangeDeclareOptions, QueueBindOptions, QueueDeclareOptions},
     types::FieldTable,
-    Connection, ConnectionProperties,
+    Connection, ConnectionProperties, ExchangeKind,
 };
 use tracing::{error, info};
 use uuid::Uuid;
@@ -136,4 +136,66 @@ pub(crate) async fn create_message_channel(
         )
         .await?;
     Ok(response_channel)
+}
+
+/// # create_event_consumer_channel
+///
+/// Sets up a channel for consuming Nameko-style events emitted by
+/// `source_service`. The function declares the source's `{source}.events`
+/// topic exchange (idempotently — so the consumer can come up before any
+/// publisher), declares a durable consumer queue, binds it to the exchange
+/// with `event_type` as the routing key, and applies `prefetch_count`.
+///
+/// The exchange and queue declarations match the Nameko EventDispatcher
+/// publisher's conventions, so a Girolle consumer can subscribe to events
+/// emitted by a Python Nameko service and vice versa.
+pub(crate) async fn create_event_consumer_channel(
+    conn: &Connection,
+    queue_name: &str,
+    source_service: &str,
+    event_type: &str,
+    prefetch_count: u16,
+) -> lapin::Result<lapin::Channel> {
+    info!(queue = queue_name, "Create event consumer queue");
+    let channel = conn.create_channel().await?;
+    let exchange = format!("{}.events", source_service);
+
+    channel
+        .exchange_declare(
+            &exchange,
+            ExchangeKind::Topic,
+            ExchangeDeclareOptions {
+                durable: true,
+                ..Default::default()
+            },
+            FieldTable::default(),
+        )
+        .await?;
+
+    channel
+        .queue_declare(
+            queue_name,
+            QueueDeclareOptions {
+                durable: true,
+                ..Default::default()
+            },
+            FieldTable::default(),
+        )
+        .await?;
+
+    channel
+        .queue_bind(
+            queue_name,
+            &exchange,
+            event_type,
+            QueueBindOptions::default(),
+            FieldTable::default(),
+        )
+        .await?;
+
+    channel
+        .basic_qos(prefetch_count, BasicQosOptions::default())
+        .await?;
+
+    Ok(channel)
 }
