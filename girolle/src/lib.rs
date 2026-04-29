@@ -55,6 +55,7 @@ pub mod nameko_utils;
 pub mod prelude;
 mod rpc_client;
 pub use rpc_client::RpcClient;
+mod rpc_core;
 mod rpc_service;
 pub use rpc_service::RpcService;
 mod rpc_task;
