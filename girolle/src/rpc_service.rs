@@ -1,6 +1,7 @@
 use crate::{
     config::Config,
     error::GirolleError,
+    events::EventDispatcherCore,
     nameko_utils::{compute_deliver, delivery_to_message_properties, get_id, publish},
     payload::{Payload, PayloadResult},
     queue::{create_service_channel, get_connection},
@@ -276,6 +277,9 @@ async fn rpc_service(
     // Stand up the in-service RPC core: reply queue, correlation map,
     // and a publish channel used by ctx.rpc.call().
     let rpc_caller_core = RpcCallerCore::new(&conn, conf, id).await?;
+    // Stand up the event-dispatcher core: a publish channel and a cache
+    // of declared `{source}.events` exchanges used by ctx.events.dispatch().
+    let event_dispatcher_core = EventDispatcherCore::new(&conn, conf, id).await?;
     // Start a consumer.
     let consumer = rpc_channel
         .basic_consume(
@@ -293,7 +297,7 @@ async fn rpc_service(
         semaphore: Semaphore::new(conf.max_workers() as usize),
         parent_calls_tracked: conf.parent_calls_tracked() as usize,
         rpc_caller: RpcCaller::from_core(rpc_caller_core),
-        event_dispatcher: EventDispatcher::placeholder(),
+        event_dispatcher: EventDispatcher::from_core(event_dispatcher_core),
     });
     consumer.set_delegate(move |delivery: DeliveryResult| {
         let shared_data = Arc::clone(&shared_data);
@@ -338,6 +342,9 @@ async fn rpc_service(
                     let rpc = shared_data
                         .rpc_caller
                         .with_parent_headers(inbound_headers.clone());
+                    let events = shared_data
+                        .event_dispatcher
+                        .with_parent_headers(inbound_headers.clone());
                     let ctx = RpcContext {
                         service_name: incommig_service.to_string(),
                         method_name: incomming_method.to_string(),
@@ -345,7 +352,7 @@ async fn rpc_service(
                         reply_to: reply_to_id.clone(),
                         headers: inbound_headers,
                         rpc,
-                        events: shared_data.event_dispatcher.clone(),
+                        events,
                     };
                     compute_deliver(
                         incomming_data,

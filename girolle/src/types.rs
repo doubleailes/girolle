@@ -1,7 +1,9 @@
 use crate::error::GirolleError;
+use crate::events::EventDispatcherCore;
 use crate::payload::Payload;
 use crate::rpc_core::RpcCallerCore;
 use lapin::types::FieldTable;
+use serde::Serialize;
 use serde_json::Value;
 use std::future::Future;
 use std::pin::Pin;
@@ -85,16 +87,63 @@ impl RpcCaller {
 /// Capability handle exposed on [`RpcContext`] that lets a service handler
 /// emit Nameko-compatible events.
 ///
-/// In this release the dispatcher is a placeholder; the publisher
-/// implementation lands in a follow-up change.
-#[derive(Clone, Debug, Default)]
+/// Each inbound delivery receives an `EventDispatcher` derived from the
+/// service's shared event-dispatcher core. The derivation captures the
+/// parent delivery's AMQP headers so that emitted events carry the
+/// inbound `nameko.call_id_stack` through.
+///
+/// A default-constructed `EventDispatcher` has no underlying core; calling
+/// [`EventDispatcher::dispatch`] on it returns an error. Useful for
+/// unit-testing handlers without standing up a broker.
+#[derive(Clone, Default)]
 pub struct EventDispatcher {
-    _private: (),
+    inner: Option<Arc<EventDispatcherCore>>,
+    parent_headers: FieldTable,
+}
+
+impl std::fmt::Debug for EventDispatcher {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("EventDispatcher")
+            .field("active", &self.inner.is_some())
+            .finish()
+    }
 }
 
 impl EventDispatcher {
-    pub(crate) fn placeholder() -> Self {
-        Self { _private: () }
+    pub(crate) fn from_core(core: Arc<EventDispatcherCore>) -> Self {
+        Self {
+            inner: Some(core),
+            parent_headers: FieldTable::default(),
+        }
+    }
+
+    pub(crate) fn with_parent_headers(&self, headers: FieldTable) -> Self {
+        Self {
+            inner: self.inner.clone(),
+            parent_headers: headers,
+        }
+    }
+
+    /// Emit `event_type` on the `{source_service}.events` topic exchange.
+    ///
+    /// `payload` is serialized as JSON. The exchange is declared lazily on
+    /// the first emit per source. Returns when the publish has been handed
+    /// to the broker; delivery is fire-and-forget (no acknowledgement).
+    pub async fn dispatch<T: Serialize>(
+        &self,
+        source_service: &str,
+        event_type: &str,
+        payload: &T,
+    ) -> GirolleResult<()> {
+        let core = self.inner.as_ref().ok_or_else(|| {
+            GirolleError::ServiceMissingError(
+                "EventDispatcher has no in-service core; ctx.events.dispatch requires a running RpcService"
+                    .to_string(),
+            )
+        })?;
+        let body = serde_json::to_vec(payload)?;
+        core.dispatch(&self.parent_headers, source_service, event_type, body)
+            .await
     }
 }
 
