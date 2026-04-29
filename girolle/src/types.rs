@@ -171,3 +171,14 @@ pub struct RpcContext {
 /// [`Payload`] and returns a future resolving to the handler's JSON result.
 pub type RpcHandler =
     Arc<dyn Fn(RpcContext, Payload) -> BoxFuture<GirolleResult<Value>> + Send + Sync>;
+
+/// # EventHandler
+///
+/// Async handler signature for an event subscription registered via
+/// [`RpcService::subscribe`](crate::RpcService::subscribe).
+///
+/// The handler receives the per-event [`RpcContext`] and the decoded JSON
+/// payload, and returns a future resolving to `Ok(())` on success. Errors
+/// are logged but do not nack the message — events are best-effort.
+pub type EventHandler =
+    Arc<dyn Fn(RpcContext, Value) -> BoxFuture<GirolleResult<()>> + Send + Sync>;

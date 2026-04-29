@@ -4,16 +4,23 @@ use crate::{
     events::EventDispatcherCore,
     nameko_utils::{compute_deliver, delivery_to_message_properties, get_id, publish},
     payload::{Payload, PayloadResult},
-    queue::{create_service_channel, get_connection},
+    queue::{create_event_consumer_channel, create_service_channel, get_connection},
     rpc_core::RpcCallerCore,
     rpc_task::RpcTask,
-    types::{EventDispatcher, RpcCaller, RpcContext},
+    types::{EventDispatcher, EventHandler, RpcCaller, RpcContext},
 };
 use lapin::{message::DeliveryResult, options::*, types::FieldTable, Channel};
 use std::{collections::HashMap, sync::Arc};
 use tokio::sync::Semaphore;
 use tracing::{debug, error, info, warn, Level};
 use uuid::Uuid;
+
+#[derive(Clone)]
+struct EventSubscription {
+    source_service: String,
+    event_type: String,
+    handler: EventHandler,
+}
 
 /// # RpcService
 ///
@@ -40,6 +47,7 @@ pub struct RpcService {
     conf: Config,
     service_name: String,
     f: HashMap<String, RpcTask>,
+    subscriptions: Vec<EventSubscription>,
 }
 impl RpcService {
     /// # new
@@ -70,6 +78,7 @@ impl RpcService {
             conf,
             service_name: service_name.to_string(),
             f: HashMap::new(),
+            subscriptions: Vec::new(),
         }
     }
     /// # set_service_name
@@ -129,6 +138,55 @@ impl RpcService {
         let routing_key = format!("{}.{}", self.service_name, method_name);
         self.f.insert(routing_key.to_string(), f);
     }
+    /// # subscribe
+    ///
+    /// Register an async event handler for `<source_service>.events` with
+    /// routing key `event_type`.
+    ///
+    /// Multiple `subscribe` calls can coexist with `register` calls on the
+    /// same service. A service consisting only of subscriptions (no RPC
+    /// methods) is allowed.
+    ///
+    /// ## Arguments
+    ///
+    /// * `source_service` — the name of the service emitting the event
+    /// * `event_type` — the event's routing key (typically a verb like
+    ///   `user_created`)
+    /// * `handler` — an [`EventHandler`] invoked with [`RpcContext`] and the
+    ///   decoded JSON payload
+    ///
+    /// ## Example
+    ///
+    /// ```rust,no_run
+    /// use girolle::prelude::*;
+    /// use std::sync::Arc;
+    ///
+    /// fn main() {
+    ///     let _ = RpcService::new(Config::default(), "observer").subscribe(
+    ///         "users",
+    ///         "user_created",
+    ///         Arc::new(|_ctx, payload| {
+    ///             Box::pin(async move {
+    ///                 println!("event: {}", payload);
+    ///                 Ok(())
+    ///             })
+    ///         }),
+    ///     );
+    /// }
+    /// ```
+    pub fn subscribe(
+        mut self,
+        source_service: &str,
+        event_type: &str,
+        handler: EventHandler,
+    ) -> Self {
+        self.subscriptions.push(EventSubscription {
+            source_service: source_service.to_string(),
+            event_type: event_type.to_string(),
+            handler,
+        });
+        self
+    }
     /// # start
     ///
     /// ## Description
@@ -150,11 +208,16 @@ impl RpcService {
     ///    services.register(hello).start();
     /// }
     pub fn start(&self) -> Result<(), GirolleError> {
-        if self.f.is_empty() {
-            panic!("No function insert");
+        if self.f.is_empty() && self.subscriptions.is_empty() {
+            panic!("RpcService has neither RPC methods nor event subscriptions");
         }
-        // Need to clone f because it is behind a shared reference
-        rpc_service(&self.conf, &self.service_name, self.f.clone())
+        // Need to clone because the field is behind a shared reference.
+        rpc_service(
+            &self.conf,
+            &self.service_name,
+            self.f.clone(),
+            self.subscriptions.clone(),
+        )
     }
     /// # get_routing_keys
     ///
@@ -230,7 +293,7 @@ struct SharedData {
     f_task: HashMap<String, RpcTask>,
     rpc_exchange: String,
     service_name: String,
-    semaphore: Semaphore,
+    semaphore: Arc<Semaphore>,
     parent_calls_tracked: usize,
     rpc_caller: RpcCaller,
     event_dispatcher: EventDispatcher,
@@ -252,6 +315,7 @@ async fn rpc_service(
     conf: &Config,
     service_name: &str,
     f_task: HashMap<String, RpcTask>,
+    subscriptions: Vec<EventSubscription>,
 ) -> Result<(), GirolleError> {
     info!("Starting the service");
     // Define the queue name1
@@ -264,6 +328,13 @@ async fn rpc_service(
     let id = Uuid::new_v4();
     // check list of function
     debug!("List of functions {:?}", f_task.keys());
+    debug!(
+        "List of subscriptions {:?}",
+        subscriptions
+            .iter()
+            .map(|s| format!("{}.events/{}", s.source_service, s.event_type))
+            .collect::<Vec<_>>()
+    );
     let conn = get_connection(conf.AMQP_URI(), conf.heartbeat()).await?;
     // Create a channel for the service in Nameko this part is handle by
     // the RpcConsumer class
@@ -280,6 +351,91 @@ async fn rpc_service(
     // Stand up the event-dispatcher core: a publish channel and a cache
     // of declared `{source}.events` exchanges used by ctx.events.dispatch().
     let event_dispatcher_core = EventDispatcherCore::new(&conn, conf, id).await?;
+    let rpc_caller = RpcCaller::from_core(rpc_caller_core);
+    let event_dispatcher = EventDispatcher::from_core(event_dispatcher_core);
+    let semaphore = Arc::new(Semaphore::new(conf.max_workers() as usize));
+
+    // Spin up a consumer per event subscription, reusing the shared
+    // semaphore and capabilities. Each subscription gets its own queue,
+    // bound to `<source>.events` with routing key `<event_type>`.
+    for sub in &subscriptions {
+        let queue_name = format!(
+            "evt-{}-{}--{}",
+            sub.source_service, sub.event_type, service_name
+        );
+        let event_channel = create_event_consumer_channel(
+            &conn,
+            &queue_name,
+            &sub.source_service,
+            &sub.event_type,
+            conf.prefetch_count(),
+        )
+        .await?;
+        let consumer = event_channel
+            .basic_consume(
+                &queue_name,
+                "girolle_event_consumer",
+                BasicConsumeOptions::default(),
+                FieldTable::default(),
+            )
+            .await?;
+        let handler = sub.handler.clone();
+        let semaphore = Arc::clone(&semaphore);
+        let rpc_caller = rpc_caller.clone();
+        let event_dispatcher = event_dispatcher.clone();
+        let service_name_owned = service_name.to_string();
+        let event_type_owned = sub.event_type.clone();
+        consumer.set_delegate(move |delivery: DeliveryResult| {
+            let handler = handler.clone();
+            let semaphore = Arc::clone(&semaphore);
+            let rpc_caller = rpc_caller.clone();
+            let event_dispatcher = event_dispatcher.clone();
+            let service_name_owned = service_name_owned.clone();
+            let event_type_owned = event_type_owned.clone();
+            async move {
+                let _permit = semaphore.acquire().await;
+                let delivery = match delivery {
+                    Ok(Some(delivery)) => delivery,
+                    Ok(None) => return,
+                    Err(error) => {
+                        error!("Failed to consume event message {}", error);
+                        return;
+                    }
+                };
+                let payload: serde_json::Value = match serde_json::from_slice(&delivery.data) {
+                    Ok(v) => v,
+                    Err(e) => {
+                        error!(error = %e, "event payload was not valid JSON; dropping");
+                        let _ = delivery
+                            .ack(BasicAckOptions::default())
+                            .await;
+                        return;
+                    }
+                };
+                let inbound_headers = delivery
+                    .properties
+                    .headers()
+                    .clone()
+                    .unwrap_or_default();
+                let rpc = rpc_caller.with_parent_headers(inbound_headers.clone());
+                let events = event_dispatcher.with_parent_headers(inbound_headers.clone());
+                let ctx = RpcContext {
+                    service_name: service_name_owned,
+                    method_name: event_type_owned,
+                    correlation_id: String::new(),
+                    reply_to: String::new(),
+                    headers: inbound_headers,
+                    rpc,
+                    events,
+                };
+                if let Err(e) = handler(ctx, payload).await {
+                    error!(error = %e, "event handler failed; acking and continuing");
+                }
+                let _ = delivery.ack(BasicAckOptions::default()).await;
+            }
+        });
+    }
+
     // Start a consumer.
     let consumer = rpc_channel
         .basic_consume(
@@ -294,10 +450,10 @@ async fn rpc_service(
         f_task,
         rpc_exchange: conf.rpc_exchange().to_string(),
         service_name: service_name.to_string(),
-        semaphore: Semaphore::new(conf.max_workers() as usize),
+        semaphore,
         parent_calls_tracked: conf.parent_calls_tracked() as usize,
-        rpc_caller: RpcCaller::from_core(rpc_caller_core),
-        event_dispatcher: EventDispatcher::from_core(event_dispatcher_core),
+        rpc_caller,
+        event_dispatcher,
     });
     consumer.set_delegate(move |delivery: DeliveryResult| {
         let shared_data = Arc::clone(&shared_data);

@@ -50,3 +50,11 @@ path = "src/proxy_service.rs"
 [[example]]
 name = "event_emitter"
 path = "src/event_emitter.rs"
+
+[[example]]
+name = "cli_sender"
+path = "src/cli_sender.rs"
+
+[[example]]
+name = "event_observer"
+path = "src/event_observer.rs"
