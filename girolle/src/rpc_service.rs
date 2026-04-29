@@ -4,6 +4,7 @@ use crate::{
     nameko_utils::{compute_deliver, delivery_to_message_properties, get_id, publish},
     payload::{Payload, PayloadResult},
     queue::{create_service_channel, get_connection},
+    rpc_core::RpcCallerCore,
     rpc_task::RpcTask,
     types::{EventDispatcher, RpcCaller, RpcContext},
 };
@@ -272,6 +273,9 @@ async fn rpc_service(
         conf.rpc_exchange(),
     )
     .await?;
+    // Stand up the in-service RPC core: reply queue, correlation map,
+    // and a publish channel used by ctx.rpc.call().
+    let rpc_caller_core = RpcCallerCore::new(&conn, conf, id).await?;
     // Start a consumer.
     let consumer = rpc_channel
         .basic_consume(
@@ -288,7 +292,7 @@ async fn rpc_service(
         service_name: service_name.to_string(),
         semaphore: Semaphore::new(conf.max_workers() as usize),
         parent_calls_tracked: conf.parent_calls_tracked() as usize,
-        rpc_caller: RpcCaller::placeholder(),
+        rpc_caller: RpcCaller::from_core(rpc_caller_core),
         event_dispatcher: EventDispatcher::placeholder(),
     });
     consumer.set_delegate(move |delivery: DeliveryResult| {
@@ -331,13 +335,16 @@ async fn rpc_service(
                 (Some(rpc_task_struct), _) => {
                     let incomming_data: Payload = serde_json::from_slice(&delivery.data)
                         .expect("Can't deserialize incomming data");
+                    let rpc = shared_data
+                        .rpc_caller
+                        .with_parent_headers(inbound_headers.clone());
                     let ctx = RpcContext {
                         service_name: incommig_service.to_string(),
                         method_name: incomming_method.to_string(),
                         correlation_id: correlation_id.clone(),
                         reply_to: reply_to_id.clone(),
                         headers: inbound_headers,
-                        rpc: shared_data.rpc_caller.clone(),
+                        rpc,
                         events: shared_data.event_dispatcher.clone(),
                     };
                     compute_deliver(
