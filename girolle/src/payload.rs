@@ -128,6 +128,18 @@ impl Payload {
     pub fn is_empty(&self) -> bool {
         self.args.is_empty() && self.kwargs.is_empty()
     }
+    /// # args
+    ///
+    /// Borrow the positional arguments carried by this payload.
+    pub fn args(&self) -> &[Value] {
+        &self.args
+    }
+    /// # kwargs
+    ///
+    /// Borrow the keyword arguments carried by this payload.
+    pub fn kwargs(&self) -> &HashMap<String, Value> {
+        &self.kwargs
+    }
 }
 
 impl fmt::Display for Payload {

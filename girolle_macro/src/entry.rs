@@ -2,113 +2,116 @@ use proc_macro2::TokenStream;
 use quote::quote;
 use syn::fold::Fold;
 use syn::parse_quote;
-use syn::{parse2, FnArg, ItemFn};
+use syn::{parse2, FnArg, ItemFn, Pat, Stmt};
 
-struct Task {
-    name: syn::Ident,
-    args: Vec<FnArg>,
-    deser_wrapper: Vec<syn::Stmt>,
-    args_input_core: Vec<syn::Pat>,
-}
-impl Task {
-    fn new(name: syn::Ident) -> Self {
-        Task {
-            name,
-            args: Vec::new(),
-            deser_wrapper: Vec::new(),
-            args_input_core: Vec::new(),
-        }
-    }
-    /// # add_input_serialize
-    ///
-    /// ## Description
-    ///
-    /// This function is used to add the input serialization to the task.
-    /// It use for the second function to deserialize the input.
-    ///
-    /// ## Arguments
-    ///
-    /// - `self` : &mut Task : The task to modify.
-    fn add_input_serialize(&mut self) {
-        let mut stmts: Vec<syn::Stmt> = Vec::new();
-        for (i, arg) in self.args.iter().enumerate() {
-            let data_quote = quote! {
-                data[#i]
-            };
-            if let FnArg::Typed(pat_type) = arg {
-                let pat = &pat_type.pat;
-                let ty = &pat_type.ty;
-                self.args_input_core.push(*pat.clone());
-                stmts.push(
-                    parse_quote! {let #pat: #ty = serde_json::from_value(#data_quote.clone())?;},
-                );
-            }
-        }
-        self.deser_wrapper.clone_from(&stmts);
-    }
+/// Renames the user-written function's identifier to `<name>_core`, both at
+/// the definition site and at any recursive call site inside the body.
+struct CoreRenamer {
+    from: syn::Ident,
 }
 
-impl Fold for Task {
-    /// # fold_ident
-    ///
-    /// ## Description
-    ///
-    /// This function is used to fold the ident of the function by replacing the
-    /// original name by the name suffixed by `_core`.
-    ///
-    /// ## Arguments
-    ///
-    /// - `i` : proc_macro2::Ident : The ident to fold.
-    ///
-    /// ## Returns
-    ///
-    /// - `proc_macro2::Ident` : The folded ident.
+impl Fold for CoreRenamer {
     fn fold_ident(&mut self, i: proc_macro2::Ident) -> proc_macro2::Ident {
-        let folded_item = i.clone();
-        // Capture the original statements
-        if folded_item == self.name {
-            return syn::Ident::new(
-                &format!("{}_core", folded_item),
+        if i == self.from {
+            syn::Ident::new(
+                &format!("{}_core", i),
                 proc_macro2::Span::call_site(),
-            );
+            )
+        } else {
+            i
         }
-        folded_item
+    }
+}
+
+/// Returns true if the FnArg is a typed argument whose type path ends in
+/// `RpcContext`. We use this to detect the optional first context arg.
+fn is_ctx_arg(arg: &FnArg) -> bool {
+    match arg {
+        FnArg::Typed(pt) => match &*pt.ty {
+            syn::Type::Path(tp) => tp
+                .path
+                .segments
+                .last()
+                .map(|s| s.ident == "RpcContext")
+                .unwrap_or(false),
+            _ => false,
+        },
+        _ => false,
     }
 }
 
 pub(crate) fn girolle_task(input: TokenStream) -> TokenStream {
-    let item_fn = parse2::<ItemFn>(input).unwrap();
+    let item_fn = parse2::<ItemFn>(input).expect("girolle: expected a free function");
     let name = item_fn.sig.ident.clone();
-    let mut task = Task::new(name.clone());
-    task.args = item_fn.sig.inputs.iter().cloned().collect();
-    let new_item_fn = task.fold_item_fn(item_fn);
-    task.add_input_serialize();
-    let args_str: Vec<String> = task
-        .args
-        .iter()
-        .map(|arg| match arg {
-            FnArg::Typed(pat_type) => {
-                let pat = &pat_type.pat;
-                quote! {#pat}.to_string()
-            }
-            _ => "".to_string(),
-        })
-        .collect();
-    let name_fn = quote! {#name}.to_string();
-    let fn_wrap_name = syn::Ident::new(&format!("{}_wrap", name), proc_macro2::Span::call_site());
-    let fn_core_name: syn::Ident =
-        syn::Ident::new(&format!("{}_core", name), proc_macro2::Span::call_site());
-    let wrap = task.deser_wrapper;
-    let args_input_core: Vec<syn::Pat> = task.args_input_core.clone();
-    let expanded = quote! {
-        #new_item_fn
-        fn #fn_wrap_name(data : & [Value]) -> GirolleResult<Value>{
-            #(#wrap)*
-            Ok(serde_json :: to_value(#fn_core_name(#(#args_input_core),*)) ?)
-        }
-        fn #name() -> girolle::RpcTask {
-            girolle::RpcTask::new(#name_fn,vec![#(#args_str),*], #fn_wrap_name)
-        }
+    let is_async = item_fn.sig.asyncness.is_some();
+
+    let inputs: Vec<FnArg> = item_fn.sig.inputs.iter().cloned().collect();
+    let (has_ctx, real_args): (bool, Vec<FnArg>) = match inputs.first() {
+        Some(first) if is_ctx_arg(first) => (true, inputs[1..].to_vec()),
+        _ => (false, inputs),
     };
-    expanded
+
+    // Rename the original function to `<name>_core`.
+    let mut renamer = CoreRenamer { from: name.clone() };
+    let new_item_fn = renamer.fold_item_fn(item_fn);
+
+    // Build the per-arg name list used for kwargs->args dispatch and the
+    // deserialization statements unpacking each arg from the Payload.
+    let mut args_str: Vec<String> = Vec::new();
+    let mut deser_stmts: Vec<Stmt> = Vec::new();
+    let mut args_input_core: Vec<Pat> = Vec::new();
+    for (i, arg) in real_args.iter().enumerate() {
+        if let FnArg::Typed(pat_type) = arg {
+            let pat = &pat_type.pat;
+            let ty = &pat_type.ty;
+            args_str.push(quote! { #pat }.to_string());
+            args_input_core.push(*pat.clone());
+            deser_stmts.push(parse_quote! {
+                let #pat: #ty = ::girolle::serde_json::from_value(__args[#i].clone())?;
+            });
+        }
+    }
+
+    let name_fn = quote! { #name }.to_string();
+    let fn_core_name =
+        syn::Ident::new(&format!("{}_core", name), proc_macro2::Span::call_site());
+
+    let core_call = match (has_ctx, is_async) {
+        (true, true) => quote! { #fn_core_name(__ctx, #(#args_input_core),*).await },
+        (true, false) => quote! { #fn_core_name(__ctx, #(#args_input_core),*) },
+        (false, true) => quote! { #fn_core_name(#(#args_input_core),*).await },
+        (false, false) => quote! { #fn_core_name(#(#args_input_core),*) },
+    };
+
+    let ctx_binding = if has_ctx {
+        quote! { let __ctx = ctx; }
+    } else {
+        quote! { let _ = ctx; }
+    };
+
+    quote! {
+        #new_item_fn
+
+        fn #name() -> ::girolle::RpcTask {
+            ::girolle::RpcTask::new(
+                #name_fn,
+                ::std::sync::Arc::new(
+                    |ctx: ::girolle::RpcContext, payload: ::girolle::Payload|
+                        -> ::girolle::BoxFuture<::girolle::GirolleResult<::girolle::Value>>
+                    {
+                        ::std::boxed::Box::pin(async move {
+                            #ctx_binding
+                            let __args = ::girolle::nameko_utils::build_inputs_fn_service(
+                                &[#(#args_str),*],
+                                payload,
+                            )?;
+                            #(#deser_stmts)*
+                            let __result = #core_call;
+                            Ok(::girolle::serde_json::to_value(__result)?)
+                        })
+                    },
+                ),
+            )
+        }
+    }
 }

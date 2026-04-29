@@ -1,16 +1,16 @@
-use std::vec;
-
 use girolle::prelude::*;
-
-fn hello_core(s: &[Value]) -> GirolleResult<Value> {
-    // Parse the incomming data
-    let n: String = serde_json::from_value(s[0].clone())?;
-    let hello_str: Value = format!("Hello, {}!, by Girolle", n).into();
-    Ok(hello_str)
-}
+use std::sync::Arc;
 
 fn hello() -> RpcTask {
-    RpcTask::new("hello", vec!["s"], hello_core)
+    RpcTask::new(
+        "hello",
+        Arc::new(|_ctx: RpcContext, payload: Payload| -> BoxFuture<GirolleResult<Value>> {
+            Box::pin(async move {
+                let n: String = serde_json::from_value(payload.args()[0].clone())?;
+                Ok(serde_json::to_value(format!("Hello, {}!, by Girolle", n))?)
+            })
+        }),
+    )
 }
 
 fn fast_fibonacci(n: u64) -> u64 {
@@ -30,14 +30,16 @@ fn fast_fibonacci(n: u64) -> u64 {
     }
 }
 
-fn fibonacci_reccursive(s: &[Value]) -> GirolleResult<Value> {
-    let n: u64 = serde_json::from_value(s[0].clone())?;
-    let result: Value = serde_json::to_value(fast_fibonacci(n))?;
-    Ok(result)
-}
-
 fn fibonacci() -> RpcTask {
-    RpcTask::new("fibonacci", vec!["n"], fibonacci_reccursive)
+    RpcTask::new(
+        "fibonacci",
+        Arc::new(|_ctx: RpcContext, payload: Payload| -> BoxFuture<GirolleResult<Value>> {
+            Box::pin(async move {
+                let n: u64 = serde_json::from_value(payload.args()[0].clone())?;
+                Ok(serde_json::to_value(fast_fibonacci(n))?)
+            })
+        }),
+    )
 }
 
 fn main() {
@@ -45,7 +47,7 @@ fn main() {
     let conf: Config = Config::with_yaml_defaults("staging/config.yml".to_string()).unwrap();
     // Create the rpc service struct
     let services: RpcService = RpcService::new(conf, "video");
-    // Add the method with the register ans start the service because
+    // Add the method with the register and start the service because
     // register return the service
     let _ = services.register(hello).register(fibonacci).start();
 }

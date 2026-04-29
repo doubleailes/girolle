@@ -1,6 +1,7 @@
 use crate::error::GirolleError;
 use crate::payload::{Payload, PayloadResult};
 use crate::rpc_task::RpcTask;
+use crate::types::RpcContext;
 use lapin::options::BasicPublishOptions;
 /// # nameko_utils
 ///
@@ -256,25 +257,10 @@ pub(crate) async fn compute_deliver(
     rpc_channel: &Channel,
     rpc_exchange: &str,
     reply_to_id: String,
+    ctx: RpcContext,
 ) {
-    // Publish the response
-    let fn_service = rpc_task_struct.inner_function;
-    let buildted_args = match build_inputs_fn_service(&rpc_task_struct.args, incomming_data) {
-        Ok(result) => result,
-        Err(error) => {
-            publish(
-                rpc_channel,
-                PayloadResult::from_error(error.convert()),
-                properties,
-                reply_to_id,
-                rpc_exchange,
-            )
-            .await
-            .expect("Error publishing");
-            return;
-        }
-    };
-    match fn_service(&buildted_args) {
+    let handler = rpc_task_struct.handler.clone();
+    match handler(ctx, incomming_data).await {
         Ok(result) => {
             publish(
                 rpc_channel,
