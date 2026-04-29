@@ -309,7 +309,7 @@ impl Config {
 }
 
 // quick function to expand var in slice string
-fn expand_var(raw_config: &str) -> Cow<str> {
+fn expand_var(raw_config: &str) -> Cow<'_, str> {
     let re = Regex::new(r"\$\{([a-zA-Z_][0-9a-zA-Z_]*)\}").unwrap();
     re.replace_all(raw_config, |caps: &Captures| match env::var(&caps[1]) {
         Ok(val) => val,
