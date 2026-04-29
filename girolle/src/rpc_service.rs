@@ -5,6 +5,7 @@ use crate::{
     payload::{Payload, PayloadResult},
     queue::{create_service_channel, get_connection},
     rpc_task::RpcTask,
+    types::{EventDispatcher, RpcCaller, RpcContext},
 };
 use lapin::{message::DeliveryResult, options::*, types::FieldTable, Channel};
 use std::{collections::HashMap, sync::Arc};
@@ -229,6 +230,8 @@ struct SharedData {
     service_name: String,
     semaphore: Semaphore,
     parent_calls_tracked: usize,
+    rpc_caller: RpcCaller,
+    event_dispatcher: EventDispatcher,
 }
 
 /// # rpc_service
@@ -285,6 +288,8 @@ async fn rpc_service(
         service_name: service_name.to_string(),
         semaphore: Semaphore::new(conf.max_workers() as usize),
         parent_calls_tracked: conf.parent_calls_tracked() as usize,
+        rpc_caller: RpcCaller::placeholder(),
+        event_dispatcher: EventDispatcher::placeholder(),
     });
     consumer.set_delegate(move |delivery: DeliveryResult| {
         let shared_data = Arc::clone(&shared_data);
@@ -304,6 +309,12 @@ async fn rpc_service(
 
             let opt_routing_key = delivery.routing_key.to_string();
             let reply_to_id = get_id(delivery.properties.reply_to(), "reply_to_id");
+            let correlation_id = get_id(delivery.properties.correlation_id(), "correlation_id");
+            let inbound_headers = delivery
+                .properties
+                .headers()
+                .clone()
+                .unwrap_or_default();
             let properties = delivery_to_message_properties(
                 &delivery,
                 &id,
@@ -320,6 +331,15 @@ async fn rpc_service(
                 (Some(rpc_task_struct), _) => {
                     let incomming_data: Payload = serde_json::from_slice(&delivery.data)
                         .expect("Can't deserialize incomming data");
+                    let ctx = RpcContext {
+                        service_name: incommig_service.to_string(),
+                        method_name: incomming_method.to_string(),
+                        correlation_id: correlation_id.clone(),
+                        reply_to: reply_to_id.clone(),
+                        headers: inbound_headers,
+                        rpc: shared_data.rpc_caller.clone(),
+                        events: shared_data.event_dispatcher.clone(),
+                    };
                     compute_deliver(
                         incomming_data,
                         properties,
@@ -327,6 +347,7 @@ async fn rpc_service(
                         &shared_data.rpc_channel,
                         &shared_data.rpc_exchange,
                         reply_to_id,
+                        ctx,
                     )
                     .await
                 }
