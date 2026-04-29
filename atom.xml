@@ -1,0 +1,473 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en">
+    <title>girolle</title>
+    <subtitle>girolle is lib to interact with nameko-rpc services</subtitle>
+    <link rel="self" type="application/atom+xml" href="https://doubleailes.github.io/girolle/atom.xml"/>
+    <link rel="alternate" type="text/html" href="https://doubleailes.github.io/girolle"/>
+    <generator uri="https://www.getzola.org/">Zola</generator>
+    <updated>2024-06-14T00:00:00+00:00</updated>
+    <id>https://doubleailes.github.io/girolle/atom.xml</id>
+    <entry xml:lang="en">
+        <title>Service</title>
+        <published>2024-06-14T00:00:00+00:00</published>
+        <updated>2024-06-14T00:00:00+00:00</updated>
+        
+        <author>
+          <name>
+            
+              Unknown
+            
+          </name>
+        </author>
+        
+        <link rel="alternate" type="text/html" href="https://doubleailes.github.io/girolle/docs/getting-started/client/"/>
+        <id>https://doubleailes.github.io/girolle/docs/getting-started/client/</id>
+        
+        <content type="html" xml:base="https://doubleailes.github.io/girolle/docs/getting-started/client/">&lt;h2 id=&quot;introduction&quot;&gt;Introduction&lt;&#x2F;h2&gt;
+&lt;p&gt;The client is a standalone client to be used against Nameko or Girolle
+services. It is made to be fast and to handle a lot of requests. The client
+runs on the &lt;code&gt;tokio&lt;&#x2F;code&gt; runtime and tries to mimic the Nameko client. It exposes
+a sync &lt;code&gt;send()&lt;&#x2F;code&gt; and the async pair &lt;code&gt;call_async()&lt;&#x2F;code&gt; + &lt;code&gt;result()&lt;&#x2F;code&gt;.&lt;&#x2F;p&gt;
+&lt;p&gt;For a runnable end-to-end example, see
+&lt;a href=&quot;https:&#x2F;&#x2F;github.com&#x2F;doubleailes&#x2F;girolle&#x2F;blob&#x2F;main&#x2F;examples&#x2F;src&#x2F;simple_sender.rs&quot;&gt;&lt;code&gt;examples&#x2F;src&#x2F;simple_sender.rs&lt;&#x2F;code&gt;&lt;&#x2F;a&gt;.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;cli-sender-for-ad-hoc-testing&quot;&gt;CLI sender for ad-hoc testing&lt;&#x2F;h2&gt;
+&lt;p&gt;The &lt;a href=&quot;https:&#x2F;&#x2F;github.com&#x2F;doubleailes&#x2F;girolle&#x2F;blob&#x2F;main&#x2F;examples&#x2F;src&#x2F;cli_sender.rs&quot;&gt;&lt;code&gt;examples&#x2F;src&#x2F;cli_sender.rs&lt;&#x2F;code&gt;&lt;&#x2F;a&gt;
+example wraps &lt;code&gt;RpcClient&lt;&#x2F;code&gt; in a one-shot CLI that takes a service, method,
+and arguments off the command line. Useful when you want to poke at any
+service without writing a sender file:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;bash&quot; style=&quot;background-color:#2b303b;color:#c0c5ce;&quot; class=&quot;language-bash &quot;&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;cargo&lt;&#x2F;span&gt;&lt;span&gt; run&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt; --example&lt;&#x2F;span&gt;&lt;span&gt; cli_sender -- video hello Girolle
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;cargo&lt;&#x2F;span&gt;&lt;span&gt; run&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt; --example&lt;&#x2F;span&gt;&lt;span&gt; cli_sender -- video sub 10 5
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;cargo&lt;&#x2F;span&gt;&lt;span&gt; run&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt; --example&lt;&#x2F;span&gt;&lt;span&gt; cli_sender -- proxy hello Girolle
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;Each positional &lt;code&gt;arg&lt;&#x2F;code&gt; is parsed as JSON when possible (so numbers,
+booleans, arrays and objects work directly) and falls back to a plain
+string otherwise.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;in-service-rpc&quot;&gt;In-service RPC&lt;&#x2F;h2&gt;
+&lt;p&gt;If you only need to call another service from inside a handler, you don&#x27;t
+need an &lt;code&gt;RpcClient&lt;&#x2F;code&gt; at all — use &lt;code&gt;ctx.rpc.call(...)&lt;&#x2F;code&gt; on the &lt;code&gt;RpcContext&lt;&#x2F;code&gt;
+that the running &lt;code&gt;RpcService&lt;&#x2F;code&gt; hands to each handler. See the
+&lt;a href=&quot;..&#x2F;service&#x2F;&quot;&gt;service docs&lt;&#x2F;a&gt; for details and the
+&lt;a href=&quot;https:&#x2F;&#x2F;github.com&#x2F;doubleailes&#x2F;girolle&#x2F;blob&#x2F;main&#x2F;examples&#x2F;src&#x2F;proxy_service.rs&quot;&gt;&lt;code&gt;proxy_service&lt;&#x2F;code&gt;&lt;&#x2F;a&gt;
+example.&lt;&#x2F;p&gt;
+</content>
+        
+    </entry>
+    <entry xml:lang="en">
+        <title>Introduction</title>
+        <published>2024-06-14T00:00:00+00:00</published>
+        <updated>2024-06-14T00:00:00+00:00</updated>
+        
+        <author>
+          <name>
+            
+              Unknown
+            
+          </name>
+        </author>
+        
+        <link rel="alternate" type="text/html" href="https://doubleailes.github.io/girolle/docs/getting-started/introduction/"/>
+        <id>https://doubleailes.github.io/girolle/docs/getting-started/introduction/</id>
+        
+        <content type="html" xml:base="https://doubleailes.github.io/girolle/docs/getting-started/introduction/">&lt;h2 id=&quot;description&quot;&gt;Description&lt;&#x2F;h2&gt;
+&lt;p&gt;A &lt;a href=&quot;https:&#x2F;&#x2F;github.com&#x2F;nameko&#x2F;nameko&quot;&gt;nameko-rpc&lt;&#x2F;a&gt; like lib in rust. Check the To-Do
+section to see limitation.&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;strong&gt;Do not use in production!&lt;&#x2F;strong&gt;&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;strong&gt;Girolle&lt;&#x2F;strong&gt; use &lt;strong&gt;Nameko&lt;&#x2F;strong&gt; architecture to send request and get response.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;stack&quot;&gt;Stack&lt;&#x2F;h2&gt;
+&lt;p&gt;Girolle use &lt;a href=&quot;https:&#x2F;&#x2F;github.com&#x2F;amqp-rs&#x2F;lapin&quot;&gt;lapin&lt;&#x2F;a&gt; as an AMQP client&#x2F;server library.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;how-to-use-it&quot;&gt;How to use it&lt;&#x2F;h2&gt;
+&lt;p&gt;The core concept is to remove the pain of queue creation and replies by
+mirroring the &lt;strong&gt;Nameko&lt;&#x2F;strong&gt; architecture, and to use an abstract type
+&lt;code&gt;serde_json::Value&lt;&#x2F;code&gt; to carry serializable data.&lt;&#x2F;p&gt;
+&lt;p&gt;Service handlers run as async futures. Each handler is invoked with an
+&lt;code&gt;RpcContext&lt;&#x2F;code&gt; (inbound headers, correlation id, plus capability handles for
+calling other services and emitting events) and a &lt;code&gt;Payload&lt;&#x2F;code&gt; (positional
+args and kwargs). The &lt;code&gt;#[girolle]&lt;&#x2F;code&gt; macro hides the deserialization
+boilerplate; if you&#x27;d rather build handlers by hand you can construct an
+&lt;code&gt;RpcTask&lt;&#x2F;code&gt; directly from an &lt;code&gt;RpcHandler&lt;&#x2F;code&gt; closure.&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;macro-procedural&quot;&gt;macro procedural&lt;&#x2F;h3&gt;
+&lt;p&gt;The lib offers a procedural macro &lt;code&gt;#[girolle]&lt;&#x2F;code&gt; to create a Task. It
+accepts both sync and async functions, and detects an optional first
+&lt;code&gt;ctx: RpcContext&lt;&#x2F;code&gt; argument:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;rust&quot; style=&quot;background-color:#2b303b;color:#c0c5ce;&quot; class=&quot;language-rust &quot;&gt;&lt;code class=&quot;language-rust&quot; data-lang=&quot;rust&quot;&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;use &lt;&#x2F;span&gt;&lt;span&gt;girolle::prelude::*;
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;#[&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;girolle&lt;&#x2F;span&gt;&lt;span&gt;]
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;fn &lt;&#x2F;span&gt;&lt;span style=&quot;color:#8fa1b3;&quot;&gt;hello&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;s&lt;&#x2F;span&gt;&lt;span&gt;: String) -&amp;gt; String {
+&lt;&#x2F;span&gt;&lt;span&gt;    format!(&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a3be8c;&quot;&gt;Hello, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;{}&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a3be8c;&quot;&gt;!&lt;&#x2F;span&gt;&lt;span&gt;&amp;quot;, s)
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;#[&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;girolle&lt;&#x2F;span&gt;&lt;span&gt;]
+&lt;&#x2F;span&gt;&lt;span&gt;async &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;fn &lt;&#x2F;span&gt;&lt;span style=&quot;color:#8fa1b3;&quot;&gt;proxy_hello&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;ctx&lt;&#x2F;span&gt;&lt;span&gt;: RpcContext, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;name&lt;&#x2F;span&gt;&lt;span&gt;: String) -&amp;gt; String {
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;let&lt;&#x2F;span&gt;&lt;span&gt; result = ctx
+&lt;&#x2F;span&gt;&lt;span&gt;        .rpc
+&lt;&#x2F;span&gt;&lt;span&gt;        .&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;call&lt;&#x2F;span&gt;&lt;span&gt;(&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a3be8c;&quot;&gt;video&lt;&#x2F;span&gt;&lt;span&gt;&amp;quot;, &amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a3be8c;&quot;&gt;hello&lt;&#x2F;span&gt;&lt;span&gt;&amp;quot;, Payload::new().&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;arg&lt;&#x2F;span&gt;&lt;span&gt;(name))
+&lt;&#x2F;span&gt;&lt;span&gt;        .await
+&lt;&#x2F;span&gt;&lt;span&gt;        .&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;expect&lt;&#x2F;span&gt;&lt;span&gt;(&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a3be8c;&quot;&gt;rpc call failed&lt;&#x2F;span&gt;&lt;span&gt;&amp;quot;);
+&lt;&#x2F;span&gt;&lt;span&gt;    serde_json::from_value(result).&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;expect&lt;&#x2F;span&gt;&lt;span&gt;(&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a3be8c;&quot;&gt;video.hello did not return a String&lt;&#x2F;span&gt;&lt;span&gt;&amp;quot;)
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;The macro expands each annotated function into three items:&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;A copy of the original function with the suffix &lt;code&gt;_core&lt;&#x2F;code&gt;.&lt;&#x2F;li&gt;
+&lt;li&gt;A wrapper that deserializes the inbound &lt;code&gt;Payload&lt;&#x2F;code&gt;, awaits &lt;code&gt;_core&lt;&#x2F;code&gt;, and
+serializes the result back to a JSON &lt;code&gt;Value&lt;&#x2F;code&gt;.&lt;&#x2F;li&gt;
+&lt;li&gt;A &lt;code&gt;fn() -&amp;gt; RpcTask&lt;&#x2F;code&gt; constructor used to register the handler.&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;The macro replaces recursive calls inside the function body to call
+&lt;code&gt;_core&lt;&#x2F;code&gt; directly, which lets recursive functions like &lt;code&gt;fibonacci&lt;&#x2F;code&gt; work
+unchanged. It does this naively (textual identifier match), so an
+unrelated function with the same name as the annotated one would also be
+rewritten — for example &lt;code&gt;#[girolle] fn sleep(n: u64) { thread::sleep(...) }&lt;&#x2F;code&gt;
+would rewrite the &lt;code&gt;sleep&lt;&#x2F;code&gt; inside &lt;code&gt;thread::sleep&lt;&#x2F;code&gt; and break. Rename the
+handler in that case.&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;hand-made-deserialization-and-serialization&quot;&gt;hand made deserialization and serialization&lt;&#x2F;h3&gt;
+&lt;p&gt;If you&#x27;d rather skip the macro, build an &lt;code&gt;RpcTask&lt;&#x2F;code&gt; directly from an
+&lt;code&gt;RpcHandler&lt;&#x2F;code&gt; closure. The closure receives the &lt;code&gt;RpcContext&lt;&#x2F;code&gt; and a
+&lt;code&gt;Payload&lt;&#x2F;code&gt;, and returns a &lt;code&gt;BoxFuture&lt;&#x2F;code&gt; resolving to the JSON result:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;rust&quot; style=&quot;background-color:#2b303b;color:#c0c5ce;&quot; class=&quot;language-rust &quot;&gt;&lt;code class=&quot;language-rust&quot; data-lang=&quot;rust&quot;&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;use &lt;&#x2F;span&gt;&lt;span&gt;girolle::prelude::*;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;use &lt;&#x2F;span&gt;&lt;span&gt;std::sync::Arc;
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;fn &lt;&#x2F;span&gt;&lt;span style=&quot;color:#8fa1b3;&quot;&gt;fibonacci_core&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;n&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;u64&lt;&#x2F;span&gt;&lt;span&gt;) -&amp;gt; &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;u64 &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;if&lt;&#x2F;span&gt;&lt;span&gt; n &amp;lt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;1 &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;return&lt;&#x2F;span&gt;&lt;span&gt; n;
+&lt;&#x2F;span&gt;&lt;span&gt;    }
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;fibonacci_core&lt;&#x2F;span&gt;&lt;span&gt;(n - &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;1&lt;&#x2F;span&gt;&lt;span&gt;) + &lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;fibonacci_core&lt;&#x2F;span&gt;&lt;span&gt;(n - &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;2&lt;&#x2F;span&gt;&lt;span&gt;)
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;fn &lt;&#x2F;span&gt;&lt;span style=&quot;color:#8fa1b3;&quot;&gt;fibonacci&lt;&#x2F;span&gt;&lt;span&gt;() -&amp;gt; RpcTask {
+&lt;&#x2F;span&gt;&lt;span&gt;    RpcTask::new(
+&lt;&#x2F;span&gt;&lt;span&gt;        &amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a3be8c;&quot;&gt;fibonacci&lt;&#x2F;span&gt;&lt;span&gt;&amp;quot;,
+&lt;&#x2F;span&gt;&lt;span&gt;        Arc::new(|&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;_ctx&lt;&#x2F;span&gt;&lt;span&gt;: RpcContext, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;payload&lt;&#x2F;span&gt;&lt;span&gt;: Payload| -&amp;gt; BoxFuture&amp;lt;GirolleResult&amp;lt;Value&amp;gt;&amp;gt; {
+&lt;&#x2F;span&gt;&lt;span&gt;            Box::pin(async &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;move &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;                &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;let&lt;&#x2F;span&gt;&lt;span&gt; n: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;u64 &lt;&#x2F;span&gt;&lt;span&gt;= serde_json::from_value(payload.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;args&lt;&#x2F;span&gt;&lt;span&gt;()[&lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;0&lt;&#x2F;span&gt;&lt;span&gt;].&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;clone&lt;&#x2F;span&gt;&lt;span&gt;())?;
+&lt;&#x2F;span&gt;&lt;span&gt;                Ok(serde_json::to_value(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;fibonacci_core&lt;&#x2F;span&gt;&lt;span&gt;(n))?)
+&lt;&#x2F;span&gt;&lt;span&gt;            })
+&lt;&#x2F;span&gt;&lt;span&gt;        }),
+&lt;&#x2F;span&gt;&lt;span&gt;    )
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;This form gives you direct access to &lt;code&gt;RpcContext&lt;&#x2F;code&gt;, full control over
+deserialization, and the ability to call other services or emit events
+from the same closure.&lt;&#x2F;p&gt;
+</content>
+        
+    </entry>
+    <entry xml:lang="en">
+        <title>Service</title>
+        <published>2024-06-14T00:00:00+00:00</published>
+        <updated>2024-06-14T00:00:00+00:00</updated>
+        
+        <author>
+          <name>
+            
+              Unknown
+            
+          </name>
+        </author>
+        
+        <link rel="alternate" type="text/html" href="https://doubleailes.github.io/girolle/docs/getting-started/service/"/>
+        <id>https://doubleailes.github.io/girolle/docs/getting-started/service/</id>
+        
+        <content type="html" xml:base="https://doubleailes.github.io/girolle/docs/getting-started/service/">&lt;h2 id=&quot;introduction&quot;&gt;Introduction&lt;&#x2F;h2&gt;
+&lt;p&gt;The service is the core of the lib. It is the place where the magic happens.
+The core relies on &lt;code&gt;lapin&lt;&#x2F;code&gt; to handle the AMQP protocol and tokio for async +
+spawn. Tokio spawns one delegate per vCPU to handle the request and the
+response. As an optimisation for heavy load, the lib uses an async spawn to
+publish the response so any free vCPU can handle the publish step.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;handler-shape&quot;&gt;Handler shape&lt;&#x2F;h2&gt;
+&lt;p&gt;A service handler is registered on an &lt;code&gt;RpcService&lt;&#x2F;code&gt; either via the
+&lt;code&gt;#[girolle]&lt;&#x2F;code&gt; macro or by handing the service an &lt;code&gt;RpcTask&lt;&#x2F;code&gt;. Internally each
+handler is an async closure of the shape:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;rust&quot; style=&quot;background-color:#2b303b;color:#c0c5ce;&quot; class=&quot;language-rust &quot;&gt;&lt;code class=&quot;language-rust&quot; data-lang=&quot;rust&quot;&gt;&lt;span&gt;Arc&amp;lt;dyn Fn(RpcContext, Payload) -&amp;gt; BoxFuture&amp;lt;GirolleResult&amp;lt;Value&amp;gt;&amp;gt; + Send + Sync&amp;gt;
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;The handler receives the per-delivery &lt;code&gt;RpcContext&lt;&#x2F;code&gt; and a &lt;code&gt;Payload&lt;&#x2F;code&gt; carrying
+positional args and kwargs, and returns a future resolving to the JSON
+result. Errors propagate back to the caller as &lt;code&gt;GirolleError&lt;&#x2F;code&gt; and are
+serialized into a Nameko-compatible &lt;code&gt;RemoteError&lt;&#x2F;code&gt;.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;rpccontext&quot;&gt;RpcContext&lt;&#x2F;h2&gt;
+&lt;p&gt;&lt;code&gt;RpcContext&lt;&#x2F;code&gt; carries the inbound delivery&#x27;s metadata and two capability
+handles:&lt;&#x2F;p&gt;
+&lt;table&gt;&lt;thead&gt;&lt;tr&gt;&lt;th&gt;field&lt;&#x2F;th&gt;&lt;th&gt;meaning&lt;&#x2F;th&gt;&lt;&#x2F;tr&gt;&lt;&#x2F;thead&gt;&lt;tbody&gt;
+&lt;tr&gt;&lt;td&gt;&lt;code&gt;service_name&lt;&#x2F;code&gt;&lt;&#x2F;td&gt;&lt;td&gt;the inbound routing key&#x27;s service component&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td&gt;&lt;code&gt;method_name&lt;&#x2F;code&gt;&lt;&#x2F;td&gt;&lt;td&gt;the inbound routing key&#x27;s method component&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td&gt;&lt;code&gt;correlation_id&lt;&#x2F;code&gt;&lt;&#x2F;td&gt;&lt;td&gt;the AMQP correlation id of the inbound delivery&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td&gt;&lt;code&gt;reply_to&lt;&#x2F;code&gt;&lt;&#x2F;td&gt;&lt;td&gt;the requester&#x27;s reply queue routing key&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td&gt;&lt;code&gt;headers&lt;&#x2F;code&gt;&lt;&#x2F;td&gt;&lt;td&gt;the raw inbound headers (incl. &lt;code&gt;nameko.call_id_stack&lt;&#x2F;code&gt;)&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td&gt;&lt;code&gt;rpc&lt;&#x2F;code&gt;&lt;&#x2F;td&gt;&lt;td&gt;an &lt;code&gt;RpcCaller&lt;&#x2F;code&gt; for outbound RPC, stamped with the inbound headers&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td&gt;&lt;code&gt;events&lt;&#x2F;code&gt;&lt;&#x2F;td&gt;&lt;td&gt;an &lt;code&gt;EventDispatcher&lt;&#x2F;code&gt; for emitting events, stamped with the inbound headers&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;&#x2F;tbody&gt;&lt;&#x2F;table&gt;
+&lt;p&gt;Both &lt;code&gt;rpc&lt;&#x2F;code&gt; and &lt;code&gt;events&lt;&#x2F;code&gt; propagate the inbound &lt;code&gt;nameko.call_id_stack&lt;&#x2F;code&gt; on
+outbound messages, so distributed traces stay consistent across hops.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;in-service-rpc&quot;&gt;In-service RPC&lt;&#x2F;h2&gt;
+&lt;p&gt;&lt;code&gt;ctx.rpc.call(service, method, payload).await&lt;&#x2F;code&gt; issues an outbound RPC and
+awaits the reply. Internally, the &lt;code&gt;RpcService&lt;&#x2F;code&gt; stands up a single shared
+reply queue, a &lt;code&gt;DashMap&amp;lt;correlation_id, oneshot::Sender&amp;gt;&lt;&#x2F;code&gt; correlation map,
+and a publish channel — all wired up automatically when the service starts.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;events&quot;&gt;Events&lt;&#x2F;h2&gt;
+&lt;p&gt;Service handlers can publish Nameko-compatible events with
+&lt;code&gt;ctx.events.dispatch(source_service, event_type, &amp;amp;payload).await&lt;&#x2F;code&gt;. The
+&lt;code&gt;{source_service}.events&lt;&#x2F;code&gt; topic exchange is declared lazily on first emit
+per source, and messages are published as durable JSON.&lt;&#x2F;p&gt;
+&lt;p&gt;A service can also subscribe to events emitted by other services with
+&lt;code&gt;RpcService::subscribe(source_service, event_type, handler)&lt;&#x2F;code&gt;. The handler
+follows the same &lt;code&gt;(RpcContext, Value) -&amp;gt; Future&lt;&#x2F;code&gt; shape as RPC handlers.
+Subscriptions and &lt;code&gt;register(...)&lt;&#x2F;code&gt; calls can coexist on the same service;
+either alone is also valid.&lt;&#x2F;p&gt;
+</content>
+        
+    </entry>
+    <entry xml:lang="en">
+        <title>Performances</title>
+        <published>2021-05-01T08:20:00+00:00</published>
+        <updated>2021-05-01T08:20:00+00:00</updated>
+        
+        <author>
+          <name>
+            
+              Unknown
+            
+          </name>
+        </author>
+        
+        <link rel="alternate" type="text/html" href="https://doubleailes.github.io/girolle/docs/getting-started/performances/"/>
+        <id>https://doubleailes.github.io/girolle/docs/getting-started/performances/</id>
+        
+        <content type="html" xml:base="https://doubleailes.github.io/girolle/docs/getting-started/performances/">&lt;h2 id=&quot;introduction&quot;&gt;Introduction&lt;&#x2F;h2&gt;
+&lt;p&gt;The performance of Girolle is a really important matter. The lib is made to be fast and
+to be able to handle a lot of request.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;cost-of-the-serialization-deserialization&quot;&gt;Cost of the serialization &amp;amp; deserialization&lt;&#x2F;h2&gt;
+&lt;p&gt;The cost of the serialization and deserialization is really low. The lib use
+&lt;code&gt;serde_json&lt;&#x2F;code&gt; to serialize and deserialize the data.&lt;&#x2F;p&gt;
+&lt;img alt=&quot;serde performance&quot; src=&quot;https:&#x2F;&#x2F;github.com&#x2F;doubleailes&#x2F;girolle&#x2F;blob&#x2F;main&#x2F;girolle&#x2F;benches&#x2F;lines.svg&quot; width=&quot;30px&quot; height=&quot;30px&quot;&gt;
+&lt;p&gt;The average overhead of the serialization and deserialization is around 39 ns per call.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;benchmark&quot;&gt;Benchmark&lt;&#x2F;h2&gt;
+&lt;table&gt;&lt;thead&gt;&lt;tr&gt;&lt;th&gt;&lt;&#x2F;th&gt;&lt;th&gt;nameko_test.py&lt;&#x2F;th&gt;&lt;th&gt;simple_sender.rs&lt;&#x2F;th&gt;&lt;&#x2F;tr&gt;&lt;&#x2F;thead&gt;&lt;tbody&gt;
+&lt;tr&gt;&lt;td&gt;nameko_service.py&lt;&#x2F;td&gt;&lt;td&gt;15.587 s&lt;&#x2F;td&gt;&lt;td&gt;11.532 s&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td&gt;simple_macro.rs&lt;&#x2F;td&gt;&lt;td&gt;15.654 s&lt;&#x2F;td&gt;&lt;td&gt;9.995 s&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;&#x2F;tbody&gt;&lt;&#x2F;table&gt;
+&lt;h3 id=&quot;client-benchmark&quot;&gt;Client benchmark&lt;&#x2F;h3&gt;
+&lt;p&gt;Using hyperfine to test the client benchmark.&lt;&#x2F;p&gt;
+&lt;p&gt;Girolle client ( with Girolle service )&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;bash&quot; style=&quot;background-color:#2b303b;color:#c0c5ce;&quot; class=&quot;language-bash &quot;&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;hyperfine -N &lt;&#x2F;span&gt;&lt;span&gt;&amp;#39;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a3be8c;&quot;&gt;.&#x2F;target&#x2F;release&#x2F;examples&#x2F;simple_sender&lt;&#x2F;span&gt;&lt;span&gt;&amp;#39;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;Benchmark&lt;&#x2F;span&gt;&lt;span&gt; 1: .&#x2F;target&#x2F;release&#x2F;examples&#x2F;simple_sender
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;Time&lt;&#x2F;span&gt;&lt;span&gt; (mean ± σ)&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;:&lt;&#x2F;span&gt;&lt;span&gt;      9.995 s ±  0.116 s    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;[&lt;&#x2F;span&gt;&lt;span&gt;User: 0.163 s, System: 0.197 s&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;]
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;Range&lt;&#x2F;span&gt;&lt;span&gt; (min … max)&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;:&lt;&#x2F;span&gt;&lt;span&gt;    9.778 s … 10.176 s    10 runs
+&lt;&#x2F;span&gt;&lt;span&gt;```	
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;Nameko&lt;&#x2F;span&gt;&lt;span&gt; client ( with Girolle service )
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;```bash
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;hyperfine -N --warmup&lt;&#x2F;span&gt;&lt;span&gt; 3 &amp;#39;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a3be8c;&quot;&gt;python nameko_test.py&lt;&#x2F;span&gt;&lt;span&gt;&amp;#39;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;Benchmark&lt;&#x2F;span&gt;&lt;span&gt; 1: python nameko_test.py
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;Time&lt;&#x2F;span&gt;&lt;span&gt; (mean ± σ)&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;:&lt;&#x2F;span&gt;&lt;span&gt;     15.654 s ±  0.257 s    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;[&lt;&#x2F;span&gt;&lt;span&gt;User: 1.455 s, System: 0.407 s&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;]
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;Range&lt;&#x2F;span&gt;&lt;span&gt; (min … max)&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;:&lt;&#x2F;span&gt;&lt;span&gt;   15.202 s … 15.939 s    10 runs
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;h3 id=&quot;service-benchmark&quot;&gt;Service benchmark&lt;&#x2F;h3&gt;
+&lt;p&gt;Girolle service ( with Girolle client )&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;bash&quot; style=&quot;background-color:#2b303b;color:#c0c5ce;&quot; class=&quot;language-bash &quot;&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;hyperfine -N &lt;&#x2F;span&gt;&lt;span&gt;&amp;#39;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a3be8c;&quot;&gt;.&#x2F;target&#x2F;release&#x2F;examples&#x2F;simple_sender&lt;&#x2F;span&gt;&lt;span&gt;&amp;#39;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;Benchmark&lt;&#x2F;span&gt;&lt;span&gt; 1: .&#x2F;target&#x2F;release&#x2F;examples&#x2F;simple_sender
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;Time&lt;&#x2F;span&gt;&lt;span&gt; (mean ± σ)&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;:&lt;&#x2F;span&gt;&lt;span&gt;      9.995 s ±  0.116 s    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;[&lt;&#x2F;span&gt;&lt;span&gt;User: 0.163 s, System: 0.197 s&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;]
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;Range&lt;&#x2F;span&gt;&lt;span&gt; (min … max)&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;:&lt;&#x2F;span&gt;&lt;span&gt;    9.778 s … 10.176 s    10 runs
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;Nameko service running python 3.9.15 ( with Girolle client )&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;bash&quot; style=&quot;background-color:#2b303b;color:#c0c5ce;&quot; class=&quot;language-bash &quot;&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;hyperfine -N --warmup&lt;&#x2F;span&gt;&lt;span&gt; 3 &amp;#39;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a3be8c;&quot;&gt;target&#x2F;release&#x2F;examples&#x2F;simple_sender&lt;&#x2F;span&gt;&lt;span&gt;&amp;#39;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;Benchmark&lt;&#x2F;span&gt;&lt;span&gt; 1: target&#x2F;release&#x2F;examples&#x2F;simple_sender
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;Time&lt;&#x2F;span&gt;&lt;span&gt; (mean ± σ)&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;:&lt;&#x2F;span&gt;&lt;span&gt;     11.532 s ±  0.091 s    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;[&lt;&#x2F;span&gt;&lt;span&gt;User: 0.199 s, System: 0.213 s&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;]
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;Range&lt;&#x2F;span&gt;&lt;span&gt; (min … max)&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;:&lt;&#x2F;span&gt;&lt;span&gt;   11.396 s … 11.670 s    10 runs
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;Nameko service running python 3.9.15 ( with Nameko client )&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;bash&quot; style=&quot;background-color:#2b303b;color:#c0c5ce;&quot; class=&quot;language-bash &quot;&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;hyperfine -N --warmup&lt;&#x2F;span&gt;&lt;span&gt; 3 &amp;#39;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a3be8c;&quot;&gt;python nameko_test.py&lt;&#x2F;span&gt;&lt;span&gt;&amp;#39;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;Benchmark&lt;&#x2F;span&gt;&lt;span&gt; 1: python nameko_test.py
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;Time&lt;&#x2F;span&gt;&lt;span&gt; (mean ± σ)&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;:&lt;&#x2F;span&gt;&lt;span&gt;     15.587 s ±  0.325 s    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;[&lt;&#x2F;span&gt;&lt;span&gt;User: 1.443 s, System: 0.420 s&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;]
+&lt;&#x2F;span&gt;&lt;span&gt;  &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;Range&lt;&#x2F;span&gt;&lt;span&gt; (min … max)&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;:&lt;&#x2F;span&gt;&lt;span&gt;   15.181 s … 16.034 s    10 runs
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+</content>
+        
+    </entry>
+    <entry xml:lang="en">
+        <title>Quick Start</title>
+        <published>2021-05-01T08:20:00+00:00</published>
+        <updated>2021-05-01T08:20:00+00:00</updated>
+        
+        <author>
+          <name>
+            
+              Unknown
+            
+          </name>
+        </author>
+        
+        <link rel="alternate" type="text/html" href="https://doubleailes.github.io/girolle/docs/getting-started/quick-start/"/>
+        <id>https://doubleailes.github.io/girolle/docs/getting-started/quick-start/</id>
+        
+        <content type="html" xml:base="https://doubleailes.github.io/girolle/docs/getting-started/quick-start/">&lt;h2 id=&quot;installation&quot;&gt;Installation&lt;&#x2F;h2&gt;
+&lt;pre data-lang=&quot;bash&quot; style=&quot;background-color:#2b303b;color:#c0c5ce;&quot; class=&quot;language-bash &quot;&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;cargo&lt;&#x2F;span&gt;&lt;span&gt; add girolle
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;h2 id=&quot;configuration&quot;&gt;Configuration&lt;&#x2F;h2&gt;
+&lt;p&gt;There is two way to create a configuration. The first one is to use the &lt;code&gt;Config::with_yaml_defaults&lt;&#x2F;code&gt; function that will read a configuration from
+a YAML file, &lt;a href=&quot;https:&#x2F;&#x2F;github.com&#x2F;doubleailes&#x2F;girolle&#x2F;blob&#x2F;main&#x2F;examples&#x2F;config.yml&quot;&gt;see example&lt;&#x2F;a&gt;. The second one is to create a configuration by hand.&lt;&#x2F;p&gt;
+&lt;h3 id=&quot;create-a-configuration-from-a-yaml-file&quot;&gt;Create a configuration from a yaml file&lt;&#x2F;h3&gt;
+&lt;p&gt;The configuration is done by a yaml file. It should be compliant with a Nameko one.
+The file should look like this:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;yaml&quot; style=&quot;background-color:#2b303b;color:#c0c5ce;&quot; class=&quot;language-yaml &quot;&gt;&lt;code class=&quot;language-yaml&quot; data-lang=&quot;yaml&quot;&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;AMQP_URI&lt;&#x2F;span&gt;&lt;span&gt;: &amp;#39;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a3be8c;&quot;&gt;amqp:&#x2F;&#x2F;toto:super@$172.16.1.1:5672&#x2F;&#x2F;&lt;&#x2F;span&gt;&lt;span&gt;&amp;#39;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;rpc_exchange&lt;&#x2F;span&gt;&lt;span&gt;: &amp;#39;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a3be8c;&quot;&gt;nameko-rpc&lt;&#x2F;span&gt;&lt;span&gt;&amp;#39;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;max_workers&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;10
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;parent_calls_tracked&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;10
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;In this example:&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;The &lt;code&gt;AMQP_URI&lt;&#x2F;code&gt; is the connection string to the RabbitMQ server.&lt;&#x2F;li&gt;
+&lt;li&gt;The &lt;code&gt;rpc_exchange&lt;&#x2F;code&gt; is the exchange name for the rpc calls.&lt;&#x2F;li&gt;
+&lt;li&gt;The &lt;code&gt;max_workers&lt;&#x2F;code&gt; is the max number of workers that will be created to handle the rpc calls.&lt;&#x2F;li&gt;
+&lt;li&gt;The &lt;code&gt;parent_calls_tracked&lt;&#x2F;code&gt; is the number of parent calls that will be tracked by the service.&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;h3 id=&quot;create-a-configuration-by-hand&quot;&gt;Create a configuration by hand&lt;&#x2F;h3&gt;
+&lt;pre data-lang=&quot;rust&quot; style=&quot;background-color:#2b303b;color:#c0c5ce;&quot; class=&quot;language-rust &quot;&gt;&lt;code class=&quot;language-rust&quot; data-lang=&quot;rust&quot;&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;let&lt;&#x2F;span&gt;&lt;span&gt; conf = Config::default();
+&lt;&#x2F;span&gt;&lt;span&gt;conf.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;with_amqp_uri&lt;&#x2F;span&gt;&lt;span&gt;(&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a3be8c;&quot;&gt;amqp:&#x2F;&#x2F;toto:super@localhost:5672&#x2F;&lt;&#x2F;span&gt;&lt;span&gt;&amp;quot;)
+&lt;&#x2F;span&gt;&lt;span&gt;    .&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;with_rpc_exchange&lt;&#x2F;span&gt;&lt;span&gt;(&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a3be8c;&quot;&gt;nameko-rpc&lt;&#x2F;span&gt;&lt;span&gt;&amp;quot;)
+&lt;&#x2F;span&gt;&lt;span&gt;    .&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;with_max_workers&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;10&lt;&#x2F;span&gt;&lt;span&gt;)
+&lt;&#x2F;span&gt;&lt;span&gt;    .&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;with_parent_calls_tracked&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;10&lt;&#x2F;span&gt;&lt;span&gt;);
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;h4 id=&quot;environment-variables&quot;&gt;Environment variables&lt;&#x2F;h4&gt;
+&lt;p&gt;The configuration support the expension of the environment variables with the
+following syntax &lt;code&gt;${VAR_NAME}&lt;&#x2F;code&gt;. Like in this example:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;yaml&quot; style=&quot;background-color:#2b303b;color:#c0c5ce;&quot; class=&quot;language-yaml &quot;&gt;&lt;code class=&quot;language-yaml&quot; data-lang=&quot;yaml&quot;&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;AMQP_URI&lt;&#x2F;span&gt;&lt;span&gt;: &amp;#39;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a3be8c;&quot;&gt;amqp:&#x2F;&#x2F;${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@${RABBITMQ_HOST}:${RABBITMQ_PORT}&#x2F;%2f&lt;&#x2F;span&gt;&lt;span&gt;&amp;#39;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;rpc_exchange&lt;&#x2F;span&gt;&lt;span&gt;: &amp;#39;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a3be8c;&quot;&gt;nameko-rpc&lt;&#x2F;span&gt;&lt;span&gt;&amp;#39;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;max_workers&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;10
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;parent_calls_tracked&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;10
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;h2 id=&quot;create-a-simple-service&quot;&gt;Create a simple service&lt;&#x2F;h2&gt;
+&lt;pre data-lang=&quot;rust&quot; style=&quot;background-color:#2b303b;color:#c0c5ce;&quot; class=&quot;language-rust &quot;&gt;&lt;code class=&quot;language-rust&quot; data-lang=&quot;rust&quot;&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;use &lt;&#x2F;span&gt;&lt;span&gt;girolle::prelude::*;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;use &lt;&#x2F;span&gt;&lt;span&gt;std::{thread, time};
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;#[&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;girolle&lt;&#x2F;span&gt;&lt;span&gt;]
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;fn &lt;&#x2F;span&gt;&lt;span style=&quot;color:#8fa1b3;&quot;&gt;hello&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;s&lt;&#x2F;span&gt;&lt;span&gt;: String) -&amp;gt; String {
+&lt;&#x2F;span&gt;&lt;span&gt;    format!(&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a3be8c;&quot;&gt;Hello, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;{}&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a3be8c;&quot;&gt;!&lt;&#x2F;span&gt;&lt;span&gt;&amp;quot;, s)
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;#[&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;girolle&lt;&#x2F;span&gt;&lt;span&gt;]
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;fn &lt;&#x2F;span&gt;&lt;span style=&quot;color:#8fa1b3;&quot;&gt;sub&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;a&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;i64&lt;&#x2F;span&gt;&lt;span&gt;, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;b&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;i64&lt;&#x2F;span&gt;&lt;span&gt;) -&amp;gt; &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;i64 &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;    a - b
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;#[&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;girolle&lt;&#x2F;span&gt;&lt;span&gt;]
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;fn &lt;&#x2F;span&gt;&lt;span style=&quot;color:#8fa1b3;&quot;&gt;slip&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;n&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;u64&lt;&#x2F;span&gt;&lt;span&gt;) -&amp;gt; String {
+&lt;&#x2F;span&gt;&lt;span&gt;    thread::sleep(time::Duration::from_secs(n));
+&lt;&#x2F;span&gt;&lt;span&gt;    format!(&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a3be8c;&quot;&gt;Slept for &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;{}&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a3be8c;&quot;&gt; seconds&lt;&#x2F;span&gt;&lt;span&gt;&amp;quot;, n)
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;#[&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;girolle&lt;&#x2F;span&gt;&lt;span&gt;]
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;fn &lt;&#x2F;span&gt;&lt;span style=&quot;color:#8fa1b3;&quot;&gt;fibonacci&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;n&lt;&#x2F;span&gt;&lt;span&gt;: &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;u64&lt;&#x2F;span&gt;&lt;span&gt;) -&amp;gt; &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;u64 &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;if&lt;&#x2F;span&gt;&lt;span&gt; n &amp;lt;= &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;1 &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;return&lt;&#x2F;span&gt;&lt;span&gt; n;
+&lt;&#x2F;span&gt;&lt;span&gt;    }
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;return &lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;fibonacci&lt;&#x2F;span&gt;&lt;span&gt;(n - &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;1&lt;&#x2F;span&gt;&lt;span&gt;) + &lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;fibonacci&lt;&#x2F;span&gt;&lt;span&gt;(n - &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;2&lt;&#x2F;span&gt;&lt;span&gt;);
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;fn &lt;&#x2F;span&gt;&lt;span style=&quot;color:#8fa1b3;&quot;&gt;main&lt;&#x2F;span&gt;&lt;span&gt;() {
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;let&lt;&#x2F;span&gt;&lt;span&gt; conf: Config = Config::with_yaml_defaults(&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a3be8c;&quot;&gt;staging&#x2F;config.yml&lt;&#x2F;span&gt;&lt;span&gt;&amp;quot;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;to_string&lt;&#x2F;span&gt;&lt;span&gt;()).&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;unwrap&lt;&#x2F;span&gt;&lt;span&gt;();
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;let &lt;&#x2F;span&gt;&lt;span&gt;_ = RpcService::new(conf, &amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a3be8c;&quot;&gt;video&lt;&#x2F;span&gt;&lt;span&gt;&amp;quot;)
+&lt;&#x2F;span&gt;&lt;span&gt;        .&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;register&lt;&#x2F;span&gt;&lt;span&gt;(hello)
+&lt;&#x2F;span&gt;&lt;span&gt;        .&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;register&lt;&#x2F;span&gt;&lt;span&gt;(sub)
+&lt;&#x2F;span&gt;&lt;span&gt;        .&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;register&lt;&#x2F;span&gt;&lt;span&gt;(slip)
+&lt;&#x2F;span&gt;&lt;span&gt;        .&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;register&lt;&#x2F;span&gt;&lt;span&gt;(fibonacci)
+&lt;&#x2F;span&gt;&lt;span&gt;        .&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;start&lt;&#x2F;span&gt;&lt;span&gt;();
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;This service video should be able to respond to the following requests from
+a nameko client:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;python&quot; style=&quot;background-color:#2b303b;color:#c0c5ce;&quot; class=&quot;language-python &quot;&gt;&lt;code class=&quot;language-python&quot; data-lang=&quot;python&quot;&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;def &lt;&#x2F;span&gt;&lt;span style=&quot;color:#8fa1b3;&quot;&gt;send_simple_message&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;name&lt;&#x2F;span&gt;&lt;span&gt;: str) -&amp;gt; str:
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#65737e;&quot;&gt;&amp;quot;&amp;quot;&amp;quot;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#65737e;&quot;&gt;    send_simple_message send a message to the queue
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#65737e;&quot;&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#65737e;&quot;&gt;    :param name: name of the person
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#65737e;&quot;&gt;    :type name: str
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#65737e;&quot;&gt;    &amp;quot;&amp;quot;&amp;quot;
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;with &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;rpc_proxy&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;CONFIG&lt;&#x2F;span&gt;&lt;span&gt;) &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;as &lt;&#x2F;span&gt;&lt;span&gt;rpc:
+&lt;&#x2F;span&gt;&lt;span&gt;        &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;return &lt;&#x2F;span&gt;&lt;span&gt;rpc.video.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;hello&lt;&#x2F;span&gt;&lt;span&gt;(name)
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;For more details please check the nameko documentation about &lt;a href=&quot;https:&#x2F;&#x2F;nameko.readthedocs.io&#x2F;en&#x2F;v3.0.0-rc&#x2F;api.html#module-nameko.standalone&quot;&gt;standalone&lt;&#x2F;a&gt; and &lt;a href=&quot;https:&#x2F;&#x2F;nameko.readthedocs.io&#x2F;en&#x2F;v3.0.0-rc&#x2F;rpc.html&quot;&gt;rpc&lt;&#x2F;a&gt; services.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;use-the-request-context&quot;&gt;Use the request context&lt;&#x2F;h2&gt;
+&lt;p&gt;Adding &lt;code&gt;ctx: RpcContext&lt;&#x2F;code&gt; as the first argument of a handler gives access to
+the inbound delivery&#x27;s metadata and two capability handles:&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;ctx.rpc.call(service, method, payload).await&lt;&#x2F;code&gt; — call any other service.&lt;&#x2F;li&gt;
+&lt;li&gt;&lt;code&gt;ctx.events.dispatch(source, event_type, &amp;amp;payload).await&lt;&#x2F;code&gt; — emit a
+Nameko-compatible event on the &lt;code&gt;&amp;lt;source&amp;gt;.events&lt;&#x2F;code&gt; topic exchange.&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;pre data-lang=&quot;rust&quot; style=&quot;background-color:#2b303b;color:#c0c5ce;&quot; class=&quot;language-rust &quot;&gt;&lt;code class=&quot;language-rust&quot; data-lang=&quot;rust&quot;&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;use &lt;&#x2F;span&gt;&lt;span&gt;girolle::prelude::*;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;use &lt;&#x2F;span&gt;&lt;span&gt;serde::Serialize;
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;#[&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;derive&lt;&#x2F;span&gt;&lt;span&gt;(Serialize)]
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;struct &lt;&#x2F;span&gt;&lt;span&gt;UserCreated { &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;name&lt;&#x2F;span&gt;&lt;span&gt;: String }
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span&gt;#[&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;girolle&lt;&#x2F;span&gt;&lt;span&gt;]
+&lt;&#x2F;span&gt;&lt;span&gt;async &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;fn &lt;&#x2F;span&gt;&lt;span style=&quot;color:#8fa1b3;&quot;&gt;create_user&lt;&#x2F;span&gt;&lt;span&gt;(&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;ctx&lt;&#x2F;span&gt;&lt;span&gt;: RpcContext, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;name&lt;&#x2F;span&gt;&lt;span&gt;: String) -&amp;gt; String {
+&lt;&#x2F;span&gt;&lt;span&gt;    ctx.events
+&lt;&#x2F;span&gt;&lt;span&gt;        .&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;dispatch&lt;&#x2F;span&gt;&lt;span&gt;(&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a3be8c;&quot;&gt;users&lt;&#x2F;span&gt;&lt;span&gt;&amp;quot;, &amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a3be8c;&quot;&gt;user_created&lt;&#x2F;span&gt;&lt;span&gt;&amp;quot;, &amp;amp;UserCreated { name: name.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;clone&lt;&#x2F;span&gt;&lt;span&gt;() })
+&lt;&#x2F;span&gt;&lt;span&gt;        .await
+&lt;&#x2F;span&gt;&lt;span&gt;        .&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;expect&lt;&#x2F;span&gt;&lt;span&gt;(&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a3be8c;&quot;&gt;event dispatch failed&lt;&#x2F;span&gt;&lt;span&gt;&amp;quot;);
+&lt;&#x2F;span&gt;&lt;span&gt;    format!(&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a3be8c;&quot;&gt;User &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;{}&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a3be8c;&quot;&gt; created&lt;&#x2F;span&gt;&lt;span&gt;&amp;quot;, name)
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;h2 id=&quot;subscribe-to-events&quot;&gt;Subscribe to events&lt;&#x2F;h2&gt;
+&lt;p&gt;A service can also subscribe to events emitted by other services. Use
+&lt;code&gt;RpcService::subscribe(source, event_type, handler)&lt;&#x2F;code&gt;. Subscriptions can
+coexist with &lt;code&gt;register(...)&lt;&#x2F;code&gt; on the same service, and a service consisting
+only of subscriptions is also valid.&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;rust&quot; style=&quot;background-color:#2b303b;color:#c0c5ce;&quot; class=&quot;language-rust &quot;&gt;&lt;code class=&quot;language-rust&quot; data-lang=&quot;rust&quot;&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;use &lt;&#x2F;span&gt;&lt;span&gt;girolle::prelude::*;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;use &lt;&#x2F;span&gt;&lt;span&gt;std::sync::Arc;
+&lt;&#x2F;span&gt;&lt;span&gt;
+&lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;fn &lt;&#x2F;span&gt;&lt;span style=&quot;color:#8fa1b3;&quot;&gt;main&lt;&#x2F;span&gt;&lt;span&gt;() {
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;let&lt;&#x2F;span&gt;&lt;span&gt; conf = Config::with_yaml_defaults(&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a3be8c;&quot;&gt;staging&#x2F;config.yml&lt;&#x2F;span&gt;&lt;span&gt;&amp;quot;.&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;to_string&lt;&#x2F;span&gt;&lt;span&gt;()).&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;unwrap&lt;&#x2F;span&gt;&lt;span&gt;();
+&lt;&#x2F;span&gt;&lt;span&gt;    &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;let &lt;&#x2F;span&gt;&lt;span&gt;_ = RpcService::new(conf, &amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a3be8c;&quot;&gt;event-observer&lt;&#x2F;span&gt;&lt;span&gt;&amp;quot;)
+&lt;&#x2F;span&gt;&lt;span&gt;        .&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;subscribe&lt;&#x2F;span&gt;&lt;span&gt;(
+&lt;&#x2F;span&gt;&lt;span&gt;            &amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a3be8c;&quot;&gt;users&lt;&#x2F;span&gt;&lt;span&gt;&amp;quot;,
+&lt;&#x2F;span&gt;&lt;span&gt;            &amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a3be8c;&quot;&gt;user_created&lt;&#x2F;span&gt;&lt;span&gt;&amp;quot;,
+&lt;&#x2F;span&gt;&lt;span&gt;            Arc::new(|&lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;_ctx&lt;&#x2F;span&gt;&lt;span&gt;: RpcContext, &lt;&#x2F;span&gt;&lt;span style=&quot;color:#bf616a;&quot;&gt;payload&lt;&#x2F;span&gt;&lt;span&gt;: Value| -&amp;gt; BoxFuture&amp;lt;GirolleResult&amp;lt;()&amp;gt;&amp;gt; {
+&lt;&#x2F;span&gt;&lt;span&gt;                Box::pin(async &lt;&#x2F;span&gt;&lt;span style=&quot;color:#b48ead;&quot;&gt;move &lt;&#x2F;span&gt;&lt;span&gt;{
+&lt;&#x2F;span&gt;&lt;span&gt;                    println!(&amp;quot;&lt;&#x2F;span&gt;&lt;span style=&quot;color:#a3be8c;&quot;&gt;[users.user_created] &lt;&#x2F;span&gt;&lt;span style=&quot;color:#d08770;&quot;&gt;{}&lt;&#x2F;span&gt;&lt;span&gt;&amp;quot;, payload);
+&lt;&#x2F;span&gt;&lt;span&gt;                    Ok(())
+&lt;&#x2F;span&gt;&lt;span&gt;                })
+&lt;&#x2F;span&gt;&lt;span&gt;            }),
+&lt;&#x2F;span&gt;&lt;span&gt;        )
+&lt;&#x2F;span&gt;&lt;span&gt;        .&lt;&#x2F;span&gt;&lt;span style=&quot;color:#96b5b4;&quot;&gt;start&lt;&#x2F;span&gt;&lt;span&gt;();
+&lt;&#x2F;span&gt;&lt;span&gt;}
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;h2 id=&quot;runnable-examples&quot;&gt;Runnable examples&lt;&#x2F;h2&gt;
+&lt;p&gt;The &lt;code&gt;examples&#x2F;&lt;&#x2F;code&gt; crate has a runnable example for each capability. Pick one,
+adapt it, and &lt;code&gt;cargo run --example &amp;lt;name&amp;gt;&lt;&#x2F;code&gt; from the repository root:&lt;&#x2F;p&gt;
+&lt;table&gt;&lt;thead&gt;&lt;tr&gt;&lt;th&gt;example&lt;&#x2F;th&gt;&lt;th&gt;what it shows&lt;&#x2F;th&gt;&lt;&#x2F;tr&gt;&lt;&#x2F;thead&gt;&lt;tbody&gt;
+&lt;tr&gt;&lt;td&gt;&lt;code&gt;simple_macro&lt;&#x2F;code&gt;&lt;&#x2F;td&gt;&lt;td&gt;basic &lt;code&gt;#[girolle]&lt;&#x2F;code&gt; service with sync handlers&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td&gt;&lt;code&gt;simple_service&lt;&#x2F;code&gt;&lt;&#x2F;td&gt;&lt;td&gt;hand-rolled &lt;code&gt;RpcTask::new&lt;&#x2F;code&gt; with an async closure&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td&gt;&lt;code&gt;proxy_service&lt;&#x2F;code&gt;&lt;&#x2F;td&gt;&lt;td&gt;&lt;code&gt;ctx.rpc.call&lt;&#x2F;code&gt; from inside a handler&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td&gt;&lt;code&gt;event_emitter&lt;&#x2F;code&gt;&lt;&#x2F;td&gt;&lt;td&gt;&lt;code&gt;ctx.events.dispatch&lt;&#x2F;code&gt; from inside a handler&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td&gt;&lt;code&gt;event_observer&lt;&#x2F;code&gt;&lt;&#x2F;td&gt;&lt;td&gt;&lt;code&gt;RpcService::subscribe&lt;&#x2F;code&gt; to consume events&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td&gt;&lt;code&gt;cli_sender&lt;&#x2F;code&gt;&lt;&#x2F;td&gt;&lt;td&gt;generic CLI sender — &lt;code&gt;&amp;lt;service&amp;gt; &amp;lt;method&amp;gt; [arg…]&lt;&#x2F;code&gt;&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;tr&gt;&lt;td&gt;&lt;code&gt;simple_sender&lt;&#x2F;code&gt;&lt;&#x2F;td&gt;&lt;td&gt;&lt;code&gt;RpcClient&lt;&#x2F;code&gt; round-trip with sync + async calls&lt;&#x2F;td&gt;&lt;&#x2F;tr&gt;
+&lt;&#x2F;tbody&gt;&lt;&#x2F;table&gt;
+</content>
+        
+    </entry>
+    <entry xml:lang="en">
+        <title>Philippe Llerena</title>
+        <published>2021-04-01T08:50:45+00:00</published>
+        <updated>2021-04-01T08:50:45+00:00</updated>
+        
+        <author>
+          <name>
+            
+              Unknown
+            
+          </name>
+        </author>
+        
+        <link rel="alternate" type="text/html" href="https://doubleailes.github.io/girolle/authors/doubleailes/"/>
+        <id>https://doubleailes.github.io/girolle/authors/doubleailes/</id>
+        
+        <content type="html" xml:base="https://doubleailes.github.io/girolle/authors/doubleailes/">&lt;p&gt;Creator of &lt;strong&gt;Girolle&lt;&#x2F;strong&gt;.&lt;&#x2F;p&gt;
+&lt;p&gt;&lt;a href=&quot;https:&#x2F;&#x2F;github.com&#x2F;doubleailes&quot;&gt;@doubleailes&lt;&#x2F;a&gt;&lt;&#x2F;p&gt;
+</content>
+        
+    </entry>
+</feed>
