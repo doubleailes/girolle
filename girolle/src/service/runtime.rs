@@ -1,291 +1,38 @@
-use crate::{
-    config::Config,
-    error::GirolleError,
-    events::EventDispatcherCore,
-    nameko_utils::{compute_deliver, delivery_to_message_properties, get_id, publish},
-    payload::{Payload, PayloadResult},
-    queue::{create_event_consumer_channel, create_service_channel, get_connection},
-    rpc_core::RpcCallerCore,
-    rpc_task::RpcTask,
-    types::{EventDispatcher, EventHandler, RpcCaller, RpcContext},
+//! The async dispatch loop that drives an [`super::RpcService`] once
+//! it has been started.
+//!
+//! Sets up the broker connection, the RPC consumer, the in-service
+//! [`RpcCallerCore`] / [`EventDispatcherCore`], one consumer per event
+//! subscription, and the worker semaphore. Each inbound delivery is
+//! routed to its registered handler (RPC) or subscriber (event), with
+//! the per-delivery [`RpcContext`] stamped with the inbound headers.
+
+use crate::amqp::channel::{
+    create_event_consumer_channel, create_service_channel,
 };
-use lapin::{message::DeliveryResult, options::*, types::FieldTable, Channel};
+use crate::amqp::connection::get_connection;
+use crate::amqp::headers::{delivery_to_message_properties, get_id};
+use crate::amqp::publish::publish;
+use crate::config::Config;
+use crate::error::GirolleError;
+use crate::payload::Payload;
+use crate::protocol::PayloadResult;
+use lapin::{message::DeliveryResult, options::*, types::FieldTable, BasicProperties, Channel};
 use std::{collections::HashMap, sync::Arc};
 use tokio::sync::Semaphore;
 use tracing::{debug, error, info, warn, Level};
 use uuid::Uuid;
 
-#[derive(Clone)]
-struct EventSubscription {
-    source_service: String,
-    event_type: String,
-    handler: EventHandler,
-}
+use super::caller::{RpcCaller, RpcCallerCore};
+use super::context::RpcContext;
+use super::dispatcher::{EventDispatcher, EventDispatcherCore};
+use super::task::{EventHandler, RpcTask};
 
-/// # RpcService
-///
-/// ## Description
-///
-/// This struct is used to create a RPC service. This service will run
-/// infinitly if started.
-///
-/// ## Example
-///
-/// ```rust, no_run
-/// use girolle::prelude::*;
-/// use std::vec;
-/// #[girolle]
-/// fn hello(s: String) -> String {
-///     format!("Hello, {}!, by Girolle", s)
-/// }
-///
-/// fn main() {
-///     let mut services: RpcService = RpcService::new(Config::default(),"video");
-///     services.register(hello).start();
-/// }
-pub struct RpcService {
-    conf: Config,
-    service_name: String,
-    f: HashMap<String, RpcTask>,
-    subscriptions: Vec<EventSubscription>,
-}
-impl RpcService {
-    /// # new
-    ///
-    /// ## Description
-    ///
-    /// This function create a new RpcService struct
-    ///
-    /// ## Arguments
-    ///
-    /// * `conf` - The configuration as Config
-    /// * `service_name` - The name of the service in the Nameko microservice
-    ///
-    /// ## Returns
-    ///
-    /// This function return a girolle::RpcService struct
-    ///
-    /// ## Example
-    ///
-    /// ```rust
-    /// use girolle::prelude::*;
-    ///
-    ///
-    /// let services: RpcService = RpcService::new(Config::default(),"video");
-    /// ```
-    pub fn new(conf: Config, service_name: &'static str) -> Self {
-        Self {
-            conf,
-            service_name: service_name.to_string(),
-            f: HashMap::new(),
-            subscriptions: Vec::new(),
-        }
-    }
-    /// # set_service_name
-    ///
-    /// ## Description
-    ///
-    /// This function set the service name of the RpcService struct
-    ///
-    /// ## Arguments
-    ///
-    /// * `service_name` - The name of the service in the Nameko microservice
-    ///
-    /// ## Example
-    ///
-    /// ```rust
-    /// use girolle::prelude::*;
-    ///
-    ///
-    /// let mut services: RpcService = RpcService::new(Config::default(),"video");
-    /// services.set_service_name("other".to_string());
-    /// ```
-    pub fn set_service_name(&mut self, service_name: String) {
-        self.service_name = service_name;
-    }
-    /// # insert
-    ///
-    /// ## Description
-    ///
-    /// This function insert a function in the RpcService struct
-    ///
-    /// ## Arguments
-    ///
-    /// * `method_name` - The name of the function to call
-    /// * `f` - The function to call
-    ///
-    /// ## Example
-    ///
-    /// ```rust
-    /// use girolle::prelude::*;
-    /// use std::vec;
-    ///
-    /// #[girolle]
-    /// fn hello(s: String) -> String {
-    ///   format!("Hello, {}!, by Girolle", s)
-    /// }
-    ///
-    /// fn main() {
-    ///   let mut services: RpcService = RpcService::new(Config::default(),"video");
-    ///   services.register(hello);
-    /// }
-    pub fn register(mut self, fn_macro: fn() -> RpcTask) -> Self {
-        let rpc_task = fn_macro();
-        self.insert(rpc_task.name, rpc_task);
-        self
-    }
-    fn insert(&mut self, method_name: &'static str, f: RpcTask) {
-        let routing_key = format!("{}.{}", self.service_name, method_name);
-        self.f.insert(routing_key.to_string(), f);
-    }
-    /// # subscribe
-    ///
-    /// Register an async event handler for `<source_service>.events` with
-    /// routing key `event_type`.
-    ///
-    /// Multiple `subscribe` calls can coexist with `register` calls on the
-    /// same service. A service consisting only of subscriptions (no RPC
-    /// methods) is allowed.
-    ///
-    /// ## Arguments
-    ///
-    /// * `source_service` — the name of the service emitting the event
-    /// * `event_type` — the event's routing key (typically a verb like
-    ///   `user_created`)
-    /// * `handler` — an [`EventHandler`] invoked with [`RpcContext`] and the
-    ///   decoded JSON payload
-    ///
-    /// ## Example
-    ///
-    /// ```rust,no_run
-    /// use girolle::prelude::*;
-    /// use std::sync::Arc;
-    ///
-    /// fn main() {
-    ///     let _ = RpcService::new(Config::default(), "observer").subscribe(
-    ///         "users",
-    ///         "user_created",
-    ///         Arc::new(|_ctx, payload| {
-    ///             Box::pin(async move {
-    ///                 println!("event: {}", payload);
-    ///                 Ok(())
-    ///             })
-    ///         }),
-    ///     );
-    /// }
-    /// ```
-    pub fn subscribe(
-        mut self,
-        source_service: &str,
-        event_type: &str,
-        handler: EventHandler,
-    ) -> Self {
-        self.subscriptions.push(EventSubscription {
-            source_service: source_service.to_string(),
-            event_type: event_type.to_string(),
-            handler,
-        });
-        self
-    }
-    /// # start
-    ///
-    /// ## Description
-    ///
-    /// This function start the RpcService struct
-    ///
-    /// ## Example
-    ///
-    /// ```rust
-    /// use girolle::prelude::*;
-    ///
-    /// #[girolle]
-    /// fn hello(s: String) -> String {
-    ///   format!("Hello, {}!, by Girolle", s)
-    /// }
-    ///
-    /// fn main() {
-    ///    let mut services: RpcService = RpcService::new(Config::default(),"video");
-    ///    services.register(hello).start();
-    /// }
-    pub fn start(&self) -> Result<(), GirolleError> {
-        if self.f.is_empty() && self.subscriptions.is_empty() {
-            panic!("RpcService has neither RPC methods nor event subscriptions");
-        }
-        // Need to clone because the field is behind a shared reference.
-        rpc_service(
-            &self.conf,
-            &self.service_name,
-            self.f.clone(),
-            self.subscriptions.clone(),
-        )
-    }
-    /// # get_routing_keys
-    ///
-    /// ## Description
-    ///
-    /// This function return the routing keys of the RpcService struct
-    ///
-    /// ## Example
-    ///
-    /// ```rust
-    /// use girolle::prelude::*;
-    /// use std::vec;
-    ///
-    /// #[girolle]
-    /// fn hello(s: String) -> String {
-    ///     format!("Hello, {}!, by Girolle", s)
-    /// }
-    ///
-    /// fn main() {
-    ///    let mut services: RpcService = RpcService::new(Config::default(),"video");
-    ///    let routing_keys = services.register(hello).get_routing_keys();
-    /// }
-    pub fn get_routing_keys(&self) -> Vec<String> {
-        self.f.keys().map(|x| x.to_string()).collect()
-    }
-    /// # get_config
-    ///
-    /// ## Description
-    ///
-    /// This function return the configuration of the RpcService struct
-    ///
-    /// ## Example
-    ///
-    /// ```rust
-    /// use girolle::prelude::*;
-    ///
-    ///
-    /// let services: RpcService = RpcService::new(Config::default(),"video");
-    /// let conf = services.get_config();
-    /// println!("{}", conf.AMQP_URI());
-    /// ```
-    pub fn get_config(&self) -> &Config {
-        &self.conf
-    }
-    /// # set_config
-    ///
-    /// ## Description
-    ///
-    /// This function set the configuration of the RpcService struct
-    ///
-    /// ## Arguments
-    ///
-    /// * `config` - The configuration as Config
-    ///
-    /// ## Example
-    ///
-    /// ```rust
-    /// use girolle::prelude::*;
-    ///
-    ///
-    /// let mut services: RpcService = RpcService::new(Config::default(),"video");
-    /// let conf = Config::default();
-    /// services.set_config(conf);
-    /// ```
-    pub fn set_config(&mut self, config: Config) -> std::result::Result<(), std::string::String> {
-        self.conf = config;
-        Ok(())
-    }
+#[derive(Clone)]
+pub(super) struct EventSubscription {
+    pub(super) source_service: String,
+    pub(super) event_type: String,
+    pub(super) handler: EventHandler,
 }
 
 struct SharedData {
@@ -299,34 +46,59 @@ struct SharedData {
     event_dispatcher: EventDispatcher,
 }
 
-/// # rpc_service
-///
-/// ## Description
-///
-/// This function start the RPC service
-///
-/// ## Arguments
-///
-/// * `conf` - The configuration as Config
-/// * `service_name` - The name of the service in the Nameko microservice
-/// * `f_task` - The function to call
+/// Run an RPC handler against an inbound delivery and publish either
+/// the JSON result or a remote-error envelope on the reply queue.
+async fn compute_deliver(
+    incomming_data: Payload,
+    properties: BasicProperties,
+    rpc_task_struct: &RpcTask,
+    rpc_channel: &Channel,
+    rpc_exchange: &str,
+    reply_to_id: String,
+    ctx: RpcContext,
+) {
+    let handler = rpc_task_struct.handler.clone();
+    match handler(ctx, incomming_data).await {
+        Ok(result) => {
+            publish(
+                rpc_channel,
+                PayloadResult::from_result_value(result),
+                properties,
+                reply_to_id,
+                rpc_exchange,
+            )
+            .await
+            .expect("Error publishing");
+        }
+        Err(error) => {
+            publish(
+                rpc_channel,
+                PayloadResult::from_error(error.convert()),
+                properties,
+                reply_to_id,
+                rpc_exchange,
+            )
+            .await
+            .expect("Error publishing");
+        }
+    }
+}
+
+/// Entry point invoked by [`super::RpcService::start`]. Blocks the
+/// calling thread on a tokio runtime until SIGINT.
 #[tokio::main]
-async fn rpc_service(
+pub(super) async fn run(
     conf: &Config,
     service_name: &str,
     f_task: HashMap<String, RpcTask>,
     subscriptions: Vec<EventSubscription>,
 ) -> Result<(), GirolleError> {
     info!("Starting the service");
-    // Define the queue name1
     let rpc_queue = format!("rpc-{}", service_name);
-    // Add tracing
     tracing_subscriber::fmt()
         .with_max_level(Level::DEBUG)
         .init();
-    // Uuid of the service
     let id = Uuid::new_v4();
-    // check list of function
     debug!("List of functions {:?}", f_task.keys());
     debug!(
         "List of subscriptions {:?}",
@@ -336,8 +108,6 @@ async fn rpc_service(
             .collect::<Vec<_>>()
     );
     let conn = get_connection(conf.AMQP_URI(), conf.heartbeat()).await?;
-    // Create a channel for the service in Nameko this part is handle by
-    // the RpcConsumer class
     let rpc_channel: Channel = create_service_channel(
         &conn,
         service_name,
@@ -345,19 +115,12 @@ async fn rpc_service(
         conf.rpc_exchange(),
     )
     .await?;
-    // Stand up the in-service RPC core: reply queue, correlation map,
-    // and a publish channel used by ctx.rpc.call().
     let rpc_caller_core = RpcCallerCore::new(&conn, conf, id).await?;
-    // Stand up the event-dispatcher core: a publish channel and a cache
-    // of declared `{source}.events` exchanges used by ctx.events.dispatch().
     let event_dispatcher_core = EventDispatcherCore::new(&conn, conf, id).await?;
     let rpc_caller = RpcCaller::from_core(rpc_caller_core);
     let event_dispatcher = EventDispatcher::from_core(event_dispatcher_core);
     let semaphore = Arc::new(Semaphore::new(conf.max_workers() as usize));
 
-    // Spin up a consumer per event subscription, reusing the shared
-    // semaphore and capabilities. Each subscription gets its own queue,
-    // bound to `<source>.events` with routing key `<event_type>`.
     for sub in &subscriptions {
         let queue_name = format!(
             "evt-{}-{}--{}",
@@ -406,9 +169,7 @@ async fn rpc_service(
                     Ok(v) => v,
                     Err(e) => {
                         error!(error = %e, "event payload was not valid JSON; dropping");
-                        let _ = delivery
-                            .ack(BasicAckOptions::default())
-                            .await;
+                        let _ = delivery.ack(BasicAckOptions::default()).await;
                         return;
                     }
                 };
@@ -436,7 +197,6 @@ async fn rpc_service(
         });
     }
 
-    // Start a consumer.
     let consumer = rpc_channel
         .basic_consume(
             &rpc_queue,
@@ -460,11 +220,8 @@ async fn rpc_service(
         async move {
             let _permit = shared_data.semaphore.acquire().await;
             let delivery = match delivery {
-                // Carries the delivery alongside its channel
                 Ok(Some(delivery)) => delivery,
-                // The consumer got canceled
                 Ok(None) => return,
-                // Carries the error and is always followed by Ok(None)
                 Err(error) => {
                     error!("Failed to consume queue message {}", error);
                     return;

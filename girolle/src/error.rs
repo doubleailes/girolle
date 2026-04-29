@@ -1,6 +1,9 @@
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
+/// Standard result alias used throughout the crate.
+pub type GirolleResult<T> = std::result::Result<T, GirolleError>;
+
 pub enum GirolleError {
     SerdeJsonError(serde_json::Error),
     LapinError(lapin::Error),

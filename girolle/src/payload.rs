@@ -1,14 +1,23 @@
+//! Public RPC request payload.
+//!
+//! `Payload` is the user-facing representation of an RPC's `args` and
+//! `kwargs`. The reply envelope (`PayloadResult`) lives in the private
+//! `protocol` module alongside the rest of the wire definitions.
+
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
 use std::fmt;
 
-use crate::error::RemoteError;
+/// # Payload
+///
+/// Positional and keyword arguments for an RPC call.
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Payload {
     pub(crate) args: Vec<Value>,
     pub(crate) kwargs: HashMap<String, Value>,
 }
+
 impl Default for Payload {
     fn default() -> Self {
         Self::new()
@@ -16,13 +25,7 @@ impl Default for Payload {
 }
 
 impl Payload {
-    /// # new
-    ///
-    /// ## Description
-    ///
-    /// Create a new Payload empty struct
-    ///
-    /// ## Example
+    /// Empty payload — no args, no kwargs.
     ///
     /// ```rust
     /// use girolle::prelude::Payload;
@@ -34,19 +37,14 @@ impl Payload {
             kwargs: HashMap::new(),
         }
     }
-    /// # from_args_of_value
-    ///
-    /// ## Description
-    ///
-    /// Create a new Payload struct from a vector of Value
-    ///
-    /// ## Example
+
+    /// Build a payload from a vector of pre-serialized positional
+    /// arguments.
     ///
     /// ```rust
     /// use girolle::prelude::Payload;
     /// use serde_json::Value;
-    /// let args: Vec<Value> = vec![Value::Number(serde_json::Number::from(1))];
-    /// let p = Payload::from_args_of_value(args);
+    /// let p = Payload::from_args_of_value(vec![Value::Number(1.into())]);
     /// ```
     pub fn from_args_of_value(args: Vec<Value>) -> Self {
         Self {
@@ -54,20 +52,16 @@ impl Payload {
             kwargs: HashMap::new(),
         }
     }
-    /// # from_kwargs_of_value
-    ///
-    /// ## Description
-    ///
-    /// Create a new Payload struct from a HashMap of String and Value
-    ///
-    /// ## Example
+
+    /// Build a payload from a map of pre-serialized keyword
+    /// arguments.
     ///
     /// ```rust
     /// use girolle::prelude::Payload;
     /// use serde_json::Value;
     /// use std::collections::HashMap;
-    /// let mut kwargs: HashMap<String, Value> = HashMap::new();
-    /// kwargs.insert("key".to_string(), Value::Number(serde_json::Number::from(1)));
+    /// let mut kwargs = HashMap::new();
+    /// kwargs.insert("key".to_string(), Value::Number(1.into()));
     /// let p = Payload::from_kwargs_of_value(kwargs);
     /// ```
     pub fn from_kwargs_of_value(kwargs: HashMap<String, Value>) -> Self {
@@ -76,13 +70,8 @@ impl Payload {
             kwargs,
         }
     }
-    /// # arg
-    ///
-    /// ## Description
-    ///
-    /// push an argument to the args vector
-    ///
-    /// ## Example
+
+    /// Append a positional argument.
     ///
     /// ```rust
     /// use girolle::prelude::Payload;
@@ -93,13 +82,8 @@ impl Payload {
             .push(serde_json::to_value(arg).expect("Failed to serialize argument"));
         self
     }
-    /// # kwarg
-    ///
-    /// ## Description
-    ///
-    /// push a key value pair to the kwargs HashMap
-    ///
-    /// ## Example
+
+    /// Set a keyword argument.
     ///
     /// ```rust
     /// use girolle::prelude::Payload;
@@ -112,31 +96,18 @@ impl Payload {
         );
         self
     }
-    /// # is_empty
-    ///
-    /// ## Description
-    ///
-    /// Check if the Payload is empty
-    ///
-    /// ## Example
-    ///
-    /// ```rust
-    /// use girolle::prelude::Payload;
-    /// let p = Payload::new();
-    /// assert_eq!(p.is_empty(), true);
-    /// ```
+
+    /// Whether the payload carries no arguments at all.
     pub fn is_empty(&self) -> bool {
         self.args.is_empty() && self.kwargs.is_empty()
     }
-    /// # args
-    ///
-    /// Borrow the positional arguments carried by this payload.
+
+    /// Borrow the positional arguments.
     pub fn args(&self) -> &[Value] {
         &self.args
     }
-    /// # kwargs
-    ///
-    /// Borrow the keyword arguments carried by this payload.
+
+    /// Borrow the keyword arguments.
     pub fn kwargs(&self) -> &HashMap<String, Value> {
         &self.kwargs
     }
@@ -148,59 +119,5 @@ impl fmt::Display for Payload {
             Ok(json_str) => write!(f, "{}", json_str),
             Err(e) => write!(f, "Error serializing to JSON: {}", e),
         }
-    }
-}
-
-/// # PayloadResult
-///
-/// ## Description
-///
-/// Struct to handle the result to send back to the client
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub(crate) struct PayloadResult {
-    result: Value,
-    error: Option<RemoteError>,
-}
-impl PayloadResult {
-    /// # get_error
-    ///
-    /// ## Description
-    ///
-    /// Get the error from the PayloadResult
-    pub(crate) fn get_error(&self) -> Option<RemoteError> {
-        self.error.clone()
-    }
-    /// # get_result
-    ///
-    /// ## Description
-    ///
-    /// Get the result from the PayloadResult
-    pub(crate) fn get_result(&self) -> Value {
-        self.result.clone()
-    }
-    /// # from_result_value
-    ///
-    /// ## Description
-    ///
-    /// Create a new PayloadResult from a Value
-    pub(crate) fn from_result_value(result: Value) -> Self {
-        Self {
-            result,
-            error: None,
-        }
-    }
-    /// # from_error
-    ///
-    /// ## Description
-    ///
-    /// Create a new PayloadResult from a RemoteError
-    pub(crate) fn from_error(error: RemoteError) -> Self {
-        Self {
-            result: Value::Null,
-            error: Some(error),
-        }
-    }
-    pub(crate) fn to_string(&self) -> Result<String, serde_json::Error> {
-        serde_json::to_string(self)
     }
 }

@@ -1,6 +1,6 @@
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 
-use girolle::nameko_utils::build_inputs_fn_service;
+use girolle::__macro_support::build_inputs_fn_service;
 use girolle::prelude::*;
 use serde_json::Value;
 
