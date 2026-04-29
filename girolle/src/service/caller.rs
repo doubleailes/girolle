@@ -1,18 +1,24 @@
-//! In-service async RPC core.
+//! In-service RPC caller.
 //!
-//! Holds the per-service shared state needed to act as an RPC client from
-//! within a service handler: a reply queue + consumer, a correlation map
-//! mapping `correlation_id -> oneshot::Sender<PayloadResult>`, and a
-//! publish channel.
+//! Two collaborating types:
 //!
-//! [`RpcCallerCore`] is constructed once in [`crate::rpc_service`] startup
-//! and shared (via `Arc`) by every inbound delivery's `RpcCaller`.
+//! * `RpcCallerCore` (private) — per-service shared state needed to
+//!   act as an RPC client from within a handler: a reply queue +
+//!   consumer, a correlation map (`correlation_id -> oneshot::Sender`),
+//!   and a publish channel. Built once at startup, shared via `Arc`.
+//!
+//! * [`RpcCaller`] — the public per-delivery handle. Each inbound
+//!   delivery clones the shared core and stamps it with the parent
+//!   delivery's headers so outbound calls propagate
+//!   `nameko.call_id_stack` correctly. A default-constructed handle has
+//!   no core; calling `call` on it returns an error (useful for unit
+//!   tests).
 
+use crate::amqp::channel::create_message_channel;
 use crate::config::Config;
-use crate::error::GirolleError;
-use crate::payload::{Payload, PayloadResult};
-use crate::queue::create_message_channel;
-use crate::types::GirolleResult;
+use crate::error::{GirolleError, GirolleResult};
+use crate::payload::Payload;
+use crate::protocol::{PayloadResult, NAMEKO_AMQP_URI, NAMEKO_CALL_ID_STACK};
 use dashmap::DashMap;
 use lapin::message::DeliveryResult;
 use lapin::options::{BasicAckOptions, BasicConsumeOptions, BasicPublishOptions};
@@ -24,9 +30,6 @@ use tokio::sync::oneshot;
 use tracing::error;
 use uuid::Uuid;
 
-const NAMEKO_AMQP_URI: &str = "nameko.AMQP_URI";
-const NAMEKO_CALL_ID_STACK: &str = "nameko.call_id_stack";
-
 pub(crate) struct RpcCallerCore {
     publish_channel: lapin::Channel,
     reply_routing_key: String,
@@ -37,10 +40,8 @@ pub(crate) struct RpcCallerCore {
 }
 
 impl RpcCallerCore {
-    /// Set up the in-service reply queue + consumer and return a shared core.
-    ///
-    /// Call once per `RpcService` instance. The returned `Arc` is cloned into
-    /// the `RpcCaller` handed to every inbound delivery.
+    /// Set up the in-service reply queue + consumer and return a
+    /// shared core. Call once per `RpcService` instance.
     pub(crate) async fn new(
         conn: &Connection,
         conf: &Config,
@@ -115,13 +116,10 @@ impl RpcCallerCore {
         }))
     }
 
-    /// Issue an outbound RPC call from inside a service handler and await
-    /// its reply.
-    ///
-    /// `parent_headers` carries the inbound delivery's headers; we propagate
-    /// `nameko.call_id_stack` through if present and seed it with our own
-    /// service identifier otherwise. `nameko.AMQP_URI` is always stamped
-    /// with this service's URI.
+    /// Issue an outbound RPC call from inside a service handler and
+    /// await its reply. Propagates `nameko.call_id_stack` from
+    /// `parent_headers`, seeding it with this service's identifier if
+    /// absent. Always stamps `nameko.AMQP_URI`.
     pub(crate) async fn call(
         &self,
         parent_headers: &FieldTable,
@@ -176,8 +174,7 @@ impl RpcCallerCore {
 
         let result = rx.await.map_err(|_| {
             GirolleError::ServiceMissingError(
-                "in-service RPC reply channel dropped before a reply arrived"
-                    .to_string(),
+                "in-service RPC reply channel dropped before a reply arrived".to_string(),
             )
         })?;
 
@@ -185,5 +182,67 @@ impl RpcCallerCore {
             Some(remote) => Err(remote.convert_to_girolle_error()),
             None => Ok(result.get_result()),
         }
+    }
+}
+
+/// Capability handle exposed on [`super::context::RpcContext`] that
+/// lets a service handler call other services as an RPC client.
+///
+/// Each inbound delivery receives an `RpcCaller` derived from the
+/// service's shared core. The derivation captures the parent
+/// delivery's AMQP headers so that outbound calls propagate
+/// `nameko.call_id_stack` correctly.
+///
+/// A default-constructed (or `placeholder`) `RpcCaller` has no
+/// underlying core; calling [`RpcCaller::call`] on it returns an error.
+/// This shape is useful for unit-testing handlers without standing up
+/// a broker.
+#[derive(Clone, Default)]
+pub struct RpcCaller {
+    inner: Option<Arc<RpcCallerCore>>,
+    parent_headers: FieldTable,
+}
+
+impl std::fmt::Debug for RpcCaller {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("RpcCaller")
+            .field("active", &self.inner.is_some())
+            .finish()
+    }
+}
+
+impl RpcCaller {
+    pub(crate) fn from_core(core: Arc<RpcCallerCore>) -> Self {
+        Self {
+            inner: Some(core),
+            parent_headers: FieldTable::default(),
+        }
+    }
+
+    pub(crate) fn with_parent_headers(&self, headers: FieldTable) -> Self {
+        Self {
+            inner: self.inner.clone(),
+            parent_headers: headers,
+        }
+    }
+
+    /// Invoke `<service>.<method>` and await the reply.
+    ///
+    /// Returns the decoded JSON result on success, or a [`GirolleError`]
+    /// reconstructed from the remote service's error on failure.
+    pub async fn call(
+        &self,
+        service: &str,
+        method: &str,
+        payload: Payload,
+    ) -> GirolleResult<Value> {
+        let core = self.inner.as_ref().ok_or_else(|| {
+            GirolleError::ServiceMissingError(
+                "RpcCaller has no in-service core; ctx.rpc.call requires a running RpcService"
+                    .to_string(),
+            )
+        })?;
+        core.call(&self.parent_headers, service, method, payload)
+            .await
     }
 }

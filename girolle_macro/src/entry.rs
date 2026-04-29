@@ -101,7 +101,7 @@ pub(crate) fn girolle_task(input: TokenStream) -> TokenStream {
                     {
                         ::std::boxed::Box::pin(async move {
                             #ctx_binding
-                            let __args = ::girolle::nameko_utils::build_inputs_fn_service(
+                            let __args = ::girolle::__macro_support::build_inputs_fn_service(
                                 &[#(#args_str),*],
                                 payload,
                             )?;

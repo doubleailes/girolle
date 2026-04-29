@@ -1,54 +1,23 @@
-/// # queue
-///
-/// This module contains functions to create queues and channels for the RPC communication.
+//! Channel/queue/exchange declarations.
+//!
+//! Each helper opens a fresh `lapin::Channel` on an existing
+//! `Connection`, declares the queue and any exchanges/bindings the
+//! caller will need, applies QoS, and returns the channel ready to use.
+
 use lapin::{
     options::{BasicQosOptions, ExchangeDeclareOptions, QueueBindOptions, QueueDeclareOptions},
     types::FieldTable,
-    Connection, ConnectionProperties, ExchangeKind,
+    Connection, ExchangeKind,
 };
-use tracing::{error, info};
+use tracing::info;
 use uuid::Uuid;
 
-/// # QUEUE_TTL
-const QUEUE_TTL: u32 = 300000;
+/// TTL applied to per-client reply queues (5 min). After this long
+/// without a consumer, the broker reclaims the queue.
+const QUEUE_TTL: u32 = 300_000;
 
-pub(crate) async fn get_connection(
-    amqp_uri: String,
-    heartbeat_value: u16,
-) -> Result<lapin::Connection, lapin::Error> {
-    let mut connection_options = ConnectionProperties::default()
-        .with_executor(tokio_executor_trait::Tokio::current())
-        .with_reactor(tokio_reactor_trait::Tokio);
-    let mut client_properties_custom = FieldTable::default();
-    client_properties_custom.insert("heartbeat".into(), heartbeat_value.into());
-    connection_options.client_properties = client_properties_custom;
-    match Connection::connect(&amqp_uri, connection_options).await {
-        Ok(connection) => {
-            info!("Connected to RabbitMQ");
-            Ok(connection)
-        }
-        Err(e) => {
-            error!("Failed to connect to RabbitMQ with error:{}", e);
-            Err(e)
-        }
-    }
-}
-
-/// # create_service_channel
-///
-/// This function creates a channel for a service.
-///
-/// ## Arguments
-///
-/// * `service_name` - A string slice that holds the name of the service.
-/// * `amqp_uri` - A string that holds the URI of the AMQP server.
-/// * `heartbeat_value` - A u16 that holds the heartbeat value.
-/// * `prefetch_count` - A u16 that holds the prefetch count.
-/// * `rpc_exchange` - A string slice that holds the name of the exchange.
-///
-/// ## Returns
-///
-/// A lapin::Result<lapin::Channel> that holds the channel.
+/// Declare a service's inbound RPC queue (`rpc-<service>`), bind it to
+/// the RPC exchange with `<service>.*`, and apply the requested QoS.
 pub(crate) async fn create_service_channel(
     conn: &Connection,
     service_name: &str,
@@ -86,21 +55,9 @@ pub(crate) async fn create_service_channel(
     Ok(incomming_channel)
 }
 
-/// # create_message_channel
-///
-/// This function creates a channel for a message.
-///
-/// ## Arguments
-///
-/// * `rpc_queue_reply` - A string slice that holds the name of the queue.
-/// * `id` - A string slice that holds the id of the message.
-/// * `amqp_uri` - A string that holds the URI of the AMQP server.
-/// * `heartbeat_value` - A u16 that holds the heartbeat value.
-/// * `rpc_exchange` - A string slice that holds the name of the exchange.
-///
-/// ## Returns
-///
-/// A lapin::Result<lapin::Channel> that holds the channel.
+/// Declare a per-client reply queue bound to the RPC exchange under
+/// the client's identifier as the routing key. Used by both the
+/// standalone [`crate::client::RpcClient`] and the in-service caller.
 pub(crate) async fn create_message_channel(
     conn: &Connection,
     rpc_queue_reply: &str,
@@ -112,7 +69,6 @@ pub(crate) async fn create_message_channel(
     let response_channel = conn.create_channel().await?;
     let mut response_arguments = FieldTable::default();
     response_arguments.insert("x-expires".into(), QUEUE_TTL.into());
-    // Need to clone the response_arguments because the queue_declare function takes ownership of the FieldTable
     response_channel
         .queue_declare(
             rpc_queue_reply,
@@ -138,17 +94,9 @@ pub(crate) async fn create_message_channel(
     Ok(response_channel)
 }
 
-/// # create_event_consumer_channel
-///
-/// Sets up a channel for consuming Nameko-style events emitted by
-/// `source_service`. The function declares the source's `{source}.events`
-/// topic exchange (idempotently — so the consumer can come up before any
-/// publisher), declares a durable consumer queue, binds it to the exchange
-/// with `event_type` as the routing key, and applies `prefetch_count`.
-///
-/// The exchange and queue declarations match the Nameko EventDispatcher
-/// publisher's conventions, so a Girolle consumer can subscribe to events
-/// emitted by a Python Nameko service and vice versa.
+/// Declare an event consumer's `{source}.events` topic exchange and a
+/// durable queue bound to it on `event_type`. The exchange is declared
+/// idempotently so a consumer can come up before any publisher.
 pub(crate) async fn create_event_consumer_channel(
     conn: &Connection,
     queue_name: &str,

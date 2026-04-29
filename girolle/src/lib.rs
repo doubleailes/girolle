@@ -16,6 +16,16 @@
 //! A service can also subscribe to events emitted by other services with
 //! [`RpcService::subscribe`].
 //!
+//! ## Module map
+//!
+//! - [`config`] — [`Config`] and YAML loading
+//! - [`error`] — [`GirolleError`], [`GirolleResult`]
+//! - [`payload`] — [`Payload`] (positional + keyword args)
+//! - [`service`] — `RpcService`, handlers, capability handles
+//! - [`client`] — standalone [`RpcClient`]
+//! - `amqp` (private) — lapin transport plumbing
+//! - `protocol` (private) — wire envelope and Nameko header keys
+//!
 //! ## Examples
 //!
 //! ### RPC service with the macro
@@ -107,27 +117,30 @@
 //!     Ok(())
 //! }
 //! ```
-mod config;
-mod queue;
-pub mod types;
-pub use config::Config;
-// Public for bench purpose
-pub mod nameko_utils;
+
+pub mod config;
+pub mod error;
+pub mod payload;
 pub mod prelude;
-mod events;
-mod rpc_client;
-pub use rpc_client::RpcClient;
-mod rpc_core;
-mod rpc_service;
-pub use rpc_service::RpcService;
-mod rpc_task;
-pub use rpc_task::RpcTask;
-mod payload;
+
+pub mod client;
+pub mod service;
+
+mod amqp;
+mod protocol;
+
+#[doc(hidden)]
+pub mod __macro_support;
+
+pub use config::Config;
+pub use error::{GirolleError, GirolleResult};
 pub use payload::Payload;
 pub use serde_json;
 pub use serde_json::{json, Value};
-mod error;
-pub use error::GirolleError;
-pub use types::{
-    BoxFuture, EventDispatcher, EventHandler, GirolleResult, RpcCaller, RpcContext, RpcHandler,
-};
+
+pub use client::{RpcClient, RpcReply, RpcResult};
+pub use service::caller::RpcCaller;
+pub use service::context::RpcContext;
+pub use service::dispatcher::EventDispatcher;
+pub use service::task::{BoxFuture, EventHandler, RpcHandler, RpcTask};
+pub use service::RpcService;
