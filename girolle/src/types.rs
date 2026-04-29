@@ -1,5 +1,6 @@
 use crate::error::GirolleError;
 use crate::payload::Payload;
+use crate::rpc_core::RpcCallerCore;
 use lapin::types::FieldTable;
 use serde_json::Value;
 use std::future::Future;
@@ -21,16 +22,61 @@ pub type BoxFuture<T> = Pin<Box<dyn Future<Output = T> + Send>>;
 /// Capability handle exposed on [`RpcContext`] that lets a service handler
 /// call other services as an RPC client.
 ///
-/// In this release the caller is a placeholder; the in-service async RPC
-/// core (shared reply queue, correlation map) lands in a follow-up change.
-#[derive(Clone, Debug, Default)]
+/// Each inbound delivery receives an `RpcCaller` derived from the service's
+/// shared in-service RPC core. The derivation captures the parent
+/// delivery's AMQP headers so that outbound calls propagate
+/// `nameko.call_id_stack` correctly.
+///
+/// A default-constructed (or `placeholder`) `RpcCaller` has no underlying
+/// core; calling [`RpcCaller::call`] on it returns an error. This shape is
+/// useful for unit-testing handlers without standing up a broker.
+#[derive(Clone, Default)]
 pub struct RpcCaller {
-    _private: (),
+    inner: Option<Arc<RpcCallerCore>>,
+    parent_headers: FieldTable,
+}
+
+impl std::fmt::Debug for RpcCaller {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("RpcCaller")
+            .field("active", &self.inner.is_some())
+            .finish()
+    }
 }
 
 impl RpcCaller {
-    pub(crate) fn placeholder() -> Self {
-        Self { _private: () }
+    pub(crate) fn from_core(core: Arc<RpcCallerCore>) -> Self {
+        Self {
+            inner: Some(core),
+            parent_headers: FieldTable::default(),
+        }
+    }
+
+    pub(crate) fn with_parent_headers(&self, headers: FieldTable) -> Self {
+        Self {
+            inner: self.inner.clone(),
+            parent_headers: headers,
+        }
+    }
+
+    /// Invoke `<service>.<method>` and await the reply.
+    ///
+    /// Returns the decoded JSON result on success, or a [`GirolleError`]
+    /// reconstructed from the remote service's error on failure.
+    pub async fn call(
+        &self,
+        service: &str,
+        method: &str,
+        payload: Payload,
+    ) -> GirolleResult<Value> {
+        let core = self.inner.as_ref().ok_or_else(|| {
+            GirolleError::ServiceMissingError(
+                "RpcCaller has no in-service core; ctx.rpc.call requires a running RpcService"
+                    .to_string(),
+            )
+        })?;
+        core.call(&self.parent_headers, service, method, payload)
+            .await
     }
 }
 
