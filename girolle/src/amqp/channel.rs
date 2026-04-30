@@ -31,7 +31,7 @@ pub(crate) async fn create_service_channel(
     let rpc_queue = format!("rpc-{}", service_name);
     let queue = incomming_channel
         .queue_declare(
-            &rpc_queue,
+            rpc_queue.as_str().into(),
             QueueDeclareOptions {
                 durable: true,
                 ..Default::default()
@@ -45,9 +45,9 @@ pub(crate) async fn create_service_channel(
         .await?;
     incomming_channel
         .queue_bind(
-            &rpc_queue,
-            rpc_exchange,
-            &routing_key,
+            rpc_queue.as_str().into(),
+            rpc_exchange.into(),
+            routing_key.as_str().into(),
             QueueBindOptions::default(),
             FieldTable::default(),
         )
@@ -71,7 +71,7 @@ pub(crate) async fn create_message_channel(
     response_arguments.insert("x-expires".into(), QUEUE_TTL.into());
     response_channel
         .queue_declare(
-            rpc_queue_reply,
+            rpc_queue_reply.into(),
             QueueDeclareOptions {
                 durable: true,
                 ..Default::default()
@@ -84,9 +84,9 @@ pub(crate) async fn create_message_channel(
         .await?;
     response_channel
         .queue_bind(
-            rpc_queue_reply,
-            rpc_exchange,
-            &id.to_string(),
+            rpc_queue_reply.into(),
+            rpc_exchange.into(),
+            id.to_string().into(),
             QueueBindOptions::default(),
             response_arguments,
         )
@@ -110,7 +110,7 @@ pub(crate) async fn create_event_consumer_channel(
 
     channel
         .exchange_declare(
-            &exchange,
+            exchange.as_str().into(),
             ExchangeKind::Topic,
             ExchangeDeclareOptions {
                 durable: true,
@@ -122,7 +122,7 @@ pub(crate) async fn create_event_consumer_channel(
 
     channel
         .queue_declare(
-            queue_name,
+            queue_name.into(),
             QueueDeclareOptions {
                 durable: true,
                 ..Default::default()
@@ -133,9 +133,9 @@ pub(crate) async fn create_event_consumer_channel(
 
     channel
         .queue_bind(
-            queue_name,
-            &exchange,
-            event_type,
+            queue_name.into(),
+            exchange.as_str().into(),
+            event_type.into(),
             QueueBindOptions::default(),
             FieldTable::default(),
         )
