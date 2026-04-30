@@ -93,8 +93,8 @@ impl RpcClient {
         let consumer = self
             .reply_channel
             .basic_consume(
-                &reply_queue_name,
-                "girolle_consumer",
+                reply_queue_name.as_str().into(),
+                "girolle_consumer".into(),
                 BasicConsumeOptions::default(),
                 FieldTable::default(),
             )
@@ -183,8 +183,8 @@ impl RpcClient {
         tokio::spawn(async move {
             channel_clone
                 .basic_publish(
-                    &exchange_clone,
-                    &routing_key,
+                    exchange_clone.as_str().into(),
+                    routing_key.as_str().into(),
                     BasicPublishOptions {
                         mandatory: false,
                         immediate: false,
@@ -279,8 +279,8 @@ impl RpcClient {
 
     /// Close the reply channel and the underlying AMQP connection.
     pub async fn close(&self) -> Result<(), lapin::Error> {
-        self.reply_channel.close(200, "Goodbye").await?;
-        self.conn.close(200, "Goodbye").await?;
+        self.reply_channel.close(200, "Goodbye".into()).await?;
+        self.conn.close(200, "Goodbye".into()).await?;
         Ok(())
     }
 }
@@ -296,7 +296,7 @@ impl TargetService {
     }
 
     fn close(&self) -> Result<(), lapin::Error> {
-        executor::block_on(self.channel.close(200, "Goodbye"))?;
+        executor::block_on(self.channel.close(200, "Goodbye".into()))?;
         Ok(())
     }
 

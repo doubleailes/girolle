@@ -1,19 +1,16 @@
-use lapin::{types::FieldTable, Connection, ConnectionProperties};
+use lapin::uri::AMQPUri;
+use lapin::{Connection, ConnectionProperties};
 use tracing::{error, info};
 
-/// Open an AMQP connection wired up to the Tokio executor and reactor,
-/// with a custom heartbeat advertised in the client properties.
+/// Open an AMQP connection on the ambient Tokio runtime, applying a
+/// custom heartbeat (in seconds) to the negotiated connection.
 pub(crate) async fn get_connection(
     amqp_uri: String,
     heartbeat_value: u16,
 ) -> Result<Connection, lapin::Error> {
-    let mut connection_options = ConnectionProperties::default()
-        .with_executor(tokio_executor_trait::Tokio::current())
-        .with_reactor(tokio_reactor_trait::Tokio);
-    let mut client_properties_custom = FieldTable::default();
-    client_properties_custom.insert("heartbeat".into(), heartbeat_value.into());
-    connection_options.client_properties = client_properties_custom;
-    match Connection::connect(&amqp_uri, connection_options).await {
+    let mut uri: AMQPUri = amqp_uri.parse().map_err(std::io::Error::other)?;
+    uri.query.heartbeat = Some(heartbeat_value);
+    match Connection::connect_uri(uri, ConnectionProperties::default()).await {
         Ok(connection) => {
             info!("Connected to RabbitMQ");
             Ok(connection)
