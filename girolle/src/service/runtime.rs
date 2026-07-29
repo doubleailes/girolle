@@ -136,8 +136,8 @@ pub(super) async fn run(
         .await?;
         let consumer = event_channel
             .basic_consume(
-                &queue_name,
-                "girolle_event_consumer",
+                queue_name.as_str().into(),
+                "girolle_event_consumer".into(),
                 BasicConsumeOptions::default(),
                 FieldTable::default(),
             )
@@ -199,8 +199,8 @@ pub(super) async fn run(
 
     let consumer = rpc_channel
         .basic_consume(
-            &rpc_queue,
-            "girolle_consumer_incomming",
+            rpc_queue.as_str().into(),
+            "girolle_consumer_incomming".into(),
             BasicConsumeOptions::default(),
             FieldTable::default(),
         )

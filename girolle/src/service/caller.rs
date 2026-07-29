@@ -63,8 +63,8 @@ impl RpcCallerCore {
 
         let consumer = reply_channel
             .basic_consume(
-                &reply_queue_name,
-                "girolle_in_service_replies",
+                reply_queue_name.as_str().into(),
+                "girolle_in_service_replies".into(),
                 BasicConsumeOptions::default(),
                 FieldTable::default(),
             )
@@ -159,8 +159,8 @@ impl RpcCallerCore {
         let publish_result = self
             .publish_channel
             .basic_publish(
-                &self.rpc_exchange,
-                &routing_key,
+                self.rpc_exchange.as_str().into(),
+                routing_key.as_str().into(),
                 BasicPublishOptions::default(),
                 payload.to_string().as_bytes(),
                 properties,

@@ -1,18 +1,18 @@
-use lapin::{types::FieldTable, Connection, ConnectionProperties};
+use lapin::{types::LongString, Connection, ConnectionProperties};
 use tracing::{error, info};
 
-/// Open an AMQP connection wired up to the Tokio executor and reactor,
-/// with a custom heartbeat advertised in the client properties.
+/// Open an AMQP connection on the ambient Tokio runtime, with a custom
+/// heartbeat advertised in the client properties.
 pub(crate) async fn get_connection(
     amqp_uri: String,
     heartbeat_value: u16,
 ) -> Result<Connection, lapin::Error> {
-    let mut connection_options = ConnectionProperties::default()
-        .with_executor(tokio_executor_trait::Tokio::current())
-        .with_reactor(tokio_reactor_trait::Tokio);
-    let mut client_properties_custom = FieldTable::default();
-    client_properties_custom.insert("heartbeat".into(), heartbeat_value.into());
-    connection_options.client_properties = client_properties_custom;
+    // lapin drives its IO loop on the current Tokio runtime by default
+    // (`tokio` feature), so no executor/reactor needs wiring up here.
+    let connection_options = ConnectionProperties::default().with_client_property(
+        "heartbeat".into(),
+        LongString::from(heartbeat_value.to_string()),
+    );
     match Connection::connect(&amqp_uri, connection_options).await {
         Ok(connection) => {
             info!("Connected to RabbitMQ");

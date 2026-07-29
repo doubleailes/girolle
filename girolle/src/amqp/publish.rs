@@ -17,8 +17,8 @@ pub(crate) async fn publish(
     tokio::spawn(async move {
         rpc_channel_clone
             .basic_publish(
-                &rpc_exchange_clone,
-                &reply_to_id,
+                rpc_exchange_clone.into(),
+                reply_to_id.into(),
                 BasicPublishOptions::default(),
                 payload
                     .to_string()

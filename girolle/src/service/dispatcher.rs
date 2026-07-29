@@ -63,7 +63,7 @@ impl EventDispatcherCore {
         if !self.declared_exchanges.contains(&exchange) {
             self.publish_channel
                 .exchange_declare(
-                    &exchange,
+                    exchange.as_str().into(),
                     ExchangeKind::Topic,
                     ExchangeDeclareOptions {
                         durable: true,
@@ -91,8 +91,8 @@ impl EventDispatcherCore {
 
         self.publish_channel
             .basic_publish(
-                &exchange,
-                event_type,
+                exchange.as_str().into(),
+                event_type.into(),
                 BasicPublishOptions::default(),
                 &payload_bytes,
                 properties,
